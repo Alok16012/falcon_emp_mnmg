@@ -26,12 +26,14 @@ export default function AssignmentsPage() {
     const [companies, setCompanies] = useState<any[]>([])
     const [projects, setProjects] = useState<any[]>([])
     const [inspectors, setInspectors] = useState<any[]>([])
+    const [managers, setManagers] = useState<any[]>([])
     const [assignments, setAssignments] = useState<any[]>([])
 
 
     const [selectedCompanyId, setSelectedCompanyId] = useState("")
     const [selectedProjectId, setSelectedProjectId] = useState("")
-    const [selectedInspectorId, setSelectedInspectorId] = useState("")
+    const [selectedInspectorIds, setSelectedInspectorIds] = useState<string[]>([])
+    const [selectedManagerId, setSelectedManagerId] = useState("")
 
     const [loading, setLoading] = useState(false)
     const [fetching, setFetching] = useState(true)
@@ -54,25 +56,27 @@ export default function AssignmentsPage() {
     const fetchInitialData = async () => {
         setFetching(true)
         try {
-            const [compRes, insRes, assRes] = await Promise.all([
+            const [compRes, insRes, mgrRes, assRes] = await Promise.all([
                 fetch("/api/companies"),
                 fetch("/api/users?role=INSPECTION_BOY"),
+                fetch("/api/users?role=MANAGER"),
                 fetch("/api/assignments")
             ])
 
             if (compRes.ok) setCompanies(await compRes.json())
             if (insRes.ok) setInspectors(await insRes.json())
+            if (mgrRes.ok) {
+                setManagers(await mgrRes.json())
+            } else {
+            }
             if (assRes.ok) {
                 const data = await assRes.json()
                 if (Array.isArray(data)) {
                     setAssignments(data)
                 } else {
-                    console.error("Assignments data is not an array:", data)
                     setAssignments([])
                 }
             } else {
-                console.error("Failed to fetch assignments:", await assRes.text())
-                setAssignments([])
             }
         } catch (error) {
             console.error("Failed to fetch data", error)
@@ -103,7 +107,7 @@ export default function AssignmentsPage() {
 
     const handleAssign = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!selectedProjectId || !selectedInspectorId) return
+        if (!selectedProjectId || selectedInspectorIds.length === 0) return
 
         setLoading(true)
         try {
@@ -112,26 +116,37 @@ export default function AssignmentsPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     projectId: selectedProjectId,
-                    inspectionBoyId: selectedInspectorId
+                    inspectorIds: selectedInspectorIds,
+                    managerId: selectedManagerId || null
                 })
             })
 
             if (res.ok) {
+                const result = await res.json()
+                
                 // Refresh list
                 const assRes = await fetch("/api/assignments")
                 const assData = await assRes.json()
                 setAssignments(assData)
 
                 // Reset form
-                setSelectedInspectorId("")
+                setSelectedInspectorIds([])
+                setSelectedManagerId("")
                 setSelectedProjectId("")
                 setSelectedCompanyId("")
 
-                // Show success (you could add a toast here)
-                alert("Inspector assigned successfully!")
+                // Show results
+                const createdCount = result.created?.length || 0
+                const failedCount = result.failed?.length || 0
+                
+                if (failedCount > 0) {
+                    alert(`${createdCount} inspector(s) assigned. ${failedCount} failed (duplicates).`)
+                } else {
+                    alert(`${createdCount} inspector(s) assigned successfully!`)
+                }
             } else {
                 const error = await res.json()
-                alert(error.error + (error.details ? ": " + error.details : "") || "Failed to assign inspector")
+                alert(error.error + (error.details ? ": " + error.details : "") || "Failed to assign")
             }
         } catch (error) {
             alert("An error occurred")
@@ -234,26 +249,57 @@ export default function AssignmentsPage() {
                                 ))}
                             </select>
                         </div>
+                    </CardContent>
+                    <CardContent className="grid gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="inspector">Select Inspector</Label>
+                            <Label>Select Inspectors</Label>
+                            <div className="border rounded-md max-h-48 overflow-y-auto p-3 space-y-2 bg-muted/20">
+                                {inspectors.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground">No inspectors available</p>
+                                ) : (
+                                    inspectors.map((i) => (
+                                        <label key={i.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedInspectorIds.includes(i.id)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedInspectorIds([...selectedInspectorIds, i.id])
+                                                    } else {
+                                                        setSelectedInspectorIds(selectedInspectorIds.filter(id => id !== i.id))
+                                                    }
+                                                }}
+                                                className="rounded border-gray-300"
+                                            />
+                                            <span className="text-sm">{i.name}</span>
+                                            <span className="text-xs text-muted-foreground">({i.email})</span>
+                                        </label>
+                                    ))
+                                )}
+                            </div>
+                            {selectedInspectorIds.length > 0 && (
+                                <p className="text-xs text-muted-foreground">{selectedInspectorIds.length} inspector(s) selected</p>
+                            )}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="manager">Assign Manager (Optional)</Label>
                             <select
-                                id="inspector"
+                                id="manager"
                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                value={selectedInspectorId}
-                                onChange={(e) => setSelectedInspectorId(e.target.value)}
-                                required
+                                value={selectedManagerId}
+                                onChange={(e) => setSelectedManagerId(e.target.value)}
                             >
-                                <option value="">Select Inspector</option>
-                                {inspectors.map((i) => (
-                                    <option key={i.id} value={i.id}>{i.name} ({i.email})</option>
+                                <option value="">No Manager</option>
+                                {managers.map((m) => (
+                                    <option key={m.id} value={m.id}>{m.name} ({m.email})</option>
                                 ))}
                             </select>
                         </div>
                     </CardContent>
                     <CardFooter className="justify-end border-t p-4">
-                        <Button type="submit" disabled={loading || !selectedProjectId || !selectedInspectorId}>
+                        <Button type="submit" disabled={loading || !selectedProjectId || selectedInspectorIds.length === 0}>
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Assign Inspector
+                            Assign {selectedInspectorIds.length > 0 ? `${selectedInspectorIds.length} Inspector${selectedInspectorIds.length > 1 ? 's' : ''}` : 'Inspector'}{selectedManagerId ? ' + Manager' : ''}
                         </Button>
                     </CardFooter>
                 </form>
@@ -293,6 +339,7 @@ export default function AssignmentsPage() {
                                 <tr className="border-b bg-muted/50 text-left font-medium">
                                     <th className="p-4">Company Name</th>
                                     <th className="p-4">Project Name</th>
+                                    <th className="p-4">Manager</th>
                                     <th className="p-4">Inspector Name</th>
                                     <th className="p-4">Assigned By</th>
                                     <th className="p-4">Date Assigned</th>
@@ -303,7 +350,7 @@ export default function AssignmentsPage() {
                             <tbody className="divide-y">
                                 {filteredAssignments.length === 0 ? (
                                     <tr>
-                                        <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                                        <td colSpan={8} className="p-8 text-center text-muted-foreground">
                                             No assignments found.
                                         </td>
                                     </tr>
@@ -319,6 +366,22 @@ export default function AssignmentsPage() {
                                                     <Briefcase className="h-4 w-4 text-muted-foreground" />
                                                     {assignment.project.name}
                                                 </div>
+                                                {assignment.project.projectManagers?.length > 0 && (
+                                                    <div className="mt-1">
+                                                        <Badge variant="outline" className="text-[10px] bg-purple-50 text-purple-700 border-purple-200">
+                                                            Mgr: {assignment.project.projectManagers[0]?.manager?.name}
+                                                        </Badge>
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="p-4">
+                                                {assignment.project.managers?.length > 0 ? (
+                                                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                                                        {assignment.project.managers[0]?.name || "Manager"}
+                                                    </Badge>
+                                                ) : (
+                                                    <span className="text-muted-foreground text-xs">No manager</span>
+                                                )}
                                             </td>
                                             <td className="p-4">
                                                 <div className="flex items-center gap-2">

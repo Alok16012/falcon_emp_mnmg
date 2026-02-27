@@ -10,18 +10,20 @@ datasource db {
 }
 
 model User {
-  id                     String       @id @default(uuid())
-  name                   String
-  email                  String       @unique
-  password               String
-  role                   Role         @default(CLIENT)
-  isActive               Boolean      @default(true)
-  createdAt              DateTime     @default(now())
-  companyId              String?
-  assignmentsAsAssigner  Assignment[] @relation("AssignmentAssigner")
-  assignmentsAsInspector Assignment[] @relation("AssignmentInspector")
-  inspections            Inspection[]
-  company                Company?     @relation(fields: [companyId], references: [id])
+  id                       String           @id @default(uuid())
+  name                     String
+  email                    String           @unique
+  password                 String
+  role                     Role             @default(CLIENT)
+  isActive                 Boolean          @default(true)
+  createdAt                DateTime         @default(now())
+  companyId                String?
+  assignmentsAsAssigner    Assignment[]     @relation("AssignmentAssigner")
+  assignmentsAsInspector   Assignment[]     @relation("AssignmentInspector")
+  inspections              Inspection[]
+  company                  Company?         @relation(fields: [companyId], references: [id])
+  managedProjects          ProjectManager[] @relation("ProjectManagers")
+  assignedProjects         ProjectManager[] @relation("ProjectManagerAssigner")
 }
 
 model Company {
@@ -38,15 +40,16 @@ model Company {
 }
 
 model Project {
-  id            String         @id @default(uuid())
+  id            String           @id @default(uuid())
   companyId     String
   name          String
   description   String?
   createdBy     String
-  createdAt     DateTime       @default(now())
+  createdAt     DateTime         @default(now())
   assignments   Assignment[]
   formTemplates FormTemplate[]
-  company       Company        @relation(fields: [companyId], references: [id])
+  company       Company          @relation(fields: [companyId], references: [id])
+  projectManagers ProjectManager[]
 }
 
 model Assignment {
@@ -96,6 +99,19 @@ model FormTemplate {
   createdAt    DateTime         @default(now())
   project      Project          @relation(fields: [projectId], references: [id])
   responses    InspectionData[]
+}
+
+model ProjectManager {
+  id         String   @id @default(uuid())
+  projectId  String
+  managerId  String
+  assignedBy String
+  createdAt  DateTime @default(now())
+  project    Project  @relation(fields: [projectId], references: [id])
+  manager    User     @relation("ProjectManagers", fields: [managerId], references: [id])
+  assigner   User     @relation("ProjectManagerAssigner", fields: [assignedBy], references: [id])
+
+  @@unique([projectId, managerId])
 }
 
 enum Role {

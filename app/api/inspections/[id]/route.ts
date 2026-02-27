@@ -30,8 +30,9 @@ export async function PATCH(
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 
-        // Cannot edit if not in draft
-        if (inspection.status !== "draft") {
+        // Cannot edit if not in draft, unless inspector is reverting pending back to draft
+        const isRevertToDraft = status === "draft" && inspection.status === "pending"
+        if (inspection.status !== "draft" && !isRevertToDraft) {
             return NextResponse.json({ error: "Inspection is already submitted and cannot be edited" }, { status: 400 })
         }
 
@@ -39,6 +40,10 @@ export async function PATCH(
         const updateData: any = { status }
         if (status === "pending") {
             updateData.submittedAt = new Date()
+        }
+        // If reverting to draft, clear submittedAt
+        if (isRevertToDraft) {
+            updateData.submittedAt = null
         }
 
         // Use transaction for status update and response upserts

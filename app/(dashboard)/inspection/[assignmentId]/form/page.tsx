@@ -21,10 +21,13 @@ import {
     FileText,
     Image as ImageIcon,
     Upload,
-    ExternalLink
+    ExternalLink,
+    Camera,
+    Pencil
 } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import CameraCapture from "@/components/CameraCapture"
 
 export default function InspectionFormPage() {
     const { data: session, status: authStatus } = useSession()
@@ -41,6 +44,7 @@ export default function InspectionFormPage() {
     const [saving, setSaving] = useState(false)
     const [lastSaved, setLastSaved] = useState<Date | null>(null)
     const [isDirty, setIsDirty] = useState(false)
+    const [cameraFieldId, setCameraFieldId] = useState<string | null>(null)
 
     // Redirect if not inspector
     useEffect(() => {
@@ -342,23 +346,34 @@ export default function InspectionFormPage() {
                             </div>
                         ) : (
                             !readOnly && (
-                                <div className="flex items-center justify-center w-full">
-                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/5 hover:bg-muted/10 transition-colors">
-                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                            <Upload className="w-8 h-8 mb-3 text-muted-foreground" />
-                                            <p className="mb-2 text-sm text-muted-foreground">
-                                                <span className="font-semibold">Click to upload</span> or drag and drop
-                                            </p>
-                                        </div>
-                                        <input
-                                            type="file"
-                                            className="hidden"
-                                            onChange={(e) => {
-                                                const file = e.target.files?.[0]
-                                                if (file) handleFileUpload(template.id, file)
-                                            }}
-                                        />
-                                    </label>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-center w-full">
+                                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/5 hover:bg-muted/10 transition-colors">
+                                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                <Upload className="w-8 h-8 mb-3 text-muted-foreground" />
+                                                <p className="mb-2 text-sm text-muted-foreground">
+                                                    <span className="font-semibold">Click to upload</span> or drag and drop
+                                                </p>
+                                            </div>
+                                            <input
+                                                type="file"
+                                                className="hidden"
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0]
+                                                    if (file) handleFileUpload(template.id, file)
+                                                }}
+                                            />
+                                        </label>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="w-full"
+                                        onClick={() => setCameraFieldId(template.id)}
+                                    >
+                                        <Camera className="h-4 w-4 mr-2" />
+                                        Use Camera
+                                    </Button>
                                 </div>
                             )
                         )}
@@ -421,9 +436,36 @@ export default function InspectionFormPage() {
                 <div className="container max-w-5xl mt-6">
                     <div className="bg-muted p-4 rounded-lg flex items-center gap-3 border shadow-inner">
                         <AlertCircle className="h-5 w-5 text-muted-foreground" />
-                        <p className="text-sm font-medium text-muted-foreground">
-                            This form has been submitted and cannot be edited.
+                        <p className="text-sm font-medium text-muted-foreground flex-1">
+                            This form has been submitted and is pending approval.
                         </p>
+                        {inspection?.status === "pending" && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={async () => {
+                                    if (confirm("Request to edit this form? It will be reverted to draft mode.")) {
+                                        try {
+                                            const res = await fetch(`/api/inspections/${inspection.id}`, {
+                                                method: "PATCH",
+                                                headers: { "Content-Type": "application/json" },
+                                                body: JSON.stringify({ status: "draft" })
+                                            })
+                                            if (res.ok) {
+                                                window.location.reload()
+                                            } else {
+                                                alert("Failed to request edit")
+                                            }
+                                        } catch (error) {
+                                            alert("Failed to request edit")
+                                        }
+                                    }
+                                }}
+                            >
+                                <Pencil className="h-3 w-3 mr-1" />
+                                Request Edit
+                            </Button>
+                        )}
                     </div>
                 </div>
             )}
@@ -443,6 +485,78 @@ export default function InspectionFormPage() {
                 ) : (
                     templates.map(renderField)
                 )}
+
+                {/* Paper Form Photo Section */}
+                <Card className="border-primary/20">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-primary" />
+                            Paper Form Photo
+                        </CardTitle>
+                        <CardDescription>
+                            If you have an offline paper form, attach its photo here
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {responses["paperFormPhoto"] ? (
+                                <div className="flex items-center gap-4 p-3 rounded-md bg-muted/50 border">
+                                    <div className="relative h-24 w-24 rounded border overflow-hidden bg-white">
+                                        <img src={responses["paperFormPhoto"]} alt="Paper form" className="h-full w-full object-cover" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium truncate">Paper form uploaded</p>
+                                        <div className="flex gap-2 mt-2">
+                                            <Button size="sm" variant="outline" asChild>
+                                                <a href={responses["paperFormPhoto"]} target="_blank" rel="noopener noreferrer">
+                                                    <ExternalLink className="h-3 w-3 mr-1" /> View
+                                                </a>
+                                            </Button>
+                                            {!isSubmitted && (
+                                                <Button size="sm" variant="ghost" onClick={() => handleFieldChange("paperFormPhoto", "")}>
+                                                    Replace
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : !isSubmitted ? (
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-center w-full">
+                                        <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-lg cursor-pointer bg-muted/5 hover:bg-muted/10 transition-colors">
+                                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                <Upload className="w-6 h-6 mb-2 text-muted-foreground" />
+                                                <p className="text-sm text-muted-foreground">
+                                                    <span className="font-semibold">Click to upload</span>
+                                                </p>
+                                            </div>
+                                            <input
+                                                type="file"
+                                                className="hidden"
+                                                accept="image/*"
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0]
+                                                    if (file) handleFileUpload("paperFormPhoto", file)
+                                                }}
+                                            />
+                                        </label>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="w-full"
+                                        onClick={() => setCameraFieldId("paperFormPhoto")}
+                                    >
+                                        <Camera className="h-4 w-4 mr-2" />
+                                        Use Camera
+                                    </Button>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground italic">No paper form attached</p>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
             </main>
 
             {/* Bottom Action Bar */}
@@ -479,6 +593,17 @@ export default function InspectionFormPage() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Camera Capture Modal */}
+            {cameraFieldId && (
+                <CameraCapture
+                    onCapture={(file) => {
+                        handleFileUpload(cameraFieldId, file)
+                        setCameraFieldId(null)
+                    }}
+                    onClose={() => setCameraFieldId(null)}
+                />
             )}
         </div>
     )

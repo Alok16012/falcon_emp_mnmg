@@ -43,6 +43,7 @@ import { Label } from "@/components/ui/label"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import BulkImportInspectors from "@/components/BulkImportInspectors"
 
 export default function UserManagementPage() {
     const [users, setUsers] = useState<any[]>([])
@@ -190,15 +191,17 @@ export default function UserManagementPage() {
                     <h1 className="text-3xl font-bold tracking-tight">System Users</h1>
                     <p className="text-muted-foreground font-medium text-sm">Manage access, roles, and account security</p>
                 </div>
-                <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-                    <DialogTrigger asChild>
-                        <Button className="shadow-md h-11 font-bold">
-                            <UserPlus className="mr-2 h-4 w-4" />
-                            Create User
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                        <form onSubmit={handleCreateUser}>
+                <div className="flex items-center gap-3">
+                    <BulkImportInspectors onImportComplete={fetchData} />
+                    <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="shadow-md h-11 font-bold">
+                                <UserPlus className="mr-2 h-4 w-4" />
+                                Create User
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <form onSubmit={handleCreateUser}>
                             <DialogHeader>
                                 <DialogTitle>Create New User</DialogTitle>
                                 <DialogDescription>
@@ -287,6 +290,7 @@ export default function UserManagementPage() {
                         </form>
                     </DialogContent>
                 </Dialog>
+                </div>
             </div>
 
             {/* Filters Bar */}

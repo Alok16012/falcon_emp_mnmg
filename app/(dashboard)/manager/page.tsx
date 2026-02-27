@@ -21,6 +21,7 @@ import Link from "next/link"
 import { format, formatDistanceToNow } from "date-fns"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import BulkImportInspectors from "@/components/BulkImportInspectors"
 
 export default function ManagerDashboard() {
     const { data: session } = useSession()
@@ -115,8 +116,13 @@ export default function ManagerDashboard() {
     return (
         <div className="space-y-8">
             <div className="flex flex-col gap-1">
-                <h1 className="text-3xl font-bold tracking-tight">Manager Dashboard</h1>
-                <p className="text-muted-foreground font-medium text-sm">Monitor operations and review pending inspections</p>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Manager Dashboard</h1>
+                        <p className="text-muted-foreground font-medium text-sm">Monitor operations and review pending inspections</p>
+                    </div>
+                    <BulkImportInspectors />
+                </div>
             </div>
 
             {/* Top Stats Row */}

@@ -7,7 +7,7 @@ import { signOut, useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { LayoutDashboard, Users, ClipboardList, ShieldCheck, UserCircle, LogOut, Building2, FolderOpen, ClipboardCheck, FileText, X, Folder, HardHat, BarChart2 } from "lucide-react"
+import { LayoutDashboard, Users, ClipboardList, ShieldCheck, UserCircle, LogOut, Building2, FolderOpen, ClipboardCheck, FileText, X, Folder, HardHat, BarChart2, Users2 } from "lucide-react"
 
 export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
     const pathname = usePathname()
@@ -39,6 +39,7 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
         { name: "Companies", href: "/companies", icon: Building2, roles: ["ADMIN", "MANAGER", "INSPECTION_BOY"] },
         { name: "Projects", href: "/projects", icon: Folder, roles: ["ADMIN", "MANAGER"] },
         { name: "Assignments", href: "/assignments", icon: HardHat, roles: ["ADMIN", "MANAGER"] },
+        { name: "Groups", href: "/groups", icon: Users2, roles: ["ADMIN", "MANAGER"] },
         { name: "Approvals", href: "/approvals", icon: ClipboardCheck, roles: ["ADMIN", "MANAGER"], badge: true },
         { name: "Users", href: "/admin/users", icon: Users, roles: ["ADMIN"] },
 

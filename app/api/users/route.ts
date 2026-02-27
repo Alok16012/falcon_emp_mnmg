@@ -14,13 +14,37 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url)
     const role = searchParams.get("role")
+    const ids = searchParams.get("ids")
 
     try {
+        // Get users by IDs
+        if (ids) {
+            const userIds = ids.split(",")
+            const users = await prisma.user.findMany({
+                where: { id: { in: userIds } },
+                select: { id: true, name: true, email: true }
+            })
+            return NextResponse.json(users)
+        }
+
         if (role === "INSPECTION_BOY") {
             const users = await prisma.user.findMany({
                 where: {
                     role: Role.INSPECTION_BOY,
-                    isActive: true,
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                },
+            })
+            return NextResponse.json(users)
+        }
+
+        if (role === "MANAGER") {
+            const users = await prisma.user.findMany({
+                where: {
+                    role: Role.MANAGER,
                 },
                 select: {
                     id: true,

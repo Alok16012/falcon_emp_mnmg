@@ -32,29 +32,35 @@ export async function GET(req: Request) {
         const assignments = await prisma.assignment.findMany({
             where,
             include: {
-                project: {
-                    include: {
-                        company: true
-                    }
-                },
-                inspectionBoy: {
-                    select: {
-                        name: true,
-                        email: true
-                    }
-                },
-                assigner: {
-                    select: {
-                        name: true
-                    }
-                }
+                project: { include: { company: true } },
+                inspectionBoy: { select: { id: true, name: true, email: true } },
+                assigner: { select: { name: true } }
             },
-            orderBy: {
-                createdAt: "desc"
-            }
+            orderBy: { createdAt: "desc" }
         })
 
-        return NextResponse.json(assignments)
+        // Try to get project managers (may fail if table doesn't exist)
+        let projectManagers: any[] = []
+        try {
+            projectManagers = await prisma.projectManager.findMany({
+                include: { manager: { select: { id: true, name: true, email: true } } }
+            })
+        } catch (e) {
+            console.log("ProjectManager table not available")
+        }
+
+        // Add managers to each project
+        const result = assignments.map(a => ({
+            ...a,
+            project: {
+                ...a.project,
+                managers: projectManagers
+                    .filter(pm => pm.projectId === a.projectId)
+                    .map(pm => pm.manager)
+            }
+        }))
+
+        return NextResponse.json(result)
     } catch (error) {
         console.error("GET_ASSIGNMENTS_ERROR", error)
         return NextResponse.json({ error: "Internal Error" }, { status: 500 })
@@ -70,47 +76,51 @@ export async function POST(req: Request) {
 
     try {
         const body = await req.json()
-        const { projectId, inspectionBoyId } = body
+        const { projectId, inspectorIds, managerId } = body
 
-        console.log("ASSIGNMENT_POST_DEBUG:", {
-            sessionUserId: session.user.id,
-            projectId,
-            inspectionBoyId
-        })
-
-        if (!projectId || !inspectionBoyId) {
+        if (!projectId || !inspectorIds || !Array.isArray(inspectorIds) || inspectorIds.length === 0) {
             return NextResponse.json({ error: "Missing fields" }, { status: 400 })
         }
 
-        // Check for duplicate active assignment
-        const existingAssignment = await prisma.assignment.findFirst({
-            where: {
-                projectId,
-                inspectionBoyId,
-                status: "active"
-            }
-        })
+        const created: any[] = []
+        const failed: any[] = []
 
-        if (existingAssignment) {
-            return NextResponse.json({ error: "Active assignment already exists for this inspector on this project" }, { status: 400 })
+        // First create assignments
+        for (const inspectionBoyId of inspectorIds) {
+            const existingAssignment = await prisma.assignment.findFirst({
+                where: { projectId, inspectionBoyId, status: "active" }
+            })
+
+            if (existingAssignment) {
+                failed.push({ inspectionBoyId, error: "Already assigned" })
+                continue
+            }
+
+            try {
+                const assignment = await prisma.assignment.create({
+                    data: { projectId, inspectionBoyId, assignedBy: session.user.id, status: "active" }
+                })
+                created.push(assignment)
+            } catch (err: any) {
+                failed.push({ inspectionBoyId, error: err.message })
+            }
         }
 
-        const assignment = await prisma.assignment.create({
-            data: {
-                projectId,
-                inspectionBoyId,
-                assignedBy: session.user.id,
-                status: "active"
+        // Try to assign manager (may fail if table doesn't exist)
+        if (managerId) {
+            try {
+                await prisma.projectManager.deleteMany({ where: { projectId } })
+                await prisma.projectManager.create({
+                    data: { projectId, managerId, assignedBy: session.user.id }
+                })
+            } catch (mgrErr) {
+                console.log("Manager assignment skipped:", mgrErr)
             }
-        })
+        }
 
-        return NextResponse.json(assignment)
+        return NextResponse.json({ created, failed })
     } catch (error: any) {
-        console.error("POST_ASSIGNMENT_ERROR_FULL:", error)
-        return NextResponse.json({
-            error: "Internal Error",
-            details: error?.message || "Unknown error"
-        }, { status: 500 })
+        console.error("ERROR:", error)
+        return NextResponse.json({ error: error.message }, { status: 500 })
     }
-
 }
