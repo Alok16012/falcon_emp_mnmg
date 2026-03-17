@@ -8,8 +8,7 @@ const nextConfig = {
     async headers() {
         return [
             {
-                // Only apply no-store to API routes — NOT to static assets
-                source: "/api/:path*",
+                source: "/((?!_next/static|_next/image|favicon.ico).*)",
                 headers: [
                     { key: "Cache-Control", value: "no-store, must-revalidate" },
                 ],
