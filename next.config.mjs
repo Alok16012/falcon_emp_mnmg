@@ -14,13 +14,6 @@ const nextConfig = {
                     { key: "Cache-Control", value: "no-store, must-revalidate" },
                 ],
             },
-            {
-                // Static assets should be cached normally by the browser
-                source: "/_next/static/:path*",
-                headers: [
-                    { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
-                ],
-            },
         ]
     },
 };
