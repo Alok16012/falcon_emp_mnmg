@@ -13,6 +13,29 @@ export async function GET(req: Request) {
     const assignmentId = searchParams.get("assignmentId")
 
     if (!assignmentId) {
+        // Support ?recent=N for inspectors to fetch their recent submissions
+        const recent = searchParams.get("recent")
+        if (recent && session.user.role === Role.INSPECTION_BOY) {
+            const limit = Math.min(20, Math.max(1, parseInt(recent) || 5))
+            const recentInspections = await prisma.inspection.findMany({
+                where: { submittedBy: session.user.id },
+                take: limit,
+                orderBy: [{ submittedAt: "desc" }, { createdAt: "desc" }],
+                select: {
+                    id: true,
+                    status: true,
+                    submittedAt: true,
+                    createdAt: true,
+                    assignmentId: true,
+                    assignment: {
+                        select: {
+                            project: { select: { name: true } }
+                        }
+                    }
+                }
+            })
+            return NextResponse.json(recentInspections)
+        }
         return NextResponse.json({ error: "Missing assignmentId" }, { status: 400 })
     }
 

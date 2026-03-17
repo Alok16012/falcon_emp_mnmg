@@ -22,6 +22,13 @@ import {
 import Link from "next/link"
 import * as XLSX from "xlsx"
 import { toast } from "sonner"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 
 interface Manager {
     id: string
@@ -55,6 +62,11 @@ interface AvailableUser {
     email: string
 }
 
+interface Company {
+    id: string
+    name: string
+}
+
 // ─── Detail View ─────────────────────────────────────────────────────────────
 
 function GroupDetailView({
@@ -81,7 +93,7 @@ function GroupDetailView({
     const [loadingMembers, setLoadingMembers] = useState(false)
 
     const removeInspector = async (assignmentId: string) => {
-        if (!confirm("Remove this inspector from the group?")) return
+        if (!confirm("Are you sure you want to remove this inspector from the group? This will permanently delete their assignment.")) return
         setDeletingInspectorId(assignmentId)
         try {
             const res = await fetch(`/api/groups?assignmentId=${assignmentId}`, { method: "DELETE" })
@@ -99,7 +111,7 @@ function GroupDetailView({
     }
 
     const removeManager = async (managerId: string) => {
-        if (!confirm("Remove this manager from the group?")) return
+        if (!confirm("Are you sure you want to remove this manager from the group?")) return
         setDeletingManagerId(managerId)
         try {
             const res = await fetch(`/api/groups?managerId=${managerId}&projectId=${project.id}`, { method: "DELETE" })
@@ -360,6 +372,31 @@ function GroupsContent() {
     const [addingMembers, setAddingMembers] = useState(false)
     const [loadingMembers, setLoadingMembers] = useState(false)
 
+    // Create Group State
+    const [createGroupOpen, setCreateGroupOpen] = useState(false)
+    const [companies, setCompanies] = useState<Company[]>([])
+    const [fetchingCompanies, setFetchingCompanies] = useState(false)
+
+    const openCreateGroupDialog = async () => {
+        setCreateGroupOpen(true)
+        if (companies.length === 0) {
+            setFetchingCompanies(true)
+            try {
+                const res = await fetch("/api/companies")
+                if (res.ok) {
+                    const data = await res.json()
+                    setCompanies(data)
+                } else {
+                    toast.error("Failed to load companies")
+                }
+            } catch (error) {
+                toast.error("Failed to fetch companies")
+            } finally {
+                setFetchingCompanies(false)
+            }
+        }
+    }
+
     useEffect(() => {
         if (status === "unauthenticated") {
             router.push("/login")
@@ -409,7 +446,7 @@ function GroupsContent() {
     }
 
     const removeInspectorFromCard = async (assignmentId: string) => {
-        if (!confirm("Remove this inspector from the group?")) return
+        if (!confirm("Are you sure you want to remove this inspector from the group? This will permanently delete their assignment.")) return
         setDeletingId(assignmentId)
         try {
             const res = await fetch(`/api/groups?assignmentId=${assignmentId}`, { method: "DELETE" })
@@ -534,9 +571,23 @@ function GroupsContent() {
                     <p className="text-muted-foreground">View company projects and team members</p>
                 </div>
                 {groups.length > 0 && (
-                    <Button variant="outline" onClick={() => exportToExcel()}>
-                        <Download className="h-4 w-4 mr-2" />
-                        Export All
+                    <div className="flex items-center gap-2">
+                        {canEdit && (
+                            <Button onClick={openCreateGroupDialog}>
+                                <Users name="Plus" className="h-4 w-4 mr-2" />
+                                Create Group
+                            </Button>
+                        )}
+                        <Button variant="outline" onClick={() => exportToExcel()}>
+                            <Download className="h-4 w-4 mr-2" />
+                            Export All
+                        </Button>
+                    </div>
+                )}
+                {groups.length === 0 && canEdit && (
+                    <Button onClick={openCreateGroupDialog}>
+                        <Users name="Plus" className="h-4 w-4 mr-2" />
+                        Create Group
                     </Button>
                 )}
             </div>
@@ -608,7 +659,7 @@ function GroupsContent() {
                                                                             <button
                                                                                 onClick={async (e) => {
                                                                                     e.stopPropagation()
-                                                                                    if (!confirm(`Remove ${m.name} as manager?`)) return
+                                                                                    if (!confirm(`Are you sure you want to remove ${m.name} as manager from this group?`)) return
                                                                                     try {
                                                                                         const res = await fetch(`/api/groups?managerId=${m.id}&projectId=${project.id}`, { method: "DELETE" })
                                                                                         if (res.ok) { toast.success("Manager removed"); fetchGroups() }
@@ -713,7 +764,247 @@ function GroupsContent() {
                     loadingMembers={loadingMembers}
                 />
             )}
+
+            {/* Create Group Dialog */}
+            <CreateGroupDialog
+                open={createGroupOpen}
+                onOpenChange={setCreateGroupOpen}
+                companies={companies}
+                fetchingCompanies={fetchingCompanies}
+                onSuccess={() => {
+                    fetchGroups()
+                    setCreateGroupOpen(false)
+                }}
+            />
         </div>
+    )
+}
+
+// ─── Create Group Dialog ─────────────────────────────────────────────────────
+
+function CreateGroupDialog({
+    open,
+    onOpenChange,
+    companies,
+    fetchingCompanies,
+    onSuccess,
+}: {
+    open: boolean
+    onOpenChange: (open: boolean) => void
+    companies: Company[]
+    fetchingCompanies: boolean
+    onSuccess: () => void
+}) {
+    const [loading, setLoading] = useState(false)
+    const [loadingUsers, setLoadingUsers] = useState(false)
+    const [availableInspectors, setAvailableInspectors] = useState<AvailableUser[]>([])
+    const [availableManagers, setAvailableManagers] = useState<AvailableUser[]>([])
+
+    const [formData, setFormData] = useState({
+        name: "",
+        companyId: "",
+        managerIds: [] as string[],
+        inspectorIds: [] as string[]
+    })
+
+    useEffect(() => {
+        if (open) {
+            setFormData({
+                name: "",
+                companyId: "",
+                managerIds: [],
+                inspectorIds: []
+            })
+            fetchUsers()
+        }
+    }, [open])
+
+    const fetchUsers = async () => {
+        setLoadingUsers(true)
+        try {
+            const [insRes, mgrRes] = await Promise.all([
+                fetch("/api/users?role=INSPECTION_BOY"),
+                fetch("/api/users?role=MANAGER"),
+            ])
+            if (insRes.ok) setAvailableInspectors(await insRes.json())
+            if (mgrRes.ok) setAvailableManagers(await mgrRes.json())
+        } catch {
+            toast.error("Failed to load users")
+        } finally {
+            setLoadingUsers(false)
+        }
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!formData.companyId) {
+            toast.error("Please select a company")
+            return
+        }
+        setLoading(true)
+        try {
+            const res = await fetch("/api/groups", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formData),
+            })
+            if (res.ok) {
+                toast.success("Group created successfully")
+                onSuccess()
+            } else {
+                const err = await res.json()
+                toast.error(err.error || "Failed to create group")
+            }
+        } catch {
+            toast.error("An error occurred")
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Users className="h-5 w-5" />
+                        Create New Group
+                    </DialogTitle>
+                    <DialogDescription>
+                        Create a new project group and assign team members
+                    </DialogDescription>
+                </DialogHeader>
+
+                <form onSubmit={handleSubmit} className="space-y-6 py-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Company</label>
+                            <Select
+                                value={formData.companyId}
+                                onValueChange={(val) => setFormData({ ...formData, companyId: val })}
+                                disabled={fetchingCompanies}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={fetchingCompanies ? "Loading..." : "Select company"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {companies.map(c => (
+                                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Group Name</label>
+                            <Input
+                                placeholder="Enter group/project name"
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid gap-6 md:grid-cols-2">
+                        {/* Managers Select */}
+                        <div className="space-y-3">
+                            <label className="text-sm font-medium flex items-center gap-2">
+                                <Shield className="h-4 w-4 text-purple-600" />
+                                Assign Managers
+                            </label>
+                            <div className="border rounded-xl p-3 space-y-2 max-h-60 overflow-y-auto bg-slate-50/50">
+                                {loadingUsers ? (
+                                    <Loader2 className="h-4 w-4 animate-spin mx-auto text-slate-400" />
+                                ) : availableManagers.length === 0 ? (
+                                    <p className="text-xs text-muted-foreground italic text-center py-4">No managers found</p>
+                                ) : (
+                                    availableManagers.map(m => (
+                                        <label key={m.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white transition-colors cursor-pointer group">
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.managerIds.includes(m.id)}
+                                                onChange={(e) => {
+                                                    const ids = e.target.checked
+                                                        ? [...formData.managerIds, m.id]
+                                                        : formData.managerIds.filter(id => id !== m.id)
+                                                    setFormData({ ...formData, managerIds: ids })
+                                                }}
+                                                className="h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
+                                            />
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-bold text-slate-700 truncate">{m.name}</p>
+                                                <p className="text-[10px] font-medium text-slate-400 truncate">{m.email}</p>
+                                            </div>
+                                        </label>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Inspectors Select */}
+                        <div className="space-y-3">
+                            <label className="text-sm font-medium flex items-center gap-2">
+                                <Users className="h-4 w-4 text-amber-600" />
+                                Assign Inspectors
+                            </label>
+                            <div className="border rounded-xl p-3 space-y-2 max-h-60 overflow-y-auto bg-slate-50/50">
+                                {loadingUsers ? (
+                                    <Loader2 className="h-4 w-4 animate-spin mx-auto text-slate-400" />
+                                ) : availableInspectors.length === 0 ? (
+                                    <p className="text-xs text-muted-foreground italic text-center py-4">No inspectors found</p>
+                                ) : (
+                                    availableInspectors.map(i => (
+                                        <label key={i.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white transition-colors cursor-pointer group">
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.inspectorIds.includes(i.id)}
+                                                onChange={(e) => {
+                                                    const ids = e.target.checked
+                                                        ? [...formData.inspectorIds, i.id]
+                                                        : formData.inspectorIds.filter(id => id !== i.id)
+                                                    setFormData({ ...formData, inspectorIds: ids })
+                                                }}
+                                                className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                                            />
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-bold text-slate-700 truncate">{i.name}</p>
+                                                <p className="text-[10px] font-medium text-slate-400 truncate">{i.email}</p>
+                                            </div>
+                                        </label>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1 h-11"
+                            onClick={() => onOpenChange(false)}
+                            disabled={loading}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            className="flex-1 h-11 bg-slate-900"
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Creating Group...
+                                </>
+                            ) : (
+                                "Create Group"
+                            )}
+                        </Button>
+                    </div>
+                </form>
+            </DialogContent>
+        </Dialog>
     )
 }
 

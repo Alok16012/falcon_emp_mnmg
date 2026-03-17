@@ -77,7 +77,7 @@ export default function LoginPage() {
         <div className="flex items-center justify-center min-h-screen bg-gray-100">
             <Card className="w-full max-w-md">
                 <CardHeader>
-                    <CardTitle className="text-2xl text-center">CIMS Login</CardTitle>
+                    <CardTitle className="text-2xl text-center">CIMS Login v2</CardTitle>
                     <CardDescription className="text-center">
                         Enter your credentials to access the system
                     </CardDescription>

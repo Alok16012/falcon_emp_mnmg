@@ -94,9 +94,57 @@ export async function DELETE(
             return new NextResponse("Forbidden", { status: 403 })
         }
 
+        const companyId = params.id;
+
+        // Manual cascaded deletion
+        // 1. Get all projects for this company
+        const projects = await prisma.project.findMany({
+            where: { companyId }
+        });
+
+        for (const project of projects) {
+            const projectId = project.id;
+
+            // 1a. Delete Inspections and InspectionData for all assignments in this project
+            const assignments = await prisma.assignment.findMany({
+                where: { projectId }
+            });
+
+            for (const assignment of assignments) {
+                const inspections = await prisma.inspection.findMany({
+                    where: { assignmentId: assignment.id }
+                });
+
+                for (const inspection of inspections) {
+                    await prisma.inspectionData.deleteMany({
+                        where: { inspectionId: inspection.id }
+                    });
+                }
+
+                await prisma.inspection.deleteMany({
+                    where: { assignmentId: assignment.id }
+                });
+            }
+
+            // 1b. Delete Assignments, FormTemplates, ProjectManagers for this project
+            await prisma.assignment.deleteMany({ where: { projectId } });
+            await prisma.formTemplate.deleteMany({ where: { projectId } });
+            await prisma.projectManager.deleteMany({ where: { projectId } });
+
+            // 1c. Delete the project itself
+            await prisma.project.delete({ where: { id: projectId } });
+        }
+
+        // 2. Set companyId to null for all users belonging to this company
+        await prisma.user.updateMany({
+            where: { companyId },
+            data: { companyId: null }
+        });
+
+        // 3. Finally delete the company
         const company = await prisma.company.delete({
             where: {
-                id: params.id,
+                id: companyId,
             },
         })
 

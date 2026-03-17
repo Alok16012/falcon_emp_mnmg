@@ -38,3 +38,45 @@ export async function PATCH(
         return NextResponse.json({ error: "Internal Error" }, { status: 500 })
     }
 }
+
+export async function DELETE(
+    req: Request,
+    { params }: { params: { id: string } }
+) {
+    const session = await getServerSession(authOptions)
+
+    if (!session || (session.user.role !== Role.ADMIN && session.user.role !== Role.MANAGER)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    try {
+        const assignmentId = params.id;
+
+        // Manual cascaded deletion for inspections and their data
+        const inspections = await prisma.inspection.findMany({
+            where: { assignmentId }
+        });
+
+        for (const inspection of inspections) {
+            await prisma.inspectionData.deleteMany({
+                where: { inspectionId: inspection.id }
+            });
+        }
+
+        await prisma.inspection.deleteMany({
+            where: { assignmentId }
+        });
+
+        // Finally delete the assignment
+        const assignment = await prisma.assignment.delete({
+            where: {
+                id: assignmentId
+            }
+        })
+
+        return NextResponse.json(assignment)
+    } catch (error) {
+        console.error("DELETE_ASSIGNMENT_ERROR", error)
+        return NextResponse.json({ error: "Internal Error" }, { status: 500 })
+    }
+}

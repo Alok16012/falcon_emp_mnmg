@@ -31,24 +31,71 @@ export async function GET(req: Request) {
     }
 
     try {
+        if (user.role === Role.INSPECTION_BOY) {
+            const assignments = await prisma.assignment.findMany({
+                where,
+                include: {
+                    project: {
+                        include: {
+                            company: true,
+                            projectManagers: {
+                                include: { manager: { select: { id: true, name: true, email: true } } }
+                            }
+                        }
+                    },
+                    inspectionBoy: { select: { id: true, name: true, email: true } },
+                    assigner: { select: { name: true } }
+                },
+                orderBy: { createdAt: "desc" }
+            });
+
+            const result = assignments.map(a => ({
+                ...a,
+                project: {
+                    id: a.project.id,
+                    name: a.project.name,
+                    company: a.project.company,
+                    managers: a.project.projectManagers.map(pm => pm.manager)
+                }
+            }));
+
+            return NextResponse.json(result);
+        }
+
         // 1. Get all projects that have either an assignment OR a project manager
+        const assignmentWhere = status && status !== "all" && status !== "manager_only"
+            ? { some: { status } }
+            : { some: {} }
+
         const projects = await prisma.project.findMany({
             where: {
                 OR: [
-                    { assignments: { some: {} } },
+                    { assignments: assignmentWhere },
                     { projectManagers: { some: {} } }
                 ]
             },
-            include: {
-                company: true,
+            select: {
+                id: true,
+                name: true,
+                createdAt: true,
+                company: { select: { id: true, name: true } },
                 assignments: {
-                    include: {
+                    where: status && status !== "all" && status !== "manager_only"
+                        ? { status }
+                        : undefined,
+                    select: {
+                        id: true,
+                        projectId: true,
+                        inspectionBoyId: true,
+                        assignedBy: true,
+                        status: true,
+                        createdAt: true,
                         inspectionBoy: { select: { id: true, name: true, email: true } },
                         assigner: { select: { name: true } }
                     }
                 },
                 projectManagers: {
-                    include: {
+                    select: {
                         manager: { select: { id: true, name: true, email: true } }
                     }
                 }
@@ -57,8 +104,6 @@ export async function GET(req: Request) {
         })
 
         // 2. Flatten into a list of "Display Assignments"
-        // Each inspector assignment is a row.
-        // If a project has NO inspector assignments but HAS managers, add one row for it.
         const result: any[] = []
 
         projects.forEach(project => {
@@ -76,7 +121,7 @@ export async function GET(req: Request) {
                         }
                     })
                 })
-            } else if (managers.length > 0) {
+            } else if (managers.length > 0 && (!status || status === "all" || status === "manager_only")) {
                 // Virtual assignment for manager-only project
                 result.push({
                     id: `virtual-${project.id}`,
@@ -127,12 +172,15 @@ export async function POST(req: Request) {
 
         // First create assignments for inspectors
         if (hasInspectors) {
-            for (const inspectionBoyId of inspectorIds) {
-                const existingAssignment = await prisma.assignment.findFirst({
-                    where: { projectId, inspectionBoyId, status: "active" }
-                })
+            // Check all existing assignments in one query instead of N queries
+            const existingAssignments = await prisma.assignment.findMany({
+                where: { projectId, inspectionBoyId: { in: inspectorIds }, status: "active" },
+                select: { inspectionBoyId: true }
+            })
+            const alreadyAssigned = new Set(existingAssignments.map(a => a.inspectionBoyId))
 
-                if (existingAssignment) {
+            for (const inspectionBoyId of inspectorIds) {
+                if (alreadyAssigned.has(inspectionBoyId)) {
                     failed.push({ inspectionBoyId, error: "Already assigned" })
                     continue
                 }

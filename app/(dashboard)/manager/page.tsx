@@ -19,6 +19,13 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { format, formatDistanceToNow } from "date-fns"
+
+function safeFormat(val: any, fmt: string): string {
+    try { if (!val) return "—"; const d = new Date(val); if (isNaN(d.getTime())) return "—"; return format(d, fmt) } catch { return "—" }
+}
+function safeDistance(val: any): string {
+    try { if (!val) return "—"; const d = new Date(val); if (isNaN(d.getTime())) return "—"; return formatDistanceToNow(d) } catch { return "—" }
+}
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import BulkImportInspectors from "@/components/BulkImportInspectors"
@@ -176,7 +183,7 @@ export default function ManagerDashboard() {
                                         </div>
                                         <div className="flex items-center gap-3 text-xs text-muted-foreground font-medium">
                                             <span className="flex items-center gap-1"><UserCircle2 className="h-3 w-3" /> {i.inspectorName}</span>
-                                            <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {formatDistanceToNow(new Date(i.submittedAt))} ago</span>
+                                            <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {safeDistance(i.submittedAt)} ago</span>
                                         </div>
                                     </div>
                                     <Button size="sm" asChild className="shrink-0 h-8 text-xs font-bold">
@@ -213,7 +220,7 @@ export default function ManagerDashboard() {
                                         <h4 className="font-bold text-sm">{a.projectName}</h4>
                                         <div className="flex items-center gap-3 text-xs text-muted-foreground font-medium">
                                             <span className="flex items-center gap-1 font-bold text-blue-600/80"><HardHat className="h-3 w-3" /> {a.inspectorName}</span>
-                                            <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {format(new Date(a.createdAt), "MMM d, yyyy")}</span>
+                                            <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {safeFormat(a.createdAt, "MMM d, yyyy")}</span>
                                         </div>
                                     </div>
                                     <Badge className={cn(

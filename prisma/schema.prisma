@@ -15,13 +15,15 @@ model User {
   email                    String           @unique
   password                 String
   role                     Role             @default(CLIENT)
+  phone                    String?
+  image                    String?
   isActive                 Boolean          @default(true)
   createdAt                DateTime         @default(now())
   companyId                String?
   assignmentsAsAssigner    Assignment[]     @relation("AssignmentAssigner")
   assignmentsAsInspector   Assignment[]     @relation("AssignmentInspector")
   inspections              Inspection[]
-  company                  Company?         @relation(fields: [companyId], references: [id])
+  company                  Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
   managedProjects          ProjectManager[] @relation("ProjectManagers")
   assignedProjects         ProjectManager[] @relation("ProjectManagerAssigner")
 }
@@ -48,7 +50,7 @@ model Project {
   createdAt     DateTime         @default(now())
   assignments   Assignment[]
   formTemplates FormTemplate[]
-  company       Company          @relation(fields: [companyId], references: [id])
+  company       Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
   projectManagers ProjectManager[]
 }
 
@@ -61,22 +63,33 @@ model Assignment {
   createdAt       DateTime     @default(now())
   assigner        User         @relation("AssignmentAssigner", fields: [assignedBy], references: [id])
   inspectionBoy   User         @relation("AssignmentInspector", fields: [inspectionBoyId], references: [id])
-  project         Project      @relation(fields: [projectId], references: [id])
+  project         Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   inspections     Inspection[]
+
+  @@index([inspectionBoyId])
+  @@index([projectId])
+  @@index([status])
 }
 
 model Inspection {
-  id            String           @id @default(uuid())
-  assignmentId  String
-  status        String           @default("draft")
-  submittedAt   DateTime?
-  createdAt     DateTime         @default(now())
-  approvedAt    DateTime?
-  reviewerNotes String?
-  submittedBy   String
-  assignment    Assignment       @relation(fields: [assignmentId], references: [id])
-  submitter     User             @relation(fields: [submittedBy], references: [id])
-  responses     InspectionData[]
+  id             String           @id @default(uuid())
+  assignmentId   String
+  status         String           @default("draft")
+  submittedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  approvedAt     DateTime?
+  reviewerNotes  String?
+  submittedBy    String
+  paperFormPhoto String?
+  assignment     Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  submitter      User             @relation(fields: [submittedBy], references: [id])
+  responses      InspectionData[]
+
+  @@index([status])
+  @@index([assignmentId])
+  @@index([submittedBy])
+  @@index([submittedAt])
+  @@index([approvedAt])
 }
 
 model InspectionData {
@@ -84,8 +97,11 @@ model InspectionData {
   inspectionId String
   fieldId      String
   value        String?
-  field        FormTemplate @relation(fields: [fieldId], references: [id])
-  inspection   Inspection   @relation(fields: [inspectionId], references: [id])
+  field        FormTemplate @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  inspection   Inspection   @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+
+  @@index([inspectionId])
+  @@index([fieldId])
 }
 
 model FormTemplate {
@@ -98,8 +114,10 @@ model FormTemplate {
   isRequired   Boolean          @default(false)
   displayOrder Int              @default(0)
   createdAt    DateTime         @default(now())
-  project      Project          @relation(fields: [projectId], references: [id])
+  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
   responses    InspectionData[]
+
+  @@index([projectId])
 }
 
 model ProjectManager {
@@ -108,7 +126,7 @@ model ProjectManager {
   managerId  String
   assignedBy String
   createdAt  DateTime @default(now())
-  project    Project  @relation(fields: [projectId], references: [id])
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   manager    User     @relation("ProjectManagers", fields: [managerId], references: [id])
   assigner   User     @relation("ProjectManagerAssigner", fields: [assignedBy], references: [id])
 

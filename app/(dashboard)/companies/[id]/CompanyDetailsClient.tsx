@@ -66,7 +66,7 @@ export default function CompanyDetailsClient({
     }, [companyId])
 
     const handleDeleteProject = async (projectId: string, projectName: string) => {
-        if (!confirm(`Are you sure you want to delete "${projectName}"? This cannot be undone.`)) return
+        if (!confirm(`WARNING: Are you sure you want to delete project "${projectName}"? This will permanently delete ALL related assignments and inspections. This action CANNOT be undone.`)) return
         setDeletingProjectId(projectId)
         try {
             const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE" })
@@ -81,7 +81,7 @@ export default function CompanyDetailsClient({
 
     const handleDeleteCompany = async () => {
         if (!company) return
-        if (!confirm(`Are you sure you want to delete "${company.name}" and all its projects? This cannot be undone.`)) return
+        if (!confirm(`WARNING: Are you sure you want to delete "${company.name}"? This will permanently delete ALL related projects, assignments, and inspections. This action CANNOT be undone.`)) return
         setDeletingCompany(true)
         try {
             const res = await fetch(`/api/companies/${companyId}`, { method: "DELETE" })

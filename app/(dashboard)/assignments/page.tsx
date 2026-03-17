@@ -79,6 +79,15 @@ export default function AssignmentsPage() {
                     }
                 } catch { }
                 setSelectedProjectId(groupProjectId)
+
+                // Pre-select group's managers and inspectors
+                if (project.managers) {
+                    setSelectedManagerIds(project.managers.map((m: any) => m.id))
+                }
+                if (project.inspectors) {
+                    setSelectedInspectorIds(project.inspectors.map((i: any) => i.id))
+                }
+
                 break
             }
         }
@@ -195,6 +204,24 @@ export default function AssignmentsPage() {
             }
         } catch (error) {
             alert("Failed to cancel assignment")
+        }
+    }
+
+    const handleDelete = async (id: string) => {
+        if (!confirm("Are you sure you want to permanently delete this assignment and all its inspections? This cannot be undone.")) return
+
+        try {
+            const res = await fetch(`/api/assignments/${id}`, {
+                method: "DELETE",
+            })
+
+            if (res.ok) {
+                setAssignments(assignments.filter(a => a.id !== id))
+            } else {
+                alert("Failed to delete assignment")
+            }
+        } catch (error) {
+            alert("An error occurred while deleting")
         }
     }
 
@@ -485,17 +512,27 @@ export default function AssignmentsPage() {
                                                 </Badge>
                                             </td>
                                             <td className="p-4 text-right">
-                                                {assignment.status === "active" && (
+                                                <div className="flex justify-end gap-2">
+                                                    {assignment.status === "active" && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+                                                            onClick={() => handleCancel(assignment.id)}
+                                                        >
+                                                            Cancel
+                                                        </Button>
+                                                    )}
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
                                                         className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                                        onClick={() => handleCancel(assignment.id)}
+                                                        onClick={() => handleDelete(assignment.id)}
                                                     >
                                                         <Trash2 className="h-4 w-4 mr-1" />
-                                                        Cancel
+                                                        Delete
                                                     </Button>
-                                                )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))

@@ -133,3 +133,62 @@ export async function DELETE(req: Request) {
         return NextResponse.json({ error: "Internal Error" }, { status: 500 })
     }
 }
+
+// POST - Create a new Group (Project) and assign members
+export async function POST(req: Request) {
+    const session = await getServerSession(authOptions)
+
+    if (!session || (session.user.role !== Role.ADMIN && session.user.role !== Role.MANAGER)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    try {
+        const body = await req.json()
+        const { name, companyId, managerIds, inspectorIds } = body
+
+        if (!name || !companyId) {
+            return NextResponse.json({ error: "Name and Company are required" }, { status: 400 })
+        }
+
+        // Create group and assignments in a transaction
+        const result = await prisma.$transaction(async (tx) => {
+            // 1. Create the project
+            const project = await tx.project.create({
+                data: {
+                    name,
+                    companyId,
+                    createdBy: session.user.id
+                }
+            })
+
+            // 2. Create manager assignments
+            if (managerIds && Array.isArray(managerIds) && managerIds.length > 0) {
+                await tx.projectManager.createMany({
+                    data: managerIds.map(managerId => ({
+                        projectId: project.id,
+                        managerId,
+                        assignedBy: session.user.id
+                    }))
+                })
+            }
+
+            // 3. Create inspector assignments
+            if (inspectorIds && Array.isArray(inspectorIds) && inspectorIds.length > 0) {
+                await tx.assignment.createMany({
+                    data: inspectorIds.map(inspectorId => ({
+                        projectId: project.id,
+                        inspectionBoyId: inspectorId,
+                        assignedBy: session.user.id
+                    }))
+                })
+            }
+
+            return project
+        })
+
+        return NextResponse.json(result)
+    } catch (error) {
+        console.error("POST_GROUP_ERROR", error)
+        return NextResponse.json({ error: "Internal Error" }, { status: 500 })
+    }
+}

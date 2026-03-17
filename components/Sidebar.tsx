@@ -111,21 +111,6 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
                 </nav>
             </div>
 
-            <div className="p-4 border-t bg-muted/20">
-                <div className="flex flex-col gap-1 px-2 mb-4">
-                    <p className="text-sm font-semibold truncate leading-none mb-1">{session?.user?.name}</p>
-                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{role?.replace("_", " ")}</p>
-                </div>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-10 px-3"
-                    onClick={() => signOut({ callbackUrl: "/login" })}
-                >
-                    <LogOut className="h-4 w-4" />
-                    <span className="font-medium">Sign Out</span>
-                </Button>
-            </div>
         </div>
     )
 }

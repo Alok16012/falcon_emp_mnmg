@@ -77,6 +77,11 @@ export async function GET() {
                 rejected,
                 approvalRate: Math.round(approvalRate)
             }
+        }, {
+            headers: {
+                // Cache for 30s, serve stale up to 60s while revalidating in background
+                "Cache-Control": "private, s-maxage=30, stale-while-revalidate=60"
+            }
         })
     } catch (error) {
         console.error("ADMIN_STATS_ERROR", error)

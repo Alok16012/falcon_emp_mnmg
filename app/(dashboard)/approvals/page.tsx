@@ -48,20 +48,19 @@ export default function ApprovalsPage() {
     const fetchData = async (status: string) => {
         setLoading(true)
         try {
-            const endpoint = status === "pending" ? "/api/approvals" : `/api/inspections/all?status=${status}`
-            const res = await fetch(endpoint)
+            const url = `/api/inspections/all?status=${status}&limit=100&withCounts=true`
+            const res = await fetch(url)
             const data = await res.json()
-            setInspections(Array.isArray(data) ? data : [])
 
-            // Fetch all counts for badges
-            const allRes = await fetch("/api/inspections/all")
-            const allData = await allRes.json()
-            if (Array.isArray(allData)) {
+            const items = data?.inspections ?? (Array.isArray(data) ? data : [])
+            setInspections(items)
+
+            if (data?.counts) {
                 setCounts({
-                    pending: allData.filter(i => i.status === "pending").length,
-                    approved: allData.filter(i => i.status === "approved").length,
-                    rejected: allData.filter(i => i.status === "rejected").length,
-                    all: allData.length
+                    pending: data.counts.pending ?? 0,
+                    approved: data.counts.approved ?? 0,
+                    rejected: data.counts.rejected ?? 0,
+                    all: data.counts.all ?? 0
                 })
             }
         } catch (error) {

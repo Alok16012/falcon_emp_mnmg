@@ -122,7 +122,8 @@ export default function InspectionFormPage() {
 
             setResponses(initialResponses)
             if (inspData.submittedAt) {
-                setLastSaved(new Date(inspData.submittedAt))
+                const d = new Date(inspData.submittedAt)
+                if (!isNaN(d.getTime())) setLastSaved(d)
             } else if (inspData.status === "draft") {
                 setLastSaved(new Date())
             }
@@ -813,7 +814,7 @@ export default function InspectionFormPage() {
                             {lastSaved && (
                                 <>
                                     <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                    <span>Last saved: {lastSaved.toLocaleTimeString()}</span>
+                                    <span>Last saved: {isNaN(lastSaved.getTime()) ? "—" : lastSaved.toLocaleTimeString()}</span>
                                     {isDirty && <span className="italic ml-2">(Unsaved changes)</span>}
                                 </>
                             )}

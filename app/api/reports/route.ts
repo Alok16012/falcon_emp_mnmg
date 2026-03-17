@@ -66,6 +66,8 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
+    const projectId = searchParams.get("projectId") || null
+
     // Date range for the selected month/year
     const startDate = new Date(year, month - 1, 1)
     const endDate = new Date(year, month, 0, 23, 59, 59, 999)
@@ -80,7 +82,10 @@ export async function GET(req: Request) {
                     lte: endDate,
                 },
                 assignment: {
-                    project: companyId ? { companyId } : undefined,
+                    project: (companyId || projectId) ? {
+                        id: projectId || undefined,
+                        companyId: companyId || undefined
+                    } : undefined,
                     inspectionBoyId: inspectorId || undefined,
                 },
             },

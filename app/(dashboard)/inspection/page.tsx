@@ -21,12 +21,64 @@ import {
     FileText,
     TrendingUp,
     TrendingDown,
-    Minus
+    Minus,
+    PartyPopper,
+    ThumbsDown,
+    Send,
+    Star
 } from "lucide-react"
 import Link from "next/link"
 import { format, formatDistanceToNow } from "date-fns"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+
+function safeFormat(val: any, fmt: string): string {
+    try {
+        if (!val) return "—"
+        const d = new Date(val)
+        if (isNaN(d.getTime())) return "—"
+        return format(d, fmt)
+    } catch { return "—" }
+}
+
+function safeDistance(val: any): string {
+    try {
+        if (!val) return "—"
+        const d = new Date(val)
+        if (isNaN(d.getTime())) return "—"
+        return formatDistanceToNow(d)
+    } catch { return "—" }
+}
+
+function StatusBadge({ status }: { status: string }) {
+    const config: Record<string, { label: string; className: string }> = {
+        draft: {
+            label: "Draft",
+            className: "bg-amber-100 text-amber-700 border-amber-200"
+        },
+        pending: {
+            label: "Awaiting Approval",
+            className: "bg-yellow-100 text-yellow-700 border-yellow-200"
+        },
+        approved: {
+            label: "✓ Approved",
+            className: "bg-emerald-100 text-emerald-700 border-emerald-200"
+        },
+        rejected: {
+            label: "Rejected",
+            className: "bg-red-100 text-red-700 border-red-200"
+        }
+    }
+    const c = config[status] ?? { label: status, className: "bg-muted text-muted-foreground" }
+    return (
+        <Badge className={cn(
+            "capitalize border text-[10px] h-5 px-2 font-bold shadow-none",
+            c.className
+        )}>
+            {c.label}
+        </Badge>
+    )
+}
 
 export default function InspectionDashboard() {
     const { data: session } = useSession()
@@ -36,15 +88,19 @@ export default function InspectionDashboard() {
     const [reportData, setReportData] = useState<any>(null)
     const [reportLoading, setReportLoading] = useState(true)
 
+    // Main data — loads first, controls the page skeleton
     useEffect(() => {
-        const fetchData = async () => {
+        if (!session?.user?.id) return
+        const fetchMain = async () => {
             try {
                 const [asgnRes, subRes] = await Promise.all([
                     fetch("/api/assignments"),
-                    fetch("/api/inspections?recent=5")
+                    fetch("/api/inspections?recent=20"),
                 ])
-                const asgnData = await asgnRes.json()
-                const subData = await subRes.json()
+                const [asgnData, subData] = await Promise.all([
+                    asgnRes.json(),
+                    subRes.json(),
+                ])
                 setAssignments(Array.isArray(asgnData) ? asgnData : [])
                 setRecentSubmissions(Array.isArray(subData) ? subData : [])
             } catch (error) {
@@ -53,12 +109,13 @@ export default function InspectionDashboard() {
                 setLoading(false)
             }
         }
-        fetchData()
-    }, [])
+        fetchMain()
+    }, [session?.user?.id])
 
+    // Reports — loads independently so it doesn't block main content
     useEffect(() => {
-        const fetchReport = async () => {
-            if (!session?.user?.id) return
+        if (!session?.user?.id) return
+        const fetchReports = async () => {
             try {
                 const now = new Date()
                 const month = now.getMonth() + 1
@@ -67,19 +124,19 @@ export default function InspectionDashboard() {
                 const data = await res.json()
                 setReportData(data)
             } catch (error) {
-                console.error("Failed to fetch report", error)
+                console.error("Failed to fetch report data", error)
             } finally {
                 setReportLoading(false)
             }
         }
-        fetchReport()
-    }, [session])
+        fetchReports()
+    }, [session?.user?.id])
 
     if (loading) {
         return (
             <div className="space-y-8 animate-pulse">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {[1, 2, 3].map((i) => (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    {[1, 2, 3, 4].map((i) => (
                         <Skeleton key={i} className="h-32 w-full rounded-xl" />
                     ))}
                 </div>
@@ -97,7 +154,10 @@ export default function InspectionDashboard() {
 
     const activeCount = assignments.filter(a => a.status === "active").length
     const draftCount = recentSubmissions.filter(s => s.status === "draft").length
-    const completedCount = assignments.filter(a => a.status === "completed").length
+    const pendingCount = recentSubmissions.filter(s => s.status === "pending").length
+    const approvedInspections = recentSubmissions.filter(s => s.status === "approved")
+    const approvedCount = approvedInspections.length
+    const rejectedCount = recentSubmissions.filter(s => s.status === "rejected").length
 
     return (
         <div className="space-y-8">
@@ -107,7 +167,7 @@ export default function InspectionDashboard() {
             </div>
 
             {/* Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Card className="border-none shadow-sm bg-white">
                     <CardContent className="p-6 flex items-center gap-4">
                         <div className="bg-blue-50 text-blue-600 p-3 rounded-xl">
@@ -132,16 +192,65 @@ export default function InspectionDashboard() {
                 </Card>
                 <Card className="border-none shadow-sm bg-white">
                     <CardContent className="p-6 flex items-center gap-4">
-                        <div className="bg-emerald-50 text-emerald-600 p-3 rounded-xl">
+                        <div className="bg-yellow-50 text-yellow-600 p-3 rounded-xl">
+                            <Send className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[11px]">Pending</p>
+                            <p className="text-2xl font-bold">{pendingCount}</p>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="border-none shadow-sm bg-gradient-to-br from-emerald-50 to-white border-emerald-100">
+                    <CardContent className="p-6 flex items-center gap-4">
+                        <div className="bg-emerald-100 text-emerald-600 p-3 rounded-xl">
                             <CheckCircle2 className="h-6 w-6" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[11px]">Completed</p>
-                            <p className="text-2xl font-bold">{completedCount}</p>
+                            <p className="text-sm font-medium text-emerald-700 uppercase tracking-wider text-[11px] font-bold">Approved</p>
+                            <p className="text-2xl font-bold text-emerald-700">{approvedCount}</p>
                         </div>
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Approved Inspections - Success Section */}
+            {approvedCount > 0 && (
+                <div className="space-y-4">
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                        <Star className="h-5 w-5 text-emerald-500 fill-emerald-400" />
+                        Successful Inspections
+                        <Badge className="bg-emerald-100 text-emerald-700 border-none text-xs font-bold">{approvedCount}</Badge>
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {approvedInspections.slice(0, 6).map((s) => (
+                            <Card key={s.id} className="border-none shadow-sm overflow-hidden bg-white group hover:shadow-md transition-all">
+                                <div className="h-1.5 bg-gradient-to-r from-emerald-400 to-emerald-600" />
+                                <CardContent className="p-4 space-y-3">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <h4 className="text-sm font-bold truncate leading-tight group-hover:text-emerald-600 transition-colors">
+                                            {s.assignment?.project?.name}
+                                        </h4>
+                                        <Badge className="bg-emerald-100 text-emerald-700 border-none text-[10px] font-bold shrink-0 h-5 px-2 shadow-none">
+                                            ✓ Approved
+                                        </Badge>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
+                                        <Clock className="h-3 w-3" />
+                                        Approved {safeDistance(s.submittedAt || s.createdAt)} ago
+                                    </div>
+                                    <Link
+                                        href={`/inspection/${s.assignmentId}/form`}
+                                        className="text-[11px] font-bold text-emerald-600 hover:underline flex items-center gap-1"
+                                    >
+                                        View Report →
+                                    </Link>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Company Wise Report Section */}
             <div className="space-y-4">
@@ -279,7 +388,7 @@ export default function InspectionDashboard() {
                                             </div>
                                             <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                                                 <Calendar className="h-3.5 w-3.5" />
-                                                Assigned {format(new Date(a.createdAt), "MMM d, yyyy")}
+                                                Assigned {safeFormat(a.createdAt, "MMM d, yyyy")}
                                             </div>
                                         </div>
                                     </div>
@@ -301,26 +410,24 @@ export default function InspectionDashboard() {
                 <div className="space-y-4">
                     <h2 className="text-xl font-bold flex items-center gap-2">
                         <History className="h-5 w-5 text-emerald-500" />
-                        Activity feed
+                        Activity Feed
                     </h2>
                     <Card className="border-none shadow-sm bg-white overflow-hidden">
                         <CardContent className="p-0">
                             <div className="divide-y">
-                                {recentSubmissions.map((s) => (
-                                    <div key={s.id} className="p-4 hover:bg-muted/30 transition-colors">
-                                        <div className="flex items-start justify-between mb-1">
-                                            <h4 className="text-sm font-bold truncate max-w-[150px]">{s.assignment.project.name}</h4>
-                                            <Badge className={cn(
-                                                "capitalize border-none text-[9px] h-4 px-1.5 font-bold",
-                                                s.status === "draft" ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
-                                            )}>
-                                                {s.status}
-                                            </Badge>
+                                {recentSubmissions.slice(0, 10).map((s) => (
+                                    <div key={s.id} className={cn(
+                                        "p-4 hover:bg-muted/30 transition-colors",
+                                        s.status === "approved" && "bg-emerald-50/50 hover:bg-emerald-50"
+                                    )}>
+                                        <div className="flex items-start justify-between mb-1.5 gap-2">
+                                            <h4 className="text-sm font-bold truncate max-w-[130px]">{s.assignment.project.name}</h4>
+                                            <StatusBadge status={s.status} />
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <p className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
                                                 <Clock className="h-2.5 w-2.5" />
-                                                {formatDistanceToNow(new Date(s.submittedAt || s.updatedAt))} ago
+                                                {safeDistance(s.submittedAt || s.createdAt)} ago
                                             </p>
                                             <Link href={`/inspection/${s.assignmentId}/form`} className="text-[10px] font-bold text-primary hover:underline">
                                                 {s.status === "draft" ? "Resume →" : "View →"}
@@ -341,4 +448,3 @@ export default function InspectionDashboard() {
         </div>
     )
 }
-
