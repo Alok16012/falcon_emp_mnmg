@@ -158,35 +158,37 @@ function useCountUp(target: number, duration = 1000) {
 }
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
-function KpiCard({ label, value, color, icon: Icon, delay = 0 }: {
-    label: string; value: number | string; color: string; icon: any; delay?: number
+function KpiCard({ label, value, color, icon: Icon, delay = 0, index }: {
+    label: string; value: number | string; color: string; icon: any; delay?: number; index?: number
 }) {
     const numericValue = typeof value === "number" ? value : 0
     const animated = useCountUp(numericValue)
     const displayValue = typeof value === "string" ? value : animated.toLocaleString()
 
+    const bgColorMap: Record<string, string> = {
+        "#6366f1": "#eef2ff",
+        "#1a9e6e": "#e8f7f1",
+        "#d97706": "#fef3c7",
+        "#dc2626": "#fef2f2",
+    }
+    const bgColor = bgColorMap[color] || "#f9f8f5"
+
     return (
-        <Card
-            className="group relative overflow-hidden border-none bg-white/50 backdrop-blur-md shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 animate-fadeIn rounded-[24px]"
+        <div
+            className="bg-white border border-[#e8e6e1] rounded-[12px] p-4 relative overflow-hidden animate-fadeIn"
             style={{ animationDelay: `${delay}ms` }}
         >
-            <div className="absolute top-0 right-0 p-3 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
-                <Icon className="h-20 w-20" />
+            <div
+                className="absolute right-[-8px] bottom-[-8px] text-[60px] font-extrabold text-black/[0.03] pointer-events-none select-none"
+            >
+                {index !== undefined ? index + 1 : ""}
             </div>
-            <CardContent className="p-6">
-                <div className="flex flex-col gap-4">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${color}10`, color }}>
-                        <Icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-                        <div className="flex items-baseline gap-1">
-                            <p className="text-3xl font-black text-slate-800 tracking-tight">{displayValue}</p>
-                        </div>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center mb-[10px]" style={{ backgroundColor: bgColor }}>
+                <Icon className="h-4 w-4" style={{ color }} />
+            </div>
+            <p className="text-[10.5px] font-semibold text-[#9e9b95] uppercase tracking-[0.6px] mb-[6px]">{label}</p>
+            <p className="text-[28px] font-bold text-[#1a1a18] tracking-[-1px] tabular-nums">{displayValue}</p>
+        </div>
     )
 }
 
@@ -196,10 +198,10 @@ function TabButton({ name, active, onClick }: { name: string; active: boolean; o
         <button
             onClick={onClick}
             className={cn(
-                "px-6 py-2 rounded-xl text-sm font-bold transition-all duration-300 whitespace-nowrap",
+                "px-[18px] py-2 rounded-[8px] text-[13px] font-medium transition-all duration-200 whitespace-nowrap",
                 active
-                    ? "bg-slate-900 text-white shadow-lg shadow-slate-200"
-                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                    ? "bg-[#1a1a18] text-white"
+                    : "text-[#6b6860] hover:text-[#1a1a18] hover:bg-[#f9f8f5]"
             )}
         >
             {name}
@@ -381,7 +383,7 @@ export default function ReportsPage() {
     }), [data?.topDefects])
 
     return (
-        <div className="min-h-screen pb-20 space-y-6" style={{ background: THEME.background }}>
+        <div className="min-h-screen bg-[#f5f4f0]">
             <style jsx global>{`
                 @keyframes fadeIn {
                     from { opacity: 0; transform: translateY(8px); }
@@ -395,115 +397,113 @@ export default function ReportsPage() {
                 }
             `}</style>
 
-            {/* ── TOP NAV BAR ─────────────────────────────────────── */}
-            <header className="no-print bg-white/40 backdrop-blur-xl sticky top-0 z-50 border-b border-slate-100/50 px-8 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="bg-slate-900 p-2 rounded-xl text-white shadow-xl shadow-slate-200">
-                        <ClipboardList className="h-5 w-5" />
+            {/* ── TOP HEADER BAR ─────────────────────────────────────── */}
+            <header className="no-print bg-white border-b border-[#e8e6e1] px-6 py-[14px] flex items-center justify-between">
+                <div className="flex items-center gap-[10px]">
+                    <div className="w-8 h-8 bg-[#e8f7f1] rounded-[8px] flex items-center justify-center">
+                        <ClipboardList className="h-4 w-4 text-[#1a9e6e]" />
                     </div>
                     <div>
-                        <span className="font-black text-xl tracking-tight text-slate-900 block leading-none">QC PRO</span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 block">Analytics Dashboard</span>
+                        <span className="font-bold text-[15px] text-[#1a1a18] tracking-[-0.3px] block leading-none">QC PRO</span>
+                        <span className="text-[10px] font-medium text-[#9e9b95] tracking-[1px] uppercase block mt-[1px]">ANALYTICS DASHBOARD</span>
                     </div>
                 </div>
-                <div className="flex items-center gap-4">
-                    <div className="h-8 w-[1px] bg-slate-100 hidden sm:block" />
-                    <Badge variant="outline" className="hidden sm:flex text-[10px] font-black py-0 h-6 px-3 border-slate-200 text-slate-400 rounded-full bg-slate-50/50">PLATFORM v1.4.0</Badge>
+                <div className="bg-[#f9f8f5] border border-[#e8e6e1] rounded-[6px] px-[10px] py-[4px] text-[11px] font-medium text-[#9e9b95]" style={{ fontFamily: "monospace" }}>
+                    PLATFORM v1.4.0
                 </div>
             </header>
 
-            <div className="max-w-[1600px] mx-auto px-4 lg:px-8 space-y-6">
-                {/* ── FILTER & TAB BAR ────────────────────────────────── */}
-                <div className="no-print flex flex-col gap-8 py-4">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                        <div className="flex items-center gap-2 p-1.5 bg-slate-100/50 backdrop-blur-md rounded-[20px] border border-slate-200/50 w-fit">
-                            {["Dashboard", "Graphical", "Pareto Chart", "Day Wise", "Part Wise", "Inspection Report"].map(tab => (
-                                <TabButton
-                                    key={tab}
-                                    name={tab}
-                                    active={activeTab === tab}
-                                    onClick={() => setActiveTab(tab)}
-                                />
-                            ))}
-                        </div>
-
-                        <div className="flex items-center gap-3 self-end">
-                            <Button
-                                className="rounded-2xl font-black px-8 py-6 h-auto shadow-2xl shadow-blue-200/50 bg-blue-600 hover:bg-blue-700 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-                                onClick={fetchReport}
-                                disabled={loading}
-                            >
-                                {loading ? "Syncing..." : "Update Dashboard"}
-                                <ArrowUpRight className="ml-2 h-4 w-4" />
-                            </Button>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                        {[
-                            { label: "Company", value: selectedCompanyId, options: companies, setter: setSelectedCompanyId, allLabel: "Global View" },
-                            { label: "Project", value: selectedProjectId, options: projects, setter: setSelectedProjectId, allLabel: "All Projects", disabled: selectedCompanyId === "all" },
-                            { label: "Inspector", value: selectedInspectorId, options: inspectors, setter: setSelectedInspectorId, allLabel: "All Inspectors" },
-                            { label: "Month", value: selectedMonth, options: MONTHS.map((m, i) => ({ id: i + 1, name: m })), setter: (v: string) => setSelectedMonth(Number(v)) },
-                            { label: "Year", value: selectedYear, options: [2024, 2025, 2026].map(y => ({ id: y, name: y })), setter: (v: string) => setSelectedYear(Number(v)) }
-                        ].map((filter, idx) => (
-                            <div key={idx} className="group flex flex-col gap-1.5">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{filter.label}</span>
-                                <div className={cn(
-                                    "relative bg-white border border-slate-100 rounded-2xl px-4 py-2.5 shadow-sm group-hover:border-blue-200 transition-colors",
-                                    filter.disabled && "opacity-50 cursor-not-allowed"
-                                )}>
-                                    <select
-                                        className="w-full bg-transparent text-sm font-bold focus:outline-none appearance-none cursor-pointer"
-                                        value={filter.value}
-                                        onChange={e => filter.setter(e.target.value)}
-                                        disabled={filter.disabled}
-                                    >
-                                        {filter.allLabel && <option value="all">{filter.allLabel}</option>}
-                                        {filter.options.map((opt: any) => (
-                                            <option key={opt.id} value={opt.id}>{opt.name}</option>
-                                        ))}
-                                    </select>
-                                    <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 pointer-events-none rotate-90" />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+            {/* ── TABS ROW ─────────────────────────────────────────── */}
+            <div className="no-print bg-white border-b border-[#e8e6e1] px-6 flex items-center justify-between">
+                <div className="flex items-center gap-1 py-[10px]">
+                    {["Dashboard", "Graphical", "Pareto Chart", "Day Wise", "Part Wise", "Inspection Report"].map(tab => (
+                        <TabButton
+                            key={tab}
+                            name={tab}
+                            active={activeTab === tab}
+                            onClick={() => setActiveTab(tab)}
+                        />
+                    ))}
                 </div>
+                <Button
+                    className="bg-[#1a9e6e] text-white hover:bg-[#158a5e] rounded-[10px] text-[13px] font-semibold h-auto py-[10px] px-5 mr-0"
+                    onClick={fetchReport}
+                    disabled={loading}
+                >
+                    {loading ? "Syncing..." : "Update Dashboard"}
+                    <ArrowUpRight className="ml-[6px] h-[14px] w-[14px]" />
+                </Button>
+            </div>
 
+            {/* ── FILTER ROW ─────────────────────────────────────────── */}
+            <div className="no-print bg-white border-b border-[#e8e6e1] px-6 py-3">
+                <div className="grid grid-cols-5 gap-3">
+                    {[
+                        { label: "Company", value: selectedCompanyId, options: companies, setter: setSelectedCompanyId, allLabel: "Global View" },
+                        { label: "Project", value: selectedProjectId, options: projects, setter: setSelectedProjectId, allLabel: "All Projects", disabled: selectedCompanyId === "all" },
+                        { label: "Inspector", value: selectedInspectorId, options: inspectors, setter: setSelectedInspectorId, allLabel: "All Inspectors" },
+                        { label: "Month", value: selectedMonth, options: MONTHS.map((m, i) => ({ id: i + 1, name: m })), setter: (v: string) => setSelectedMonth(Number(v)) },
+                        { label: "Year", value: selectedYear, options: [2024, 2025, 2026].map(y => ({ id: y, name: y })), setter: (v: string) => setSelectedYear(Number(v)) }
+                    ].map((filter, idx) => (
+                        <div key={idx} className="flex flex-col gap-[5px]">
+                            <span className="text-[10.5px] font-semibold text-[#9e9b95] uppercase tracking-[0.6px]">{filter.label}</span>
+                            <div className={cn(
+                                "relative bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] px-[14px] py-[9px] transition-all",
+                                filter.disabled && "opacity-50 cursor-not-allowed"
+                            )}>
+                                <select
+                                    className="w-full bg-transparent text-[13px] font-medium focus:outline-none appearance-none cursor-pointer text-[#1a1a18]"
+                                    value={filter.value}
+                                    onChange={e => filter.setter(e.target.value)}
+                                    disabled={filter.disabled}
+                                >
+                                    {filter.allLabel && <option value="all">{filter.allLabel}</option>}
+                                    {filter.options.map((opt: any) => (
+                                        <option key={opt.id} value={opt.id}>{opt.name}</option>
+                                    ))}
+                                </select>
+                                <ChevronRight className="absolute right-[14px] top-1/2 -translate-y-1/2 h-4 w-4 text-[#9e9b95] pointer-events-none rotate-90" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* ── MAIN CONTENT ─────────────────────────────────────── */}
+            <div className="px-6 pb-6">
                 {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                        {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-28 rounded-2xl" />)}
+                    <div className="grid grid-cols-6 gap-3 mt-5">
+                        {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-[110px] rounded-[12px]" />)}
                     </div>
                 ) : !data ? (
-                    <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white rounded-3xl border border-dashed border-slate-300">
-                        <div className="p-6 bg-slate-50 rounded-full"><AlertCircle className="h-12 w-12 text-slate-200" /></div>
-                        <h2 className="text-xl font-black text-slate-900">No report data loaded</h2>
-                        <Button onClick={fetchReport} variant="secondary" className="font-bold">Initialize Dashboard</Button>
+                    <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white rounded-[14px] border border-[#e8e6e1] mt-5">
+                        <div className="p-6 bg-[#f5f4f0] rounded-full"><AlertCircle className="h-12 w-12 text-[#d4d1ca]" /></div>
+                        <h2 className="text-xl font-bold text-[#1a1a18]">No report data loaded</h2>
+                        <Button onClick={fetchReport} variant="secondary" className="font-medium">Initialize Dashboard</Button>
                     </div>
                 ) : (
-                    <div className="space-y-6">
-                        {/* ── KPI SECTION ─────────────────────────────────── */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 print-avoid">
-                            <KpiCard label="Total Inspected" value={s?.totalInspected || 0} color={THEME.info} icon={History} delay={0} />
-                            <KpiCard label="Total Accepted" value={s?.totalAccepted || 0} color={THEME.success} icon={CheckCircle2} delay={100} />
-                            <KpiCard label="Total Rework" value={s?.totalRework || 0} color={THEME.warning} icon={TrendingDown} delay={200} />
-                            <KpiCard label="Total Rejected" value={s?.totalRejected || 0} color={THEME.danger} icon={AlertCircle} delay={300} />
-                            <KpiCard label="Rework PPM" value={s?.reworkPPM || 0} color={THEME.accent} icon={TrendingUp} delay={400} />
-                            <KpiCard label="Rejection PPM" value={s?.rejectionPPM || 0} color={THEME.danger} icon={AlertCircle} delay={500} />
+                    <div className="space-y-4">
+                        {/* ── STAT CARDS ROW ────────────────────────────── */}
+                        <div className="grid grid-cols-6 gap-3 mt-5">
+                            <KpiCard label="Total Inspected" value={s?.totalInspected || 0} color="#6366f1" icon={History} delay={0} index={0} />
+                            <KpiCard label="Total Accepted" value={s?.totalAccepted || 0} color="#1a9e6e" icon={CheckCircle2} delay={100} index={1} />
+                            <KpiCard label="Total Rework" value={s?.totalRework || 0} color="#d97706" icon={TrendingDown} delay={200} index={2} />
+                            <KpiCard label="Total Rejected" value={s?.totalRejected || 0} color="#dc2626" icon={AlertCircle} delay={300} index={3} />
+                            <KpiCard label="Rework PPM" value={s?.reworkPPM || 0} color="#d97706" icon={TrendingUp} delay={400} index={4} />
+                            <KpiCard label="Rejection PPM" value={s?.rejectionPPM || 0} color="#dc2626" icon={AlertCircle} delay={500} index={5} />
                         </div>
 
                         {/* ── TAB CONTENT ─────────────────────────────────── */}
                         <div className="animate-fadeIn">
                             {activeTab === "Dashboard" && (
-                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                                <div className="grid grid-cols-2 gap-4">
                                     {/* Overall Status - Donut */}
-                                    <Card className="lg:col-span-4 border-none bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] rounded-[32px] overflow-hidden flex flex-col">
-                                        <CardHeader className="p-8 pb-0">
-                                            <CardTitle className="text-xl font-black text-slate-800 tracking-tight">Overall Status</CardTitle>
-                                            <CardDescription className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Acceptance vs Rejection</CardDescription>
-                                        </CardHeader>
-                                        <CardContent className="flex-1 flex flex-col justify-center items-center py-8">
+                                    <div className="bg-white border border-[#e8e6e1] rounded-[14px] p-5 overflow-hidden">
+                                        <div className="mb-[2px]">
+                                            <h3 className="text-[14px] font-semibold text-[#1a1a18]">Overall Status</h3>
+                                            <p className="text-[10.5px] font-semibold text-[#9e9b95] uppercase tracking-[0.5px] mt-[2px]">Acceptance vs Rejection</p>
+                                        </div>
+                                        <div className="flex flex-col justify-center items-center py-4">
                                             {(s?.totalInspected || 0) > 0 ? (
                                                 <div className="w-full h-[300px] relative">
                                                     <ResponsiveContainer width="100%" height="100%">
@@ -522,8 +522,8 @@ export default function ReportsPage() {
                                                         </PieChart>
                                                     </ResponsiveContainer>
                                                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                                        <span className="text-5xl font-black text-slate-900 leading-none tracking-tighter">{s?.acceptanceRate.toFixed(1)}%</span>
-                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">Quality Rate</span>
+                                                        <span className="text-5xl font-bold text-[#1a1a18] leading-none tracking-tight">{s?.acceptanceRate.toFixed(1)}%</span>
+                                                        <span className="text-[10px] font-semibold text-[#9e9b95] uppercase tracking-[0.2em] mt-2">Quality Rate</span>
                                                     </div>
                                                 </div>
                                             ) : <EmptyState />}
@@ -531,22 +531,20 @@ export default function ReportsPage() {
                                                 {pieData.map(e => (
                                                     <div key={e.name} className="flex items-center gap-2">
                                                         <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: e.color }} />
-                                                        <span className="text-[11px] font-bold text-slate-600">{e.name}</span>
+                                                        <span className="text-[11px] font-medium text-[#6b6860]">{e.name}</span>
                                                     </div>
                                                 ))}
                                             </div>
-                                        </CardContent>
-                                    </Card>
+                                        </div>
+                                    </div>
 
                                     {/* Trend Analysis - Area Chart */}
-                                    <Card className="lg:col-span-8 border-none bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] rounded-[32px] flex flex-col">
-                                        <CardHeader className="p-8 pb-0 flex flex-row items-center justify-between">
-                                            <div>
-                                                <CardTitle className="text-xl font-black text-slate-800 tracking-tight">Perfromance Trend</CardTitle>
-                                                <CardDescription className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Daily inspection performance volume</CardDescription>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent className="flex-1 p-8 pt-6">
+                                    <div className="bg-white border border-[#e8e6e1] rounded-[14px] p-5 overflow-hidden">
+                                        <div className="mb-[2px]">
+                                            <h3 className="text-[14px] font-semibold text-[#1a1a18]">Performance Trend</h3>
+                                            <p className="text-[10.5px] font-semibold text-[#9e9b95] uppercase tracking-[0.5px] mt-[2px]">Daily inspection performance volume</p>
+                                        </div>
+                                        <div className="pt-4">
                                             {areaData.length > 0 ? (
                                                 <ResponsiveContainer width="100%" height={320}>
                                                     <AreaChart data={areaData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -565,13 +563,13 @@ export default function ReportsPage() {
                                                             dataKey="label"
                                                             axisLine={false}
                                                             tickLine={false}
-                                                            tick={{ fontSize: 10, fontWeight: 700, fill: "#94a3b8" }}
+                                                            tick={{ fontSize: 10, fontWeight: 600, fill: "#94a3b8" }}
                                                             dy={10}
                                                         />
                                                         <YAxis
                                                             axisLine={false}
                                                             tickLine={false}
-                                                            tick={{ fontSize: 10, fontWeight: 700, fill: "#94a3b8" }}
+                                                            tick={{ fontSize: 10, fontWeight: 600, fill: "#94a3b8" }}
                                                         />
                                                         <Tooltip content={<CustomTooltip />} />
                                                         <Area
@@ -603,21 +601,23 @@ export default function ReportsPage() {
                                                     </AreaChart>
                                                 </ResponsiveContainer>
                                             ) : <EmptyState />}
-                                        </CardContent>
-                                    </Card>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 
                             {activeTab === "Graphical" && (
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    <Card className="border-none shadow-sm p-6">
-                                        <CardTitle className="text-lg font-black mb-6">Part-Wise Quality Split</CardTitle>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-white border border-[#e8e6e1] rounded-[14px] p-5 overflow-hidden">
+                                        <div className="mb-5">
+                                            <h3 className="text-[14px] font-semibold text-[#1a1a18]">Part-Wise Quality Split</h3>
+                                        </div>
                                         {data.partWise.length > 0 ? (
                                             <ResponsiveContainer width="100%" height={400}>
                                                 <BarChart data={data.partWise} layout="vertical" margin={{ left: 20 }}>
                                                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                                                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700 }} />
-                                                    <YAxis dataKey="partName" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700 }} width={120} />
+                                                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600 }} />
+                                                    <YAxis dataKey="partName" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600 }} width={120} />
                                                     <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f8fafc" }} />
                                                     <Bar dataKey="totalAccepted" name="Accepted" stackId="a" fill={THEME.success} radius={[0, 0, 0, 0]} />
                                                     <Bar dataKey="totalRework" name="Rework" stackId="a" fill={THEME.warning} />
@@ -625,32 +625,34 @@ export default function ReportsPage() {
                                                 </BarChart>
                                             </ResponsiveContainer>
                                         ) : <EmptyState />}
-                                    </Card>
-                                    <Card className="border-none shadow-sm p-6">
-                                        <CardTitle className="text-lg font-black mb-6">Comparison by Location</CardTitle>
+                                    </div>
+                                    <div className="bg-white border border-[#e8e6e1] rounded-[14px] p-5 overflow-hidden">
+                                        <div className="mb-5">
+                                            <h3 className="text-[14px] font-semibold text-[#1a1a18]">Comparison by Location</h3>
+                                        </div>
                                         {data.locationWise.length > 0 ? (
                                             <ResponsiveContainer width="100%" height={400}>
                                                 <BarChart data={data.locationWise}>
                                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                                    <XAxis dataKey="location" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700 }} />
-                                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700 }} />
+                                                    <XAxis dataKey="location" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600 }} />
+                                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600 }} />
                                                     <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f8fafc" }} />
                                                     <Bar dataKey="totalInspected" name="Inspected" fill={THEME.info} radius={[4, 4, 0, 0]} barSize={40} />
                                                 </BarChart>
                                             </ResponsiveContainer>
                                         ) : <EmptyState />}
-                                    </Card>
+                                    </div>
                                 </div>
                             )}
 
                             {activeTab === "Pareto Chart" && (
-                                <Card className="border-none shadow-sm p-8">
-                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                                <div className="bg-white border border-[#e8e6e1] rounded-[14px] p-5 overflow-hidden">
+                                    <div className="flex items-center justify-between mb-6">
                                         <div>
-                                            <CardTitle className="text-2xl font-black text-slate-900">Top Defect Analysis</CardTitle>
-                                            <CardDescription className="font-bold text-slate-400">Identify 80% of quality issues from 20% of defect types (Pareto Principle)</CardDescription>
+                                            <h3 className="text-[14px] font-semibold text-[#1a1a18]">Top Defect Analysis</h3>
+                                            <p className="text-[10.5px] font-semibold text-[#9e9b95] uppercase tracking-[0.5px] mt-[2px]">Pareto Principle</p>
                                         </div>
-                                        <Badge variant="secondary" className="bg-orange-50 text-orange-600 border-orange-100 font-black px-4 py-1 self-start md:self-center">
+                                        <Badge variant="secondary" className="bg-orange-50 text-orange-600 border-orange-100 font-semibold px-3 py-1 text-[11px]">
                                             Major Defects Only
                                         </Badge>
                                     </div>
@@ -658,95 +660,95 @@ export default function ReportsPage() {
                                         <ResponsiveContainer width="100%" height={450}>
                                             <ComposedChart data={paretoData} margin={{ top: 10, right: 30, left: 0, bottom: 40 }}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                                <XAxis dataKey="defectName" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700 }} angle={-45} textAnchor="end" height={80} dy={20} />
-                                                <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700 }} />
-                                                <YAxis yAxisId="right" orientation="right" domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700 }} unit="%" />
+                                                <XAxis dataKey="defectName" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600 }} angle={-45} textAnchor="end" height={80} dy={20} />
+                                                <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600 }} />
+                                                <YAxis yAxisId="right" orientation="right" domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600 }} unit="%" />
                                                 <Tooltip content={<CustomTooltip />} />
                                                 <Bar yAxisId="left" dataKey="count" name="Frequency" fill={THEME.danger} radius={[4, 4, 0, 0]} barSize={60} />
                                                 <Line yAxisId="right" type="monotone" dataKey="cumulative" name="Cumulative %" stroke={THEME.warning} strokeWidth={4} dot={{ r: 6, fill: THEME.warning, strokeWidth: 3, stroke: "white" }} />
                                             </ComposedChart>
                                         </ResponsiveContainer>
                                     ) : <EmptyState />}
-                                </Card>
+                                </div>
                             )}
 
                             {activeTab === "Day Wise" && (
-                                <Card className="border-none shadow-sm overflow-hidden">
-                                    <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                                        <CardTitle className="text-lg font-black">Daily Inspection Log</CardTitle>
-                                        <Button variant="outline" size="sm" className="font-bold h-8 rounded-lg" onClick={handlePrint}><Printer className="h-4 w-4 mr-2" />Print Log</Button>
+                                <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden">
+                                    <div className="p-4 border-b border-[#e8e6e1] flex items-center justify-between">
+                                        <h3 className="text-[14px] font-semibold text-[#1a1a18]">Daily Inspection Log</h3>
+                                        <Button variant="outline" size="sm" className="font-medium h-8 rounded-[8px] text-[12px]" onClick={handlePrint}><Printer className="h-4 w-4 mr-2" />Print Log</Button>
                                     </div>
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-sm">
                                             <thead>
-                                                <tr className="bg-slate-50 border-b border-slate-100">
+                                                <tr className="bg-[#f9f8f5] border-b border-[#e8e6e1]">
                                                     {["Date", "Inspected", "Accepted", "Rework", "Rejected", "Quality Status"].map(h => (
-                                                        <th key={h} className="px-6 py-4 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">{h}</th>
+                                                        <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.5px] text-[#9e9b95]">{h}</th>
                                                     ))}
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-slate-50">
+                                            <tbody className="divide-y divide-[#e8e6e1]">
                                                 {data.dayWise.map((d, i) => (
-                                                    <tr key={d.date} className="hover:bg-slate-50/50 transition-colors">
-                                                        <td className="px-6 py-4 font-bold text-slate-700">{(() => { try { return format(parseISO(d.date), "dd MMM yyyy, EEE") } catch { return d.date || "—" } })()}</td>
-                                                        <td className="px-6 py-4 font-black text-slate-900">{d.totalInspected.toLocaleString()}</td>
-                                                        <td className="px-6 py-4 font-bold text-green-600 bg-green-50/30">{d.totalAccepted.toLocaleString()}</td>
-                                                        <td className="px-6 py-4 font-bold text-orange-600">{d.totalRework.toLocaleString()}</td>
-                                                        <td className="px-6 py-4 font-bold text-red-600">{d.totalRejected.toLocaleString()}</td>
-                                                        <td className="px-6 py-4 w-48"><ProgressBar value={d.qualityRate} color={d.qualityRate >= 99 ? THEME.success : d.qualityRate >= 95 ? THEME.warning : THEME.danger} /></td>
+                                                    <tr key={d.date} className="hover:bg-[#f9f8f5]/50 transition-colors">
+                                                        <td className="px-4 py-3 font-medium text-[#1a1a18]">{(() => { try { return format(parseISO(d.date), "dd MMM yyyy, EEE") } catch { return d.date || "—" } })()}</td>
+                                                        <td className="px-4 py-3 font-bold text-[#1a1a18]">{d.totalInspected.toLocaleString()}</td>
+                                                        <td className="px-4 py-3 font-bold text-green-600">{d.totalAccepted.toLocaleString()}</td>
+                                                        <td className="px-4 py-3 font-bold text-orange-600">{d.totalRework.toLocaleString()}</td>
+                                                        <td className="px-4 py-3 font-bold text-red-600">{d.totalRejected.toLocaleString()}</td>
+                                                        <td className="px-4 py-3 w-40"><ProgressBar value={d.qualityRate} color={d.qualityRate >= 99 ? THEME.success : d.qualityRate >= 95 ? THEME.warning : THEME.danger} /></td>
                                                     </tr>
                                                 ))}
                                             </tbody>
                                         </table>
                                     </div>
-                                </Card>
+                                </div>
                             )}
 
                             {activeTab === "Part Wise" && (
-                                <Card className="border-none shadow-sm overflow-hidden">
-                                    <div className="p-6 border-b border-slate-100">
-                                        <CardTitle className="text-lg font-black">Performance by Component</CardTitle>
+                                <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden">
+                                    <div className="p-4 border-b border-[#e8e6e1]">
+                                        <h3 className="text-[14px] font-semibold text-[#1a1a18]">Performance by Component</h3>
                                     </div>
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-sm">
                                             <thead>
-                                                <tr className="bg-slate-50 border-b border-slate-100">
+                                                <tr className="bg-[#f9f8f5] border-b border-[#e8e6e1]">
                                                     {["Component", "Inspected", "Accepted", "Rework", "Rejected", "Quality Rate"].map(h => (
-                                                        <th key={h} className="px-6 py-4 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">{h}</th>
+                                                        <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.5px] text-[#9e9b95]">{h}</th>
                                                     ))}
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-slate-50">
+                                            <tbody className="divide-y divide-[#e8e6e1]">
                                                 {data.partWise.map((p, i) => (
-                                                    <tr key={p.partName} className="hover:bg-slate-50/50 transition-colors">
-                                                        <td className="px-6 py-4 font-black text-slate-800">{p.partName}</td>
-                                                        <td className="px-6 py-4 font-bold text-blue-600">{p.totalInspected.toLocaleString()}</td>
-                                                        <td className="px-6 py-4 font-bold text-green-600">{p.totalAccepted.toLocaleString()}</td>
-                                                        <td className="px-6 py-4 font-bold text-orange-600">{p.totalRework.toLocaleString()}</td>
-                                                        <td className="px-6 py-4 font-bold text-red-600">{p.totalRejected.toLocaleString()}</td>
-                                                        <td className="px-6 py-4 w-48"><ProgressBar value={p.qualityRate} color={p.qualityRate >= 99 ? THEME.success : p.qualityRate >= 95 ? THEME.warning : THEME.danger} /></td>
+                                                    <tr key={p.partName} className="hover:bg-[#f9f8f5]/50 transition-colors">
+                                                        <td className="px-4 py-3 font-semibold text-[#1a1a18]">{p.partName}</td>
+                                                        <td className="px-4 py-3 font-bold text-blue-600">{p.totalInspected.toLocaleString()}</td>
+                                                        <td className="px-4 py-3 font-bold text-green-600">{p.totalAccepted.toLocaleString()}</td>
+                                                        <td className="px-4 py-3 font-bold text-orange-600">{p.totalRework.toLocaleString()}</td>
+                                                        <td className="px-4 py-3 font-bold text-red-600">{p.totalRejected.toLocaleString()}</td>
+                                                        <td className="px-4 py-3 w-40"><ProgressBar value={p.qualityRate} color={p.qualityRate >= 99 ? THEME.success : p.qualityRate >= 95 ? THEME.warning : THEME.danger} /></td>
                                                     </tr>
                                                 ))}
                                             </tbody>
                                         </table>
                                     </div>
-                                </Card>
+                                </div>
                             )}
 
                             {/* Inspector Wise removed as per request */}
 
                             {activeTab === "Inspection Report" && (
-                                <Card className="border-none bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] rounded-[32px] overflow-hidden">
-                                    <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden">
+                                    <div className="p-4 border-b border-[#e8e6e1] flex flex-col md:flex-row md:items-center justify-between gap-4">
                                         <div>
-                                            <CardTitle className="text-xl font-black text-slate-800 tracking-tight">Inspection Record Explorer</CardTitle>
-                                            <CardDescription className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Live data feed with advanced search</CardDescription>
+                                            <h3 className="text-[14px] font-semibold text-[#1a1a18]">Inspection Record Explorer</h3>
+                                            <p className="text-[10.5px] font-semibold text-[#9e9b95] uppercase tracking-[0.5px] mt-[2px]">Live data feed</p>
                                         </div>
                                         <div className="flex flex-wrap items-center gap-3">
                                             <div className="relative group">
-                                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9e9b95] group-focus-within:text-[#1a9e6e] transition-colors" />
                                                 <Input
-                                                    className="pl-11 h-11 w-full md:w-[300px] rounded-2xl border-slate-100 bg-slate-50/50 font-bold text-sm focus:bg-white focus:ring-4 focus:ring-blue-50/50 transition-all border-none"
+                                                    className="pl-11 h-10 w-full md:w-[260px] rounded-[9px] border border-[#e8e6e1] bg-[#f9f8f5] font-medium text-[13px] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:border-[#1a9e6e] transition-all"
                                                     placeholder="Search records..."
                                                     value={searchTerm}
                                                     onChange={e => setSearchTerm(e.target.value)}
@@ -755,7 +757,7 @@ export default function ReportsPage() {
                                             <div className="flex items-center gap-2">
                                                 <Button
                                                     variant="outline"
-                                                    className="h-11 rounded-2xl font-black text-xs border-slate-100 text-green-600 hover:text-green-700 hover:bg-green-50 px-6 transition-all active:scale-95"
+                                                    className="h-10 rounded-[8px] font-medium text-[12px] border-[#e8e6e1] text-[#1a9e6e] hover:bg-[#e8f7f1] px-4"
                                                     onClick={handleExportExcel}
                                                 >
                                                     <FileSpreadsheet className="h-4 w-4 mr-2" />
@@ -763,7 +765,7 @@ export default function ReportsPage() {
                                                 </Button>
                                                 <Button
                                                     variant="outline"
-                                                    className="h-11 rounded-2xl font-black text-xs border-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-50 px-6 transition-all active:scale-95"
+                                                    className="h-10 rounded-[8px] font-medium text-[12px] border-[#e8e6e1] text-[#6b6860] hover:bg-[#f9f8f5] px-4"
                                                     onClick={handlePrint}
                                                 >
                                                     <FileDown className="h-4 w-4 mr-2" />
@@ -775,43 +777,43 @@ export default function ReportsPage() {
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-xs">
                                             <thead>
-                                                <tr className="bg-slate-50/50 border-b border-slate-50">
+                                                <tr className="bg-[#f9f8f5] border-b border-[#e8e6e1]">
                                                     {["Date", "Inspector", "Company", "Project", "Part", "Location", "Inspected", "Accepted", "Rework", "Rejected"].map(h => (
-                                                        <th key={h} className="px-8 py-5 text-left font-black uppercase tracking-widest text-slate-400 text-[9px]">{h}</th>
+                                                        <th key={h} className="px-6 py-3 text-left font-semibold uppercase tracking-[0.5px] text-[#9e9b95] text-[11px]">{h}</th>
                                                     ))}
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-slate-50">
+                                            <tbody className="divide-y divide-[#e8e6e1]">
                                                 {filteredRecords.map(r => (
-                                                    <tr key={r.id} className="hover:bg-slate-50/30 transition-all group">
-                                                        <td className="px-8 py-5 font-bold text-slate-400 whitespace-nowrap">{(() => { try { const d = new Date(r.date); return isNaN(d.getTime()) ? "—" : format(d, "dd MMM, HH:mm") } catch { return "—" } })()}</td>
-                                                        <td className="px-8 py-5 font-black text-slate-700 group-hover:text-blue-600 transition-colors">{r.inspector}</td>
-                                                        <td className="px-8 py-5 font-bold text-slate-500">{r.company}</td>
-                                                        <td className="px-8 py-5 font-bold text-slate-400">{r.project}</td>
-                                                        <td className="px-8 py-5"><Badge variant="outline" className="bg-white border-slate-100 text-slate-900 font-black px-3 py-0.5 rounded-lg text-[10px]">{r.partName}</Badge></td>
-                                                        <td className="px-8 py-5 font-bold text-slate-500">{r.location}</td>
-                                                        <td className="px-8 py-5">
+                                                    <tr key={r.id} className="hover:bg-[#f9f8f5]/50 transition-all group">
+                                                        <td className="px-6 py-4 font-medium text-[#6b6860] whitespace-nowrap">{(() => { try { const d = new Date(r.date); return isNaN(d.getTime()) ? "—" : format(d, "dd MMM, HH:mm") } catch { return "—" } })()}</td>
+                                                        <td className="px-6 py-4 font-semibold text-[#1a1a18] group-hover:text-[#1a9e6e] transition-colors">{r.inspector}</td>
+                                                        <td className="px-6 py-4 font-medium text-[#6b6860]">{r.company}</td>
+                                                        <td className="px-6 py-4 font-medium text-[#9e9b95]">{r.project}</td>
+                                                        <td className="px-6 py-4"><Badge variant="outline" className="bg-white border-[#e8e6e1] text-[#1a1a18] font-semibold px-2 py-0.5 rounded-[6px] text-[10px]">{r.partName}</Badge></td>
+                                                        <td className="px-6 py-4 font-medium text-[#6b6860]">{r.location}</td>
+                                                        <td className="px-6 py-4">
                                                             <div className="flex flex-col">
-                                                                <span className="font-black text-slate-900 text-sm">{r.inspected.toLocaleString()}</span>
-                                                                <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest mt-0.5">Total</span>
+                                                                <span className="font-bold text-[#1a1a18] text-[13px]">{r.inspected.toLocaleString()}</span>
+                                                                <span className="text-[8px] font-semibold text-[#d4d1ca] uppercase tracking-widest mt-[2px]">Total</span>
                                                             </div>
                                                         </td>
-                                                        <td className="px-8 py-5">
+                                                        <td className="px-6 py-4">
                                                             <div className="flex flex-col">
-                                                                <span className="font-black text-green-600 text-sm">{r.accepted.toLocaleString()}</span>
-                                                                <span className="text-[8px] font-black text-green-200 uppercase tracking-widest mt-0.5">OK</span>
+                                                                <span className="font-bold text-green-600 text-[13px]">{r.accepted.toLocaleString()}</span>
+                                                                <span className="text-[8px] font-semibold text-green-200 uppercase tracking-widest mt-[2px]">OK</span>
                                                             </div>
                                                         </td>
-                                                        <td className="px-8 py-5">
+                                                        <td className="px-6 py-4">
                                                             <div className="flex flex-col">
-                                                                <span className="font-black text-orange-500 text-sm">{r.rework.toLocaleString()}</span>
-                                                                <span className="text-[8px] font-black text-orange-200 uppercase tracking-widest mt-0.5">RW</span>
+                                                                <span className="font-bold text-orange-500 text-[13px]">{r.rework.toLocaleString()}</span>
+                                                                <span className="text-[8px] font-semibold text-orange-200 uppercase tracking-widest mt-[2px]">RW</span>
                                                             </div>
                                                         </td>
-                                                        <td className="px-8 py-5">
+                                                        <td className="px-6 py-4">
                                                             <div className="flex flex-col">
-                                                                <span className="font-black text-red-500 text-sm">{r.rejected.toLocaleString()}</span>
-                                                                <span className="text-[8px] font-black text-red-200 uppercase tracking-widest mt-0.5">RJ</span>
+                                                                <span className="font-bold text-red-500 text-[13px]">{r.rejected.toLocaleString()}</span>
+                                                                <span className="text-[8px] font-semibold text-red-200 uppercase tracking-widest mt-[2px]">RJ</span>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -819,13 +821,13 @@ export default function ReportsPage() {
                                             </tbody>
                                         </table>
                                         {filteredRecords.length === 0 && (
-                                            <div className="py-20 flex flex-col items-center gap-2 text-slate-400">
+                                            <div className="py-20 flex flex-col items-center gap-2 text-[#9e9b95]">
                                                 <Search className="h-8 w-8 opacity-20" />
-                                                <p className="font-bold">No records matching your search</p>
+                                                <p className="font-medium">No records matching your search</p>
                                             </div>
                                         )}
                                     </div>
-                                </Card>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -837,15 +839,9 @@ export default function ReportsPage() {
 
 function EmptyState() {
     return (
-        <div className="flex flex-col items-center justify-center p-12 text-center h-full min-h-[350px]">
-            <div className="relative mb-6">
-                <div className="absolute inset-0 bg-slate-100 rounded-full scale-[2] opacity-50 blur-2xl" />
-                <div className="relative p-6 bg-white rounded-3xl shadow-xl shadow-slate-100 ring-1 ring-slate-100">
-                    <ClipboardList className="h-8 w-8 text-slate-300" />
-                </div>
-            </div>
-            <h3 className="font-black text-slate-900 text-lg">No data matches your criteria</h3>
-            <p className="text-sm text-slate-400 max-w-[240px] mt-2 font-bold leading-relaxed">Try adjusting your filters or selecting a different reporting period.</p>
+        <div className="flex flex-col items-center justify-center py-10 text-center h-full min-h-[350px]">
+            <ClipboardList className="h-8 w-8 text-[#d4d1ca] mb-3" />
+            <p className="text-[13px] text-[#9e9b95]">No data available</p>
         </div>
     )
 }

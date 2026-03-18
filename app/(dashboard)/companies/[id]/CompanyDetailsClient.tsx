@@ -112,113 +112,130 @@ export default function CompanyDetailsClient({
     }
 
     return (
-        <div className="space-y-6">
+        <div className="min-h-[calc(100vh-54px)] bg-[var(--bg)] p-[22px_26px]">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <Button variant="outline" size="icon" asChild>
-                        <Link href="/companies"><ChevronLeft className="h-4 w-4" /></Link>
-                    </Button>
+            <div className="flex items-start justify-between mb-[20px]">
+                <div className="flex items-start gap-4">
+                    <Link
+                        href="/companies"
+                        className="w-8 h-8 bg-white border border-[var(--border)] rounded-[8px] flex items-center justify-center text-[var(--text2)] hover:bg-[var(--surface2)] transition-colors shrink-0 mt-0.5"
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                    </Link>
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">{company.name}</h1>
-                        <div className="flex flex-wrap items-center gap-2 text-muted-foreground text-sm mt-1">
+                        <h1 className="text-[22px] font-semibold tracking-[-0.4px] text-[var(--text)] leading-tight">{company.name}</h1>
+                        <div className="flex flex-wrap items-center gap-[16px] mt-1.5">
                             {company.address && (
-                                <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {company.address}</span>
+                                <span className="flex items-center gap-[5px] text-[12.5px] text-[var(--text2)]">
+                                    <MapPin className="h-3 w-3 text-[var(--text3)] shrink-0" /> <span className="truncate max-w-[200px]">{company.address}</span>
+                                </span>
                             )}
                             {company.contactPerson && (
                                 <>
-                                    <span>•</span>
-                                    <span className="flex items-center gap-1"><User className="h-3 w-3" /> {company.contactPerson}</span>
+                                    {company.address && <span className="text-[10px] text-[var(--border2)]">•</span>}
+                                    <span className="flex items-center gap-[5px] text-[12.5px] text-[var(--text2)]">
+                                        <User className="h-3 w-3 text-[var(--text3)] shrink-0" /> <span className="truncate max-w-[150px]">{company.contactPerson}</span>
+                                    </span>
                                 </>
                             )}
                             {company.contactPhone && (
                                 <>
-                                    <span>•</span>
-                                    <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {company.contactPhone}</span>
+                                    {(company.address || company.contactPerson) && <span className="text-[10px] text-[var(--border2)]">•</span>}
+                                    <span className="flex items-center gap-[5px] text-[12.5px] text-[var(--text2)]">
+                                        <Phone className="h-3 w-3 text-[var(--text3)] shrink-0" /> {company.contactPhone}
+                                    </span>
                                 </>
                             )}
                         </div>
                     </div>
                 </div>
                 {isAdminOrManager && (
-                    <div className="flex gap-2">
-                        <Button variant="outline" asChild>
-                            <Link href={`/companies/${companyId}/edit`}>
-                                <Pencil className="mr-2 h-4 w-4" /> Edit
-                            </Link>
-                        </Button>
-                        <Button
-                            variant="destructive"
+                    <div className="flex items-center gap-2">
+                        <Link
+                            href={`/companies/${companyId}/edit`}
+                            className="inline-flex items-center justify-center bg-white border border-[var(--border)] rounded-[9px] text-[12.5px] font-medium text-[var(--text2)] h-[34px] px-3 hover:bg-[var(--surface2)] hover:text-[var(--text)] transition-colors shrink-0"
+                        >
+                            <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
+                        </Link>
+                        <button
                             onClick={handleDeleteCompany}
                             disabled={deletingCompany}
+                            className="inline-flex items-center justify-center bg-[var(--red-light)] border border-[#fca5a5] text-[var(--red)] rounded-[9px] text-[12.5px] font-medium h-[34px] px-3 hover:bg-[#fee2e2] transition-colors shrink-0 disabled:opacity-50"
                         >
-                            {deletingCompany ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                            {deletingCompany ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Trash2 className="mr-1.5 h-3.5 w-3.5" />}
                             Delete Company
-                        </Button>
+                        </button>
                     </div>
                 )}
             </div>
 
+            <div className="h-px w-full bg-[var(--border)] my-4"></div>
+
             {/* Projects Section */}
-            <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">Projects ({company.projects.length})</h2>
-                    <Button asChild size="sm">
-                        <Link href={`/projects/create?companyId=${company.id}`}>
-                            <Plus className="mr-2 h-4 w-4" /> Add Project
-                        </Link>
-                    </Button>
+            <div>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-[15px] font-semibold text-[var(--text)]">
+                        Projects <span className="font-normal text-[var(--text3)]">({company.projects.length})</span>
+                    </h2>
+                    <Link
+                        href={`/projects/create?companyId=${company.id}`}
+                        className="inline-flex items-center justify-center bg-[var(--accent)] text-white rounded-[9px] text-[12.5px] font-medium h-[34px] px-3 hover:opacity-90 transition-opacity"
+                    >
+                        <Plus className="mr-1.5 h-4 w-4" /> Add Project
+                    </Link>
                 </div>
 
                 {company.projects.length === 0 ? (
-                    <Card>
-                        <CardContent className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
-                            <p>No projects found for this company.</p>
-                            <Button variant="link" asChild>
-                                <Link href={`/projects/create?companyId=${company.id}`}>Create the first project</Link>
-                            </Button>
-                        </CardContent>
-                    </Card>
+                    <div className="flex flex-col items-center justify-center p-8 text-center text-[var(--text2)] border border-dashed border-[var(--border)] rounded-[12px] bg-white">
+                        <p className="text-[13px] mb-2">No projects found for this company.</p>
+                        <Link
+                            href={`/projects/create?companyId=${company.id}`}
+                            className="text-[13px] text-[var(--accent-text)] hover:underline font-medium"
+                        >
+                            Create the first project
+                        </Link>
+                    </div>
                 ) : (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-[14px]">
                         {company.projects.map((project) => (
-                            <Card key={project.id}>
-                                <CardHeader>
-                                    <CardTitle className="text-base">{project.name}</CardTitle>
-                                    <CardDescription className="line-clamp-2">{project.description || "No description"}</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                        <Calendar className="h-3 w-3" />
+                            <div key={project.id} className="bg-white border border-[var(--border)] rounded-[12px] overflow-hidden hover:shadow-[0_3px_14px_rgba(0,0,0,0.07)] hover:border-[var(--border2)] transition-all flex flex-col">
+                                <div className="p-[16px_18px] flex-1">
+                                    <h3 className="text-[14px] font-semibold text-[var(--text)] mb-1 leading-tight">{project.name}</h3>
+                                    <p className="text-[12.5px] text-[var(--text2)] leading-[1.45] mb-3 line-clamp-2">
+                                        {project.description || "No description provided."}
+                                    </p>
+                                    <div className="flex items-center gap-1.5 text-[12px] text-[var(--text3)]">
+                                        <Calendar className="h-[11px] w-[11px] shrink-0" />
                                         Created {new Date(project.createdAt).toLocaleDateString()}
                                     </div>
-                                </CardContent>
+                                </div>
                                 {isAdminOrManager && (
-                                    <CardFooter className="flex flex-wrap justify-end gap-2 pt-0">
-                                        <Button variant="outline" size="sm" asChild>
-                                            <Link href={`/projects/${project.id}/form-builder`}>
-                                                <LayoutTemplate className="h-3 w-3 mr-1" /> Form Builder
-                                            </Link>
-                                        </Button>
-                                        <Button variant="outline" size="sm" asChild>
-                                            <Link href={`/projects/${project.id}/edit`}>
-                                                <Pencil className="h-3 w-3 mr-1" /> Edit
-                                            </Link>
-                                        </Button>
-                                        <Button
-                                            variant="destructive"
-                                            size="sm"
+                                    <div className="border-t border-[var(--border)] p-[10px_18px] flex items-center flex-wrap gap-2 bg-[var(--surface2)]/30">
+                                        <Link
+                                            href={`/projects/${project.id}/form-builder`}
+                                            className="inline-flex items-center justify-center h-8 bg-[var(--surface2)] border border-[var(--border)] rounded-[7px] text-[12px] font-medium text-[var(--text2)] px-2.5 gap-1.5 hover:bg-[var(--accent-light)] hover:text-[var(--accent-text)] hover:border-[var(--accent)] transition-colors tracking-tight"
+                                        >
+                                            <LayoutTemplate className="h-[11px] w-[11px]" /> Form Builder
+                                        </Link>
+                                        <Link
+                                            href={`/projects/${project.id}/edit`}
+                                            className="inline-flex items-center justify-center h-8 bg-[var(--surface2)] border border-[var(--border)] rounded-[7px] text-[12px] font-medium text-[var(--text2)] px-2.5 gap-1.5 hover:bg-[var(--accent-light)] hover:text-[var(--accent-text)] hover:border-[var(--accent)] transition-colors tracking-tight"
+                                        >
+                                            <Pencil className="h-[11px] w-[11px]" /> Edit
+                                        </Link>
+                                        <button
                                             onClick={() => handleDeleteProject(project.id, project.name)}
                                             disabled={deletingProjectId === project.id}
+                                            className="inline-flex items-center justify-center h-8 bg-[var(--surface2)] border border-[var(--border)] rounded-[7px] text-[12px] font-medium text-[var(--text2)] px-2.5 gap-1.5 hover:bg-[var(--red-light)] hover:text-[var(--red)] hover:border-[#fca5a5] transition-colors tracking-tight disabled:opacity-50 ml-auto"
                                         >
                                             {deletingProjectId === project.id
-                                                ? <Loader2 className="h-3 w-3 animate-spin" />
-                                                : <Trash2 className="h-3 w-3 mr-1" />}
+                                                ? <Loader2 className="h-[11px] w-[11px] animate-spin" />
+                                                : <Trash2 className="h-[11px] w-[11px]" />}
                                             Delete
-                                        </Button>
-                                    </CardFooter>
+                                        </button>
+                                    </div>
                                 )}
-                            </Card>
+                            </div>
                         ))}
                     </div>
                 )}

@@ -21,7 +21,8 @@ import {
     UserX,
     UserCheck,
     Filter,
-    KeyRound
+    KeyRound,
+    UserCog
 } from "lucide-react"
 import {
     Dialog,
@@ -239,343 +240,278 @@ export default function UserManagementPage() {
 
     if (loading && users.length === 0) {
         return (
-            <div className="flex h-[70vh] items-center justify-center">
+            <div className="p-6 lg:p-7 flex h-[70vh] items-center justify-center">
                 <div className="flex flex-col items-center gap-2">
-                    <Loader2 className="h-10 w-10 animate-spin text-primary opacity-20" />
-                    <p className="text-sm font-medium text-muted-foreground animate-pulse">Loading users...</p>
+                    <Loader2 className="h-10 w-10 animate-spin text-[#1a9e6e]" />
+                    <p className="text-[13px] font-medium text-[#6b6860]">Loading users...</p>
                 </div>
             </div>
         )
     }
 
     return (
-        <div className="space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex flex-col gap-1">
-                    <h1 className="text-3xl font-bold tracking-tight">System Users</h1>
-                    <p className="text-muted-foreground font-medium text-sm">Manage access, roles, and account security</p>
+        <div className="p-6 lg:p-7">
+            <div className="flex items-center justify-between mb-5">
+                <div>
+                    <h1 className="text-[22px] font-semibold tracking-tight text-[#1a1a18]">System Users</h1>
+                    <p className="text-[13px] text-[#6b6860] mt-[3px]">Manage access, roles, and account security</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-[10px]">
                     <BulkImportInspectors onImportComplete={fetchData} />
-                    <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="shadow-md h-11 font-bold">
-                                <UserPlus className="mr-2 h-4 w-4" />
-                                Create User
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
-                            <form onSubmit={handleCreateUser}>
-                                <DialogHeader>
-                                    <DialogTitle>Create New User</DialogTitle>
-                                    <DialogDescription>
-                                        Provision a new account with specific role-based permissions.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <div className="grid gap-4 py-4">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="name" className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Full Name</Label>
-                                        <Input
-                                            id="name"
-                                            required
-                                            value={formData.name}
-                                            onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                            placeholder="John Doe"
-                                            className="h-11"
-                                        />
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="email" className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Email Address</Label>
-                                        <Input
-                                            id="email"
-                                            type="email"
-                                            required
-                                            value={formData.email}
-                                            onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                            placeholder="john@example.com"
-                                            className="h-11"
-                                        />
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="password" className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Initial Password</Label>
-                                        <Input
-                                            id="password"
-                                            type="password"
-                                            required
-                                            value={formData.password}
-                                            onChange={e => setFormData({ ...formData, password: e.target.value })}
-                                            placeholder="••••••••"
-                                            className="h-11"
-                                        />
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="role" className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Assignment Role</Label>
-                                        <Select
-                                            value={formData.role}
-                                            onValueChange={v => setFormData({ ...formData, role: v })}
-                                        >
-                                            <SelectTrigger className="h-11">
-                                                <SelectValue placeholder="Select a role" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="ADMIN">Administrator</SelectItem>
-                                                <SelectItem value="MANAGER">Manager</SelectItem>
-                                                <SelectItem value="INSPECTION_BOY">Inspector</SelectItem>
-                                                <SelectItem value="CLIENT">Client Portal User</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    {formData.role === "CLIENT" && (
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="company" className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Designated Company</Label>
-                                            <Select
-                                                value={formData.companyId}
-                                                onValueChange={v => setFormData({ ...formData, companyId: v })}
-                                                required
-                                            >
-                                                <SelectTrigger className="h-11">
-                                                    <SelectValue placeholder="Select a company" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {companies.map(c => (
-                                                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    )}
-
-                                    {/* Group Assignment — Inspector only */}
-                                    {formData.role === "INSPECTION_BOY" && (
-                                        <div className="space-y-3 border rounded-lg p-3 bg-amber-50/40 border-amber-200">
-                                            <Label className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Assign to Group (Optional)</Label>
-                                            <div className="flex gap-2">
-                                                {(["none", "existing", "new"] as const).map(m => (
-                                                    <button
-                                                        type="button"
-                                                        key={m}
-                                                        onClick={() => { setGroupMode(m); setGroupCompanyId(""); setGroupProjectId(""); setNewGroupProjectName(""); setGroupProjects([]); setGroupManagerIds([]) }}
-                                                        className={`flex-1 text-xs py-1.5 rounded border font-medium transition-colors ${groupMode === m
-                                                                ? "bg-amber-600 text-white border-amber-600"
-                                                                : "bg-white border-gray-200 hover:bg-amber-50"
-                                                            }`}
-                                                    >
-                                                        {m === "none" ? "Skip" : m === "existing" ? "Existing Group" : "New Group"}
-                                                    </button>
-                                                ))}
-                                            </div>
-
-                                            {groupMode !== "none" && (
-                                                <>
-                                                    <div className="grid gap-1">
-                                                        <label className="text-xs font-medium">Company</label>
-                                                        <select
-                                                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                                            value={groupCompanyId}
-                                                            onChange={(e) => { setGroupCompanyId(e.target.value); fetchGroupProjects(e.target.value); setGroupProjectId("") }}
-                                                        >
-                                                            <option value="">Select Company</option>
-                                                            {groupCompanies.map(c => (
-                                                                <option key={c.id} value={c.id}>{c.name}</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-
-                                                    {groupMode === "existing" && groupCompanyId && (
-                                                        <div className="grid gap-1">
-                                                            <label className="text-xs font-medium">Project (Group)</label>
-                                                            <select
-                                                                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                                                value={groupProjectId}
-                                                                onChange={(e) => setGroupProjectId(e.target.value)}
-                                                            >
-                                                                <option value="">Select Project</option>
-                                                                {groupProjects.map(p => (
-                                                                    <option key={p.id} value={p.id}>{p.name}</option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                    )}
-
-                                                    {groupMode === "new" && groupCompanyId && (
-                                                        <div className="grid gap-1">
-                                                            <label className="text-xs font-medium">New Group Name</label>
-                                                            <Input
-                                                                placeholder="Enter project/group name"
-                                                                value={newGroupProjectName}
-                                                                onChange={e => setNewGroupProjectName(e.target.value)}
-                                                                className="h-9 text-sm"
-                                                            />
-                                                        </div>
-                                                    )}
-
-                                                    {managers.length > 0 && (groupProjectId || (groupMode === "new" && newGroupProjectName)) && (
-                                                        <div className="grid gap-1">
-                                                            <label className="text-xs font-medium">Add Managers (Optional)</label>
-                                                            <div className="border rounded max-h-28 overflow-y-auto p-2 space-y-1 bg-white">
-                                                                {managers.map(m => (
-                                                                    <label key={m.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/40 p-1 rounded text-sm">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={groupManagerIds.includes(m.id)}
-                                                                            onChange={e => {
-                                                                                if (e.target.checked) setGroupManagerIds([...groupManagerIds, m.id])
-                                                                                else setGroupManagerIds(groupManagerIds.filter(id => id !== m.id))
-                                                                            }}
-                                                                            className="rounded border-gray-300"
-                                                                        />
-                                                                        <span className="font-medium">{m.name}</span>
-                                                                        <span className="text-xs text-muted-foreground">({m.email})</span>
-                                                                    </label>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                                <DialogFooter>
-                                    <Button type="submit" disabled={submitting} className="w-full h-11 font-bold">
-                                        {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                                        Complete Provisioning
-                                    </Button>
-                                </DialogFooter>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
+                    <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="px-3.5 h-9 bg-[#1a9e6e] text-white rounded-[9px] text-[13px] font-medium flex items-center gap-2 hover:bg-[#158a5e] transition-colors"
+                    >
+                        <UserPlus className="h-4 w-4" />
+                        Create User
+                    </button>
                 </div>
             </div>
 
             {/* Filters Bar */}
-            <div className="flex flex-col md:flex-row gap-4">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
+            <div className="flex items-center gap-3 mb-4">
+                <div className="relative flex-1 max-w-[400px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-[#9e9b95]" />
+                    <input
                         placeholder="Search name or email..."
-                        className="pl-10 h-11 border-none bg-white shadow-sm font-medium"
+                        className="w-full pl-9 pr-4 py-[9px] bg-white border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:outline-none focus:border-[#1a9e6e] focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] transition-shadow"
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                     />
                 </div>
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
-                    <SelectTrigger className="w-[180px] h-11 border-none bg-white shadow-sm font-bold">
-                        <div className="flex items-center gap-2">
-                            <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-                            <SelectValue placeholder="Filter by Role" />
-                        </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="ALL">All Roles</SelectItem>
-                        <SelectItem value="ADMIN">Admins</SelectItem>
-                        <SelectItem value="MANAGER">Managers</SelectItem>
-                        <SelectItem value="INSPECTION_BOY">Inspectors</SelectItem>
-                        <SelectItem value="CLIENT">Clients</SelectItem>
-                    </SelectContent>
-                </Select>
+                <select
+                    value={roleFilter}
+                    onChange={e => setRoleFilter(e.target.value)}
+                    className="w-[160px] px-3.5 py-[9px] bg-white border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#6b6860] focus:outline-none focus:border-[#1a9e6e] appearance-none cursor-pointer"
+                >
+                    <option value="ALL">All Roles</option>
+                    <option value="ADMIN">Admin</option>
+                    <option value="MANAGER">Manager</option>
+                    <option value="INSPECTION_BOY">Inspector</option>
+                    <option value="CLIENT">Client</option>
+                </select>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
-                {filteredUsers.map((user) => (
-                    <Card key={user.id} className={cn(
-                        "hover:shadow-md transition-all border-none bg-white overflow-hidden group",
-                        !user.isActive && "opacity-60 grayscale-[0.5]"
-                    )}>
-                        <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                            <div className="flex items-center gap-4 min-w-0 flex-1">
-                                <div className={cn(
-                                    "h-12 w-12 rounded-2xl flex items-center justify-center text-lg font-bold shrink-0",
-                                    user.isActive ? "bg-primary/5 text-primary" : "bg-muted text-muted-foreground"
-                                )}>
-                                    {user.name.charAt(0).toUpperCase()}
-                                </div>
-                                <div className="space-y-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <h3 className="font-bold text-base leading-tight truncate">{user.name}</h3>
-                                        {getRoleBadge(user.role)}
-                                        {!user.isActive && <Badge variant="outline" className="text-[9px] h-4 px-1.5 font-bold border-red-200 text-red-600 bg-red-50/50">DISABLED</Badge>}
-                                    </div>
-                                    <div className="flex items-center gap-4 text-xs text-muted-foreground font-medium">
-                                        <div className="flex items-center gap-1.5 truncate max-w-[200px]">
-                                            <Mail className="h-3 w-3" />
-                                            {user.email}
-                                        </div>
-                                        {user.company && (
-                                            <div className="flex items-center gap-1.5 text-blue-600/80 font-bold bg-blue-50/50 px-1.5 py-0.5 rounded">
-                                                <Building2 className="h-3 w-3" />
-                                                {user.company.name}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
+            <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden">
+                {filteredUsers.map((user, idx) => (
+                    <div
+                        key={user.id}
+                        className={`flex items-center gap-3.5 p-5 hover:bg-[#f9f8f5] transition-colors ${
+                            idx !== filteredUsers.length - 1 ? "border-b border-[#e8e6e1]" : ""
+                        } ${!user.isActive ? "opacity-60" : ""}`}
+                    >
+                        <div className={`h-9 w-9 rounded-full flex items-center justify-center text-[14px] font-semibold shrink-0 ${
+                            user.role === "ADMIN" ? "bg-[#e8f7f1] text-[#0d6b4a]" :
+                            user.role === "MANAGER" ? "bg-[#eff6ff] text-[#1d4ed8]" :
+                            user.role === "INSPECTION_BOY" ? "bg-[#fef3c7] text-[#92400e]" :
+                            "bg-[#f9f8f5] text-[#6b6860]"
+                        }`}>
+                            {user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                                <span className="text-[13.5px] font-medium text-[#1a1a18]">{user.name}</span>
+                                <span className={`px-[9px] py-0.5 rounded-[20px] text-[11px] font-medium ${
+                                    user.role === "INSPECTION_BOY" ? "bg-[#fef3c7] text-[#92400e]" :
+                                    user.role === "MANAGER" ? "bg-[#eff6ff] text-[#1d4ed8]" :
+                                    user.role === "ADMIN" ? "bg-[#e8f7f1] text-[#0d6b4a]" :
+                                    "bg-[#f9f8f5] text-[#6b6860]"
+                                }`}>
+                                    {user.role === "ADMIN" ? "Admin" : user.role === "MANAGER" ? "Manager" : user.role === "INSPECTION_BOY" ? "Inspector" : user.role === "CLIENT" ? "Client" : user.role}
+                                </span>
                             </div>
-
-                            <div className="flex bg-muted/20 p-1.5 rounded-xl gap-1 shrink-0">
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-8 w-8 p-0 hover:bg-white hover:shadow-sm"
-                                    onClick={() => {
-                                        setSelectedUserId(user.id)
-                                        setIsResetModalOpen(true)
-                                    }}
-                                    title="Reset Password"
-                                >
-                                    <KeyRound className="h-4 w-4 text-amber-500" />
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className={cn(
-                                        "h-8 w-8 p-0 hover:bg-white hover:shadow-sm",
-                                        user.isActive ? "text-red-500" : "text-emerald-500"
-                                    )}
-                                    onClick={() => toggleUserStatus(user.id, user.isActive)}
-                                    title={user.isActive ? "Disable User" : "Enable User"}
-                                >
-                                    {user.isActive ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                                </Button>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                                <Mail className="h-3 w-3 text-[#9e9b95]" />
+                                <span className="text-[12.5px] text-[#6b6860]">{user.email}</span>
                             </div>
                         </div>
-                    </Card>
+                        <div className="flex items-center gap-1.5 ml-auto">
+                            <button
+                                onClick={() => {
+                                    setSelectedUserId(user.id)
+                                    setIsResetModalOpen(true)
+                                }}
+                                className="h-[30px] w-[30px] rounded-[7px] bg-[#f9f8f5] border border-[#e8e6e1] flex items-center justify-center hover:bg-[#fef3c7] hover:text-[#d97706] hover:border-[#fcd34d] transition-colors"
+                                title="Reset Password"
+                            >
+                                <KeyRound className="h-[14px] w-[14px] text-[#6b6860]" />
+                            </button>
+                            <button
+                                className="h-[30px] w-[30px] rounded-[7px] bg-[#f9f8f5] border border-[#e8e6e1] flex items-center justify-center hover:bg-[#e8f7f1] hover:text-[#0d6b4a] hover:border-[#6ee7b7] transition-colors"
+                                title="Change Role"
+                            >
+                                <UserCog className="h-[14px] w-[14px] text-[#6b6860]" />
+                            </button>
+                        </div>
+                    </div>
                 ))}
             </div>
 
-            {/* Password Reset Modal */}
-            <Dialog open={isResetModalOpen} onOpenChange={setIsResetModalOpen}>
-                <DialogContent className="sm:max-w-[400px]">
-                    <DialogHeader>
-                        <DialogTitle>Reset Account Password</DialogTitle>
-                        <DialogDescription>
-                            Create a new secure password for this user.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4 space-y-4">
-                        <div className="space-y-2">
-                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">New Password</Label>
-                            <Input
-                                type="password"
-                                value={newPassword}
-                                onChange={e => setNewPassword(e.target.value)}
-                                placeholder="Enter strong password"
-                                className="h-11"
+            {/* Create New User Modal */}
+            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+                <DialogContent className="bg-white rounded-2xl w-[480px] max-w-[95vw] p-7 shadow-[0_20px_60px_rgba(0,0,0,0.12)] border-none [&>button]:hidden">
+                    <div className="flex items-start justify-between mb-5">
+                        <div>
+                            <h2 className="text-[17px] font-semibold text-[#1a1a18]">Create New User</h2>
+                            <p className="text-[13px] text-[#6b6860] mt-1 leading-relaxed">Provision a new account with specific role-based permissions.</p>
+                        </div>
+                        <button
+                            onClick={() => setIsCreateModalOpen(false)}
+                            className="h-[30px] w-[30px] rounded-[8px] bg-[#f9f8f5] border border-[#e8e6e1] text-[#6b6860] text-[16px] cursor-pointer hover:bg-[#fef2f2] hover:text-[#dc2626] hover:border-[#fca5a5] transition-colors flex items-center justify-center"
+                        >
+                            ✕
+                        </button>
+                    </div>
+
+                    <div className="border-t border-[#e8e6e1] mb-5" />
+
+                    <form onSubmit={handleCreateUser} className="space-y-4">
+                        <div className="space-y-1.5">
+                            <label className="text-[11.5px] font-medium text-[#6b6860] uppercase tracking-wide">Full Name</label>
+                            <input
+                                type="text"
+                                required
+                                value={formData.name}
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                placeholder="John Doe"
+                                className="w-full px-3.5 py-2.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:outline-none focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)]"
                             />
                         </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[11.5px] font-medium text-[#6b6860] uppercase tracking-wide">Email Address</label>
+                            <input
+                                type="email"
+                                required
+                                value={formData.email}
+                                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                placeholder="john@example.com"
+                                className="w-full px-3.5 py-2.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:outline-none focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)]"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[11.5px] font-medium text-[#6b6860] uppercase tracking-wide">Initial Password</label>
+                            <input
+                                type="password"
+                                required
+                                value={formData.password}
+                                onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                placeholder="••••••••"
+                                className="w-full px-3.5 py-2.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:outline-none focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)]"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[11.5px] font-medium text-[#6b6860] uppercase tracking-wide">Assignment Role</label>
+                            <select
+                                value={formData.role}
+                                onChange={e => setFormData({ ...formData, role: e.target.value })}
+                                className="w-full px-3.5 py-2.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] focus:outline-none focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] appearance-none cursor-pointer"
+                            >
+                                <option value="ADMIN">Administrator</option>
+                                <option value="MANAGER">Manager</option>
+                                <option value="INSPECTION_BOY">Inspector</option>
+                                <option value="CLIENT">Client Portal User</option>
+                            </select>
+                        </div>
+                        {formData.role === "CLIENT" && (
+                            <div className="space-y-1.5">
+                                <label className="text-[11.5px] font-medium text-[#6b6860] uppercase tracking-wide">Designated Company</label>
+                                <select
+                                    value={formData.companyId}
+                                    onChange={e => setFormData({ ...formData, companyId: e.target.value })}
+                                    required
+                                    className="w-full px-3.5 py-2.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] focus:outline-none focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] appearance-none cursor-pointer"
+                                >
+                                    <option value="">Select a company</option>
+                                    {companies.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        <div className="border-t border-[#e8e6e1] mt-1 pt-4">
+                            <button
+                                type="submit"
+                                disabled={submitting}
+                                className="w-full py-3 bg-[#1a9e6e] text-white border-none rounded-[9px] text-[13.5px] font-medium hover:bg-[#158a5e] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                {submitting ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Creating...
+                                    </span>
+                                ) : (
+                                    "Complete Provisioning"
+                                )}
+                            </button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Password Reset Modal */}
+            <Dialog open={isResetModalOpen} onOpenChange={setIsResetModalOpen}>
+                <DialogContent className="bg-white rounded-2xl w-[400px] max-w-[95vw] p-7 shadow-[0_20px_60px_rgba(0,0,0,0.12)] border-none [&>button]:hidden">
+                    <div className="flex items-start justify-between mb-5">
+                        <div>
+                            <h2 className="text-[17px] font-semibold text-[#1a1a18]">Reset Account Password</h2>
+                            <p className="text-[13px] text-[#6b6860] mt-1">Create a new secure password for this user.</p>
+                        </div>
+                        <button
+                            onClick={() => setIsResetModalOpen(false)}
+                            className="h-[30px] w-[30px] rounded-[8px] bg-[#f9f8f5] border border-[#e8e6e1] text-[#6b6860] text-[16px] cursor-pointer hover:bg-[#fef2f2] hover:text-[#dc2626] hover:border-[#fca5a5] transition-colors flex items-center justify-center"
+                        >
+                            ✕
+                        </button>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsResetModalOpen(false)}>Cancel</Button>
-                        <Button onClick={handlePasswordReset} disabled={submitting || !newPassword}>
-                            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Reset"}
-                        </Button>
-                    </DialogFooter>
+
+                    <div className="border-t border-[#e8e6e1] mb-5" />
+
+                    <div className="space-y-1.5 mb-4">
+                        <label className="text-[11.5px] font-medium text-[#6b6860] uppercase tracking-wide">New Password</label>
+                        <input
+                            type="password"
+                            value={newPassword}
+                            onChange={e => setNewPassword(e.target.value)}
+                            placeholder="Enter strong password"
+                            className="w-full px-3.5 py-2.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:outline-none focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)]"
+                        />
+                    </div>
+
+                    <div className="flex gap-2.5">
+                        <button
+                            onClick={() => setIsResetModalOpen(false)}
+                            className="flex-1 py-2.5 bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[9px] text-[13px] font-medium hover:bg-[#f9f8f5] transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handlePasswordReset}
+                            disabled={submitting || !newPassword}
+                            className="flex-1 py-2.5 bg-[#1a9e6e] text-white border-none rounded-[9px] text-[13px] font-medium hover:bg-[#158a5e] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                            {submitting ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Resetting...
+                                </span>
+                            ) : (
+                                "Confirm Reset"
+                            )}
+                        </button>
+                    </div>
                 </DialogContent>
             </Dialog>
 
             {filteredUsers.length === 0 && (
-                <div className="py-20 text-center space-y-3">
-                    <Users className="h-12 w-12 text-muted-foreground mx-auto opacity-20" />
-                    <p className="text-muted-foreground font-medium">No system users found matching your criteria.</p>
+                <div className="bg-white border border-[#e8e6e1] rounded-[14px] py-[60px] text-center">
+                    <div className="w-[56px] h-[56px] bg-[#e8f7f1] rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Users className="h-6 w-6 text-[#1a9e6e]" />
+                    </div>
+                    <h3 className="text-[16px] font-semibold text-[#1a1a18] mb-1.5">No users found</h3>
+                    <p className="text-[13px] text-[#6b6860] max-w-[250px] mx-auto leading-relaxed">
+                        No system users found matching your criteria.
+                    </p>
                 </div>
             )}
         </div>

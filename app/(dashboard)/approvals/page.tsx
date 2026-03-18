@@ -4,23 +4,16 @@
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
     CheckCircle2,
     XCircle,
-    Clock,
     ChevronRight,
     Loader2,
     Search,
-    ClipboardCheck,
-    Inbox
+    ClipboardCheck
 } from "lucide-react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
-import { cn } from "@/lib/utils"
 
 export default function ApprovalsPage() {
     const { data: session, status: authStatus } = useSession()
@@ -91,131 +84,178 @@ export default function ApprovalsPage() {
     }
 
     return (
-        <div className="space-y-8 container max-w-7xl py-10">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Inspection Approvals</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Review and approve submitted inspections to finalize reports.
-                    </p>
-                </div>
-                {counts.pending > 0 && (
-                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 px-4 py-1 self-start md:self-center">
-                        <Clock className="h-3.5 w-3.5 mr-2" />
-                        {counts.pending} Pending Reviews
-                    </Badge>
-                )}
+        <div className="p-6 lg:p-7">
+            <div className="mb-5">
+                <h1 className="text-[22px] font-semibold tracking-tight text-[#1a1a18]">Inspection Approvals</h1>
+                <p className="text-[13px] text-[#6b6860] mt-[3px]">Review and approve submitted inspections to finalize reports.</p>
             </div>
 
-            <Tabs defaultValue="pending" className="w-full" onValueChange={setActiveTab}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
-                    <TabsList className="grid grid-cols-4 w-full sm:w-[450px]">
-                        <TabsTrigger value="pending" className="relative">
-                            Pending
-                            {counts.pending > 0 && (
-                                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground shadow-sm">
-                                    {counts.pending}
-                                </span>
-                            )}
-                        </TabsTrigger>
-                        <TabsTrigger value="approved">Approved</TabsTrigger>
-                        <TabsTrigger value="rejected">Rejected</TabsTrigger>
-                        <TabsTrigger value="all">All</TabsTrigger>
-                    </TabsList>
+            <div className="flex items-center justify-between gap-4 mb-4">
+                <div className="flex items-center bg-white border border-[#e8e6e1] rounded-[10px] p-1">
+                    <button
+                        onClick={() => setActiveTab("pending")}
+                        className={`px-[18px] py-1.5 rounded-[7px] text-[13px] font-medium transition-all duration-150 ${
+                            activeTab === "pending"
+                                ? "bg-[#fef3c7] text-[#d97706]"
+                                : "text-[#6b6860] hover:bg-[#f9f8f5] hover:text-[#1a1a18]"
+                        }`}
+                    >
+                        Pending {counts.pending > 0 && <span className="ml-1 text-[10px]">({counts.pending})</span>}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("approved")}
+                        className={`px-[18px] py-1.5 rounded-[7px] text-[13px] font-medium transition-all duration-150 ${
+                            activeTab === "approved"
+                                ? "bg-[#e8f7f1] text-[#0d6b4a]"
+                                : "text-[#6b6860] hover:bg-[#f9f8f5] hover:text-[#1a1a18]"
+                        }`}
+                    >
+                        Approved
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("rejected")}
+                        className={`px-[18px] py-1.5 rounded-[7px] text-[13px] font-medium transition-all duration-150 ${
+                            activeTab === "rejected"
+                                ? "bg-[#fef2f2] text-[#dc2626]"
+                                : "text-[#6b6860] hover:bg-[#f9f8f5] hover:text-[#1a1a18]"
+                        }`}
+                    >
+                        Rejected
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("all")}
+                        className={`px-[18px] py-1.5 rounded-[7px] text-[13px] font-medium transition-all duration-150 ${
+                            activeTab === "all"
+                                ? "bg-[#1a1a18] text-white"
+                                : "text-[#6b6860] hover:bg-[#f9f8f5] hover:text-[#1a1a18]"
+                        }`}
+                    >
+                        All
+                    </button>
+                </div>
 
-                    <div className="relative w-full sm:w-[300px]">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search by project, company..."
-                            className="pl-9"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
+                <div className="relative w-[280px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-[#9e9b95]" />
+                    <Input
+                        placeholder="Search..."
+                        className="pl-9 pr-4 py-2 bg-white border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:border-[#1a9e6e] focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:outline-none transition-shadow"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+            </div>
+
+            <div>
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                        <Loader2 className="h-10 w-10 animate-spin text-primary opacity-50" />
+                        <p className="text-sm font-medium text-muted-foreground">Loading inspections...</p>
                     </div>
-                </div>
-
-                <div className="mt-8">
-                    {loading ? (
-                        <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                            <Loader2 className="h-10 w-10 animate-spin text-primary opacity-50" />
-                            <p className="text-sm font-medium text-muted-foreground">Loading inspections...</p>
+                ) : filteredInspections.length === 0 ? (
+                    <div className="bg-white border border-[#e8e6e1] rounded-[14px] py-[60px] px-10 text-center">
+                        <div className="w-[56px] h-[56px] bg-[#e8f7f1] rounded-full flex items-center justify-center mx-auto mb-4">
+                            <ClipboardCheck className="h-6 w-6 text-[#1a9e6e]" />
                         </div>
-                    ) : filteredInspections.length === 0 ? (
-                        <Card className="border-dashed">
-                            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                                <div className="rounded-full bg-green-50 p-4 border border-green-100 mb-4">
-                                    <ClipboardCheck className="h-8 w-8 text-green-500" />
-                                </div>
-                                <h3 className="text-lg font-semibold">All caught up!</h3>
-                                <p className="text-muted-foreground max-w-[250px] mt-1">
-                                    No {activeTab !== "all" ? activeTab : ""} inspections found matching your criteria.
-                                </p>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        <div className="rounded-md border bg-card overflow-hidden shadow-sm">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-muted/50 border-b">
-                                        <tr className="text-left font-medium text-muted-foreground">
-                                            <th className="px-4 py-3">Company Name</th>
-                                            <th className="px-4 py-3">Project Name</th>
-                                            <th className="px-4 py-3">Inspector Name</th>
-                                            <th className="px-4 py-3">Submitted Date</th>
-                                            <th className="px-4 py-3">Status</th>
-                                            <th className="px-4 py-3 text-right">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y">
-                                        {filteredInspections.map((inspection) => (
-                                            <tr key={inspection.id} className="hover:bg-muted/30 transition-colors group">
-                                                <td className="px-4 py-4 font-medium">
-                                                    {inspection.assignment?.project?.company?.name}
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    {inspection.assignment?.project?.name}
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
-                                                            {inspection.submitter?.name.charAt(0)}
-                                                        </div>
-                                                        {inspection.submitter?.name}
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-4 text-muted-foreground">
-                                                    {inspection.submittedAt ? new Date(inspection.submittedAt).toLocaleDateString('en-GB') : "—"}
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <Badge
-                                                        className={cn(
-                                                            "px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider rounded-md border shadow-none",
-                                                            inspection.status === "pending" && "bg-yellow-50 text-yellow-700 border-yellow-200",
-                                                            inspection.status === "approved" && "bg-green-50 text-green-700 border-green-200",
-                                                            inspection.status === "rejected" && "bg-red-50 text-red-700 border-red-200",
-                                                            inspection.status === "draft" && "bg-blue-50 text-blue-700 border-blue-200"
-                                                        )}
+                        <h3 className="text-[16px] font-semibold text-[#1a1a18] mb-1.5">All caught up!</h3>
+                        <p className="text-[13px] text-[#6b6860] max-w-[250px] mx-auto leading-relaxed">
+                            No {activeTab !== "all" ? activeTab : ""} inspections found matching your criteria.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="bg-[#f9f8f5] border-b border-[#e8e6e1]">
+                                        <th className="px-[18px] py-2.5 text-left text-[11px] font-medium text-[#9e9b95] uppercase tracking-wide">Inspector</th>
+                                        <th className="px-[18px] py-2.5 text-left text-[11px] font-medium text-[#9e9b95] uppercase tracking-wide">Project</th>
+                                        <th className="px-[18px] py-2.5 text-left text-[11px] font-medium text-[#9e9b95] uppercase tracking-wide">Company</th>
+                                        <th className="px-[18px] py-2.5 text-left text-[11px] font-medium text-[#9e9b95] uppercase tracking-wide">Submitted</th>
+                                        <th className="px-[18px] py-2.5 text-left text-[11px] font-medium text-[#9e9b95] uppercase tracking-wide">Status</th>
+                                        <th className="px-[18px] py-2.5 text-left text-[11px] font-medium text-[#9e9b95] uppercase tracking-wide">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-[#e8e6e1]">
+                                    {filteredInspections.map((inspection) => (
+                                        <tr key={inspection.id} className="hover:bg-[#f9f8f5] transition-colors">
+                                            <td className="px-[18px] py-3.5">
+                                                <p className="text-[13px] font-medium text-[#1a1a18]">{inspection.submitter?.name}</p>
+                                                <p className="text-[11.5px] text-[#9e9b95] mt-0.5">{inspection.submitter?.email}</p>
+                                            </td>
+                                            <td className="px-[18px] py-3.5 text-[13px] text-[#1a1a18]">
+                                                {inspection.assignment?.project?.name}
+                                            </td>
+                                            <td className="px-[18px] py-3.5 text-[13px] text-[#1a1a18]">
+                                                {inspection.assignment?.project?.company?.name}
+                                            </td>
+                                            <td className="px-[18px] py-3.5 text-[13px] text-[#6b6860]">
+                                                {inspection.submittedAt ? new Date(inspection.submittedAt).toLocaleDateString('en-GB') : "—"}
+                                            </td>
+                                            <td className="px-[18px] py-3.5">
+                                                <span className={`inline-block px-3 py-1 rounded-[20px] text-[11.5px] font-medium ${
+                                                    inspection.status === "pending" ? "bg-[#fef3c7] text-[#d97706]" :
+                                                    inspection.status === "approved" ? "bg-[#e8f7f1] text-[#0d6b4a]" :
+                                                    inspection.status === "rejected" ? "bg-[#fef2f2] text-[#dc2626]" :
+                                                    "bg-[#f9f8f5] text-[#6b6860]"
+                                                }`}>
+                                                    {inspection.status === "pending" ? "Pending" : inspection.status === "approved" ? "Approved" : inspection.status === "rejected" ? "Rejected" : inspection.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-[18px] py-3.5">
+                                                <div className="flex items-center gap-1.5">
+                                                    {inspection.status === "pending" && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                try {
+                                                                    const res = await fetch(`/api/inspections/${inspection.id}`, {
+                                                                        method: "PATCH",
+                                                                        headers: { "Content-Type": "application/json" },
+                                                                        body: JSON.stringify({ status: "approved" })
+                                                                    })
+                                                                    if (res.ok) fetchData(activeTab)
+                                                                } catch {}
+                                                            }}
+                                                            className="h-7 w-7 rounded-[7px] bg-[#e8f7f1] text-[#0d6b4a] flex items-center justify-center hover:bg-[#1a9e6e] hover:text-white transition-colors"
+                                                            title="Approve"
+                                                        >
+                                                            <CheckCircle2 className="h-4 w-4" />
+                                                        </button>
+                                                    )}
+                                                    {inspection.status === "pending" && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                try {
+                                                                    const res = await fetch(`/api/inspections/${inspection.id}`, {
+                                                                        method: "PATCH",
+                                                                        headers: { "Content-Type": "application/json" },
+                                                                        body: JSON.stringify({ status: "rejected" })
+                                                                    })
+                                                                    if (res.ok) fetchData(activeTab)
+                                                                } catch {}
+                                                            }}
+                                                            className="h-7 w-7 rounded-[7px] bg-[#fef2f2] text-[#dc2626] flex items-center justify-center hover:bg-[#dc2626] hover:text-white transition-colors"
+                                                            title="Reject"
+                                                        >
+                                                            <XCircle className="h-4 w-4" />
+                                                        </button>
+                                                    )}
+                                                    <Link
+                                                        href={`/approvals/${inspection.id}`}
+                                                        className="h-7 w-7 rounded-[7px] bg-[#f9f8f5] text-[#6b6860] flex items-center justify-center hover:bg-[#1a1a18] hover:text-white transition-colors"
+                                                        title="View"
                                                     >
-                                                        {inspection.status === "pending" ? "Awaiting Review" : inspection.status}
-                                                    </Badge>
-                                                </td>
-                                                <td className="px-4 py-4 text-right">
-                                                    <Button variant={inspection.status === "pending" ? "default" : "outline"} size="sm" asChild className="h-8 group-hover:shadow-sm">
-                                                        <Link href={`/approvals/${inspection.id}`}>
-                                                            {inspection.status === "pending" ? "Review" : "View"}
-                                                            <ChevronRight className="ml-1.5 h-3.5 w-3.5" />
-                                                        </Link>
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                                        <ChevronRight className="h-4 w-4" />
+                                                    </Link>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-                    )}
-                </div>
-            </Tabs>
+                    </div>
+                )}
+            </div>
         </div>
     )
 }

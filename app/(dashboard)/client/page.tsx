@@ -3,18 +3,7 @@
 
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-    ClipboardCheck,
-    Calendar,
-    User,
-    ArrowRight,
-    FileText,
-    Loader2,
-    Inbox
-} from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
 
@@ -43,8 +32,8 @@ export default function ClientDashboard() {
 
     if (loading) {
         return (
-            <div className="flex h-[60vh] items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="min-h-screen bg-[#f5f4f0] p-6 lg:p-7 flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-[#1a9e6e] border-t-transparent rounded-full animate-spin"></div>
             </div>
         )
     }
@@ -52,137 +41,123 @@ export default function ClientDashboard() {
     if (reports && (reports as any).error) {
         const errorData = reports as any;
         return (
-            <div className="container py-8 max-w-6xl">
-                <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed shadow-sm bg-white">
-                    <div className="flex flex-col items-center gap-2 text-center p-6">
-                        <div className="h-12 w-12 text-destructive bg-destructive/10 rounded-full flex items-center justify-center mb-4">
-                            <FileText className="h-6 w-6" />
-                        </div>
-                        <h3 className="text-xl font-bold tracking-tight">
-                            Failed to load reports
-                        </h3>
-                        <p className="text-sm text-muted-foreground flex flex-col gap-1 max-w-sm">
-                            <span>{errorData.error || "An unexpected error occurred while fetching your reports."}</span>
-                            {errorData.details && (
-                                <span className="text-[10px] bg-muted p-2 rounded border mt-2 overflow-auto font-mono text-left">
-                                    {errorData.details}
-                                </span>
-                            )}
-                        </p>
-                        <Button onClick={() => window.location.reload()} className="mt-6">
-                            Try Again
-                        </Button>
+            <div className="min-h-screen bg-[#f5f4f0] p-6 lg:p-7 flex items-center justify-center">
+                <div className="bg-white border border-[#e8e6e1] rounded-[14px] p-8 text-center">
+                    <div className="w-12 h-12 rounded-full bg-[#fef2f2] flex items-center justify-center mx-auto mb-4">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="12" y1="18" x2="12" y2="12" />
+                            <line x1="9" y1="15" x2="15" y2="15" />
+                        </svg>
                     </div>
+                    <h3 className="text-xl font-semibold text-[#1a1a18] mb-2">Failed to load reports</h3>
+                    <p className="text-[13px] text-[#6b6860] mb-4">{errorData.error || "An unexpected error occurred"}</p>
+                    <Button onClick={() => window.location.reload()} className="bg-[#1a9e6e] hover:bg-[#158a5e]">
+                        Try Again
+                    </Button>
                 </div>
             </div>
         )
     }
 
     return (
-        <div className="container py-8 space-y-8 max-w-6xl">
-            {/* Header Section */}
-            <div>
-                <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-3xl font-bold tracking-tight">Welcome, {session?.user?.name}</h1>
-                    <Badge variant="secondary" className="px-3 py-1 text-xs font-semibold uppercase">
-                        {companyName}
-                    </Badge>
+        <div className="min-h-screen bg-[#f5f4f0] p-6 lg:p-7">
+            {/* PAGE HEADER */}
+            <div className="mb-6">
+                <div className="flex items-center gap-3 mb-1.5">
+                    <h1 className="text-[22px] font-semibold text-[#1a1a18] tracking-[-0.4px]">Welcome, {session?.user?.name}</h1>
+                    <span className="bg-[#e8f7f1] text-[#0d6b4a] rounded-[6px] px-[10px] py-[3px] text-[11px] font-semibold tracking-[0.5px] uppercase">{companyName}</span>
                 </div>
-                <p className="text-muted-foreground">View and download your company's approved inspection reports.</p>
+                <p className="text-[13px] text-[#6b6860]">View and download your company's approved inspection reports.</p>
             </div>
 
-            {/* Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="shadow-sm border-none bg-primary/5">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Total Reports</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-4xl font-bold text-primary">{reports.length}</div>
-                        <p className="text-xs text-muted-foreground mt-1">Approved inspections</p>
-                    </CardContent>
-                </Card>
-                <Card className="shadow-sm border-none bg-primary/5">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Latest Report</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-xl font-bold">
-                            {latestReport ? format(new Date(latestReport.approvedAt), "MMMM d, yyyy") : "N/A"}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">Most recent approval</p>
-                    </CardContent>
-                </Card>
+            {/* STAT CARDS ROW */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+                <div className="bg-white border border-[#e8e6e1] rounded-[14px] p-6">
+                    <p className="text-[13px] text-[#6b6860] mb-2">Total Reports</p>
+                    <p className="text-[32px] font-bold text-[#1a1a18] tracking-[-1px] tabular-nums mb-1">{reports.length}</p>
+                    <p className="text-[12px] text-[#9e9b95]">Approved inspections</p>
+                </div>
+                <div className="bg-white border border-[#e8e6e1] rounded-[14px] p-6">
+                    <p className="text-[13px] text-[#6b6860] mb-2">Latest Report</p>
+                    <p className="text-[32px] font-bold text-[#9e9b95] tracking-[-0.5px] tabular-nums mb-1">
+                        {latestReport ? format(new Date(latestReport.approvedAt), "MMM d, yyyy") : "N/A"}
+                    </p>
+                    <p className="text-[12px] text-[#9e9b95]">Most recent approval</p>
+                </div>
             </div>
 
-            {/* Reports List */}
-            <div className="space-y-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
-                    Available Reports
-                </h2>
+            {/* AVAILABLE REPORTS SECTION */}
+            <div>
+                <div className="flex items-center gap-2 mb-4">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b6860" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                        <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                    <h2 className="text-[15px] font-semibold text-[#1a1a18]">Available Reports</h2>
+                </div>
 
                 {reports.length === 0 ? (
-                    <Card className="border-dashed py-12">
-                        <CardContent className="flex flex-col items-center justify-center text-center space-y-3">
-                            <div className="bg-muted p-4 rounded-full">
-                                <Inbox className="h-8 w-8 text-muted-foreground" />
-                            </div>
-                            <div className="space-y-1">
-                                <p className="font-semibold text-lg">No approved reports yet</p>
-                                <p className="text-sm text-muted-foreground max-w-xs">
-                                    Reports will appear here once your inspections are approved by the management team.
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <div className="bg-white border border-[#e8e6e1] rounded-[14px] p-[60px_40px] text-center">
+                        <div className="w-[52px] h-[52px] rounded-full bg-[#f9f8f5] border border-[#e8e6e1] flex items-center justify-center mx-auto mb-4">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9e9b95" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+                                <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+                            </svg>
+                        </div>
+                        <p className="text-[15px] font-semibold text-[#1a1a18] mb-2">No approved reports yet</p>
+                        <p className="text-[13px] text-[#9e9b95] leading-relaxed max-w-[320px] mx-auto">
+                            Reports will appear here once your inspections are approved by the management team.
+                        </p>
+                    </div>
                 ) : (
-                    <div className="grid grid-cols-1 gap-4">
-                        {reports.map((report) => (
-                            <Card key={report.id} className="group hover:border-primary/50 transition-colors shadow-sm overflow-hidden">
-                                <div className="flex flex-col md:flex-row">
-                                    <div className="flex-1 p-6">
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div>
-                                                <p className="text-xs font-bold text-primary uppercase tracking-wider mb-1">
-                                                    {report.assignment.project.company.name}
-                                                </p>
-                                                <h3 className="text-xl font-bold group-hover:text-primary transition-colors">
-                                                    {report.assignment.project.name}
-                                                </h3>
-                                            </div>
-                                            <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none font-bold">
-                                                <ClipboardCheck className="h-3 w-3 mr-1" />
-                                                Approved
-                                            </Badge>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-8 text-sm">
-                                            <div className="flex items-center gap-2 text-muted-foreground">
-                                                <User className="h-4 w-4" />
-                                                <span><span className="font-medium text-foreground">Inspector:</span> {report.submitter.name}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-muted-foreground">
-                                                <Calendar className="h-4 w-4" />
-                                                <span><span className="font-medium text-foreground">Submitted:</span> {format(new Date(report.submittedAt), "MMM d, yyyy")}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-muted-foreground">
-                                                <ClipboardCheck className="h-4 w-4" />
-                                                <span><span className="font-medium text-foreground">Approved:</span> {format(new Date(report.approvedAt), "MMM d, yyyy")}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-muted/30 md:w-48 flex items-center justify-center p-6 border-t md:border-t-0 md:border-l">
-                                        <Button asChild className="w-full">
-                                            <Link href={`/client/reports/${report.id}`}>
-                                                View Report
-                                                <ArrowRight className="ml-2 h-4 w-4" />
+                    <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="bg-[#f9f8f5] border-b border-[#e8e6e1]">
+                                    <th className="px-[18px] py-3 text-left text-[11px] font-medium text-[#9e9b95] uppercase tracking-[0.5px]">PROJECT</th>
+                                    <th className="px-[18px] py-3 text-left text-[11px] font-medium text-[#9e9b95] uppercase tracking-[0.5px]">SUBMITTED DATE</th>
+                                    <th className="px-[18px] py-3 text-left text-[11px] font-medium text-[#9e9b95] uppercase tracking-[0.5px]">APPROVED DATE</th>
+                                    <th className="px-[18px] py-3 text-left text-[11px] font-medium text-[#9e9b95] uppercase tracking-[0.5px]">STATUS</th>
+                                    <th className="px-[18px] py-3 text-right text-[11px] font-medium text-[#9e9b95] uppercase tracking-[0.5px]">ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {reports.map((report) => (
+                                    <tr key={report.id} className="border-b border-[#e8e6e1] last:border-b-0 hover:bg-[#f9f8f5] transition-colors">
+                                        <td className="px-[18px] py-[13px]">
+                                            <p className="text-[13px] font-medium text-[#1a1a18]">{report.assignment.project.name}</p>
+                                        </td>
+                                        <td className="px-[18px] py-[13px]">
+                                            <p className="text-[13px] text-[#6b6860]">{format(new Date(report.submittedAt), "MMM d, yyyy")}</p>
+                                        </td>
+                                        <td className="px-[18px] py-[13px]">
+                                            <p className="text-[13px] text-[#6b6860]">{format(new Date(report.approvedAt), "MMM d, yyyy")}</p>
+                                        </td>
+                                        <td className="px-[18px] py-[13px]">
+                                            <span className="bg-[#e8f7f1] text-[#0d6b4a] rounded-[20px] px-3 py-1 text-[11.5px] font-medium">Approved</span>
+                                        </td>
+                                        <td className="px-[18px] py-[13px] text-right">
+                                            <Link
+                                                href={`/client/reports/${report.id}`}
+                                                className="inline-flex items-center gap-1.5 bg-[#1a9e6e] text-white rounded-[8px] py-1.5 px-[14px] text-[12px] font-medium hover:bg-[#158a5e] transition-colors"
+                                            >
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                    <polyline points="7 10 12 15 17 10" />
+                                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                                </svg>
+                                                Download
                                             </Link>
-                                        </Button>
-                                    </div>
-                                </div>
-                            </Card>
-                        ))}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 )}
             </div>

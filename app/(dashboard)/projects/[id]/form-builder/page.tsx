@@ -33,19 +33,11 @@ export default async function FormBuilderPage({ params }: { params: { id: string
     }
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center gap-3">
-                <Button variant="outline" size="icon" asChild>
-                    <Link href={`/companies/${project.companyId}`}>
-                        <ChevronLeft className="h-4 w-4" />
-                    </Link>
-                </Button>
-            </div>
-            <FormBuilderClient
-                projectId={params.id}
-                projectName={project.name}
-                companyName={project.company.name}
-            />
-        </div>
+        <FormBuilderClient
+            projectId={params.id}
+            projectName={project.name}
+            companyName={project.company.name}
+            companyId={project.companyId}
+        />
     )
 }

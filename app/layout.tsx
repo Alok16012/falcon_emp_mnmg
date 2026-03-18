@@ -7,8 +7,11 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "CIMS - Client Inspection Management System",
+  title: "Growus Auto - Enterprise Portal",
   description: "Inspection Management System",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -19,6 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
+        {/* Cache Bust: 1773724001 */}
         <Providers>
           {children}
           <Toaster position="top-right" richColors />

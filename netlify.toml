@@ -1,5 +1,10 @@
 [build]
   command = "npx prisma generate && npm run build"
+  publish = ".next"
+
+[build.environment]
+  NEXT_USE_NETLIFY_EDGE = "false"
+  CACHE_BUST = "2"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"

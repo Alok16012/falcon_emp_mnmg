@@ -5,9 +5,8 @@ import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { User, Phone, Mail, ShieldCheck, Loader2, CheckCircle2 } from "lucide-react"
-import { toast } from "sonner" // Assuming sonner is available or will be handled via default alert if not
+import { User, Phone, Mail, ShieldCheck, Loader2, CheckCircle2, Save } from "lucide-react"
+import { toast } from "sonner"
 
 export default function ProfilePage() {
     const { data: session, update } = useSession()
@@ -54,7 +53,6 @@ export default function ProfilePage() {
             })
 
             if (res.ok) {
-                // Update next-auth session
                 await update({
                     name: formData.name,
                 })
@@ -69,99 +67,111 @@ export default function ProfilePage() {
         }
     }
 
+    const roleBadgeStyles: Record<string, { bg: string; color: string }> = {
+        ADMIN: { bg: "#e8f7f1", color: "#0d6b4a" },
+        MANAGER: { bg: "#eff6ff", color: "#1d4ed8" },
+        INSPECTION_BOY: { bg: "#fef3c7", color: "#92400e" },
+    }
+    const roleBadge = roleBadgeStyles[formData.role] || { bg: "#f9f8f5", color: "#6b6860" }
+    const roleLabel = formData.role.replace("_", " ")
+
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+            <div className="min-h-screen bg-[#f5f4f0] flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-[#9e9b95]" />
             </div>
         )
     }
 
     return (
-        <div className="max-w-2xl mx-auto py-8">
-            <div className="mb-8">
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Account Settings</h1>
-                <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-1">Manage your professional profile and contact info</p>
+        <div className="min-h-screen bg-[#f5f4f0] p-6 lg:p-7">
+            <div className="text-center mb-6">
+                <h1 className="text-[22px] font-semibold text-[#1a1a18] tracking-[-0.4px]">Account Settings</h1>
+                <p className="text-[13px] text-[#9e9b95] mt-1">Manage your professional profile and contact info</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <Card className="border-none bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] rounded-[32px] overflow-hidden">
-                    <CardHeader className="p-8 pb-0">
-                        <div className="flex items-center gap-4">
-                            <div className="h-16 w-16 rounded-[24px] bg-slate-900 text-white flex items-center justify-center text-3xl font-black shadow-xl shadow-slate-200">
-                                {formData.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                                <CardTitle className="text-xl font-black text-slate-800">{formData.name}</CardTitle>
-                                <CardDescription className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{formData.role.replace("_", " ")}</CardDescription>
-                            </div>
+            <form onSubmit={handleSubmit}>
+                <div className="bg-white border border-[#e8e6e1] rounded-[16px] w-[480px] mx-auto p-7 shadow-none">
+                    <div className="flex items-center gap-4 mb-5 pb-5 border-b border-[#e8e6e1]">
+                        <div className="w-14 h-14 rounded-full bg-[#1a1a18] text-white flex items-center justify-center text-[20px] font-semibold">
+                            {formData.name.charAt(0).toUpperCase()}
                         </div>
-                    </CardHeader>
-                    <CardContent className="p-8 space-y-6">
-                        <div className="grid gap-6">
-                            <div className="space-y-2">
-                                <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Full Name</Label>
-                                <div className="relative group">
-                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
-                                    <Input
-                                        id="name"
-                                        className="pl-11 h-12 rounded-2xl border-slate-100 bg-slate-50/50 font-bold focus:bg-white focus:ring-4 focus:ring-blue-50/50 transition-all"
-                                        value={formData.name}
-                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2 opacity-60">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email Address (Read-only)</Label>
-                                <div className="relative">
-                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
-                                    <Input
-                                        className="pl-11 h-12 rounded-2xl border-slate-100 bg-slate-50/50 font-bold cursor-not-allowed"
-                                        value={formData.email}
-                                        disabled
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="phone" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Phone Number</Label>
-                                <div className="relative group">
-                                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-focus-within:text-emerald-500 transition-colors" />
-                                    <Input
-                                        id="phone"
-                                        type="tel"
-                                        placeholder="+91 00000 00000"
-                                        className="pl-11 h-12 rounded-2xl border-slate-100 bg-slate-50/50 font-bold focus:bg-white focus:ring-4 focus:ring-emerald-50/50 transition-all"
-                                        value={formData.phone}
-                                        onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="pt-4">
-                            <Button
-                                type="submit"
-                                className="w-full h-12 rounded-2xl font-black bg-slate-900 hover:bg-slate-800 shadow-xl shadow-slate-200 transition-all hover:scale-[1.01] active:scale-[0.99]"
-                                disabled={saving}
+                        <div>
+                            <p className="text-[16px] font-semibold text-[#1a1a18] mb-1">{formData.name}</p>
+                            <span
+                                className="inline-block rounded-[20px] px-[10px] py-[3px] text-[11px] font-semibold tracking-[0.5px]"
+                                style={{ backgroundColor: roleBadge.bg, color: roleBadge.color }}
                             >
-                                {saving ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        SAVING CHANGES...
-                                    </>
-                                ) : (
-                                    <>
-                                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                                        SAVE PROFILE
-                                    </>
-                                )}
-                            </Button>
+                                {roleLabel}
+                            </span>
                         </div>
-                    </CardContent>
-                </Card>
+                    </div>
+
+                    <div className="space-y-5">
+                        <div className="space-y-2">
+                            <Label htmlFor="name" className="text-[11.5px] font-medium text-[#9e9b95] uppercase tracking-[0.6px]">Full Name</Label>
+                            <div className="relative group">
+                                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-[15px] w-[15px] text-[#9e9b95]" />
+                                <Input
+                                    id="name"
+                                    className="pl-9 py-[10px] pr-4 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13.5px] font-medium text-[#1a1a18] focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:outline-none transition-all w-full"
+                                    value={formData.name}
+                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-[11.5px] font-medium text-[#9e9b95] uppercase tracking-[0.6px]">
+                                Email Address <span className="text-[#9e9b95] font-normal normal-case tracking-normal">(Read-only)</span>
+                            </Label>
+                            <div className="relative">
+                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-[15px] w-[15px] text-[#9e9b95]" />
+                                <Input
+                                    className="pl-9 py-[10px] pr-4 bg-[#f5f4f0] border border-dashed border-[#d4d1ca] text-[#9e9b95] cursor-not-allowed w-full"
+                                    value={formData.email}
+                                    disabled
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="phone" className="text-[11.5px] font-medium text-[#9e9b95] uppercase tracking-[0.6px]">Phone Number</Label>
+                            <div className="relative group">
+                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-[15px] w-[15px] text-[#9e9b95]" />
+                                <Input
+                                    id="phone"
+                                    type="tel"
+                                    placeholder="+91 00000 00000"
+                                    className="pl-9 py-[10px] pr-4 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13.5px] font-medium text-[#1a1a18] focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:outline-none transition-all w-full"
+                                    value={formData.phone}
+                                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="border-t border-[#e8e6e1] mt-6 pt-5">
+                        <Button
+                            type="submit"
+                            className="w-full py-3 bg-[#1a9e6e] hover:bg-[#158a5e] text-white border-none rounded-[10px] text-[13.5px] font-semibold flex items-center justify-center gap-2 transition-colors"
+                            disabled={saving}
+                        >
+                            {saving ? (
+                                <>
+                                    <Loader2 className="h-[15px] w-[15px] animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="h-[15px] w-[15px]" />
+                                    Save Profile
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                </div>
             </form>
         </div>
     )

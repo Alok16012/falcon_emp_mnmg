@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
     ClipboardList,
@@ -18,17 +16,13 @@ import {
     Clock,
     LayoutDashboard,
     BarChart3,
-    FileText,
-    TrendingUp,
-    TrendingDown,
-    Minus,
-    PartyPopper,
-    ThumbsDown,
     Send,
-    Star
+    Edit3,
+    Grid,
+    Activity
 } from "lucide-react"
 import Link from "next/link"
-import { format, formatDistanceToNow } from "date-fns"
+import { format, formatDistanceToNow, isValid } from "date-fns"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
@@ -36,7 +30,7 @@ function safeFormat(val: any, fmt: string): string {
     try {
         if (!val) return "—"
         const d = new Date(val)
-        if (isNaN(d.getTime())) return "—"
+        if (!isValid(d)) return "—"
         return format(d, fmt)
     } catch { return "—" }
 }
@@ -45,39 +39,9 @@ function safeDistance(val: any): string {
     try {
         if (!val) return "—"
         const d = new Date(val)
-        if (isNaN(d.getTime())) return "—"
+        if (!isValid(d)) return "—"
         return formatDistanceToNow(d)
     } catch { return "—" }
-}
-
-function StatusBadge({ status }: { status: string }) {
-    const config: Record<string, { label: string; className: string }> = {
-        draft: {
-            label: "Draft",
-            className: "bg-amber-100 text-amber-700 border-amber-200"
-        },
-        pending: {
-            label: "Awaiting Approval",
-            className: "bg-yellow-100 text-yellow-700 border-yellow-200"
-        },
-        approved: {
-            label: "✓ Approved",
-            className: "bg-emerald-100 text-emerald-700 border-emerald-200"
-        },
-        rejected: {
-            label: "Rejected",
-            className: "bg-red-100 text-red-700 border-red-200"
-        }
-    }
-    const c = config[status] ?? { label: status, className: "bg-muted text-muted-foreground" }
-    return (
-        <Badge className={cn(
-            "capitalize border text-[10px] h-5 px-2 font-bold shadow-none",
-            c.className
-        )}>
-            {c.label}
-        </Badge>
-    )
 }
 
 export default function InspectionDashboard() {
@@ -88,7 +52,6 @@ export default function InspectionDashboard() {
     const [reportData, setReportData] = useState<any>(null)
     const [reportLoading, setReportLoading] = useState(true)
 
-    // Main data — loads first, controls the page skeleton
     useEffect(() => {
         if (!session?.user?.id) return
         const fetchMain = async () => {
@@ -112,7 +75,6 @@ export default function InspectionDashboard() {
         fetchMain()
     }, [session?.user?.id])
 
-    // Reports — loads independently so it doesn't block main content
     useEffect(() => {
         if (!session?.user?.id) return
         const fetchReports = async () => {
@@ -134,18 +96,16 @@ export default function InspectionDashboard() {
 
     if (loading) {
         return (
-            <div className="space-y-8 animate-pulse">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    {[1, 2, 3, 4].map((i) => (
-                        <Skeleton key={i} className="h-32 w-full rounded-xl" />
-                    ))}
-                </div>
-                <div className="space-y-4">
-                    <Skeleton className="h-10 w-48" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[1, 2, 3].map((i) => (
-                            <Skeleton key={i} className="h-[250px] w-full rounded-xl" />
+            <div className="min-h-screen bg-[#f5f4f0] p-6 lg:p-7">
+                <div className="space-y-5 animate-pulse">
+                    <div className="grid grid-cols-4 gap-3">
+                        {[1, 2, 3, 4].map((i) => (
+                            <Skeleton key={i} className="h-[100px] rounded-[12px]" />
                         ))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <Skeleton className="h-[300px] rounded-[12px]" />
+                        <Skeleton className="h-[300px] rounded-[12px]" />
                     </div>
                 </div>
             </div>
@@ -160,289 +120,285 @@ export default function InspectionDashboard() {
     const rejectedCount = recentSubmissions.filter(s => s.status === "rejected").length
 
     return (
-        <div className="space-y-8">
-            <div className="flex flex-col gap-1">
-                <h1 className="text-3xl font-bold tracking-tight">Inspector Workspace</h1>
-                <p className="text-muted-foreground font-medium text-sm">Track assignments and submit inspection reports</p>
+        <div className="min-h-screen bg-[#f5f4f0] p-6 lg:p-7">
+            <div className="mb-5">
+                <h1 className="text-[22px] font-semibold text-[#1a1a18] tracking-[-0.4px]">Inspector Workspace</h1>
+                <p className="text-[13px] text-[#6b6860] mt-[3px]">Track assignments and submit inspection reports</p>
             </div>
 
-            {/* Stats Row */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="border-none shadow-sm bg-white">
-                    <CardContent className="p-6 flex items-center gap-4">
-                        <div className="bg-blue-50 text-blue-600 p-3 rounded-xl">
-                            <LayoutDashboard className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[11px]">Active</p>
-                            <p className="text-2xl font-bold">{activeCount}</p>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-none shadow-sm bg-white">
-                    <CardContent className="p-6 flex items-center gap-4">
-                        <div className="bg-amber-50 text-amber-600 p-3 rounded-xl">
-                            <FileEdit className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[11px]">Drafts</p>
-                            <p className="text-2xl font-bold">{draftCount}</p>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-none shadow-sm bg-white">
-                    <CardContent className="p-6 flex items-center gap-4">
-                        <div className="bg-yellow-50 text-yellow-600 p-3 rounded-xl">
-                            <Send className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[11px]">Pending</p>
-                            <p className="text-2xl font-bold">{pendingCount}</p>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-none shadow-sm bg-gradient-to-br from-emerald-50 to-white border-emerald-100">
-                    <CardContent className="p-6 flex items-center gap-4">
-                        <div className="bg-emerald-100 text-emerald-600 p-3 rounded-xl">
-                            <CheckCircle2 className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-emerald-700 uppercase tracking-wider text-[11px] font-bold">Approved</p>
-                            <p className="text-2xl font-bold text-emerald-700">{approvedCount}</p>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Approved Inspections - Success Section */}
-            {approvedCount > 0 && (
-                <div className="space-y-4">
-                    <h2 className="text-xl font-bold flex items-center gap-2">
-                        <Star className="h-5 w-5 text-emerald-500 fill-emerald-400" />
-                        Successful Inspections
-                        <Badge className="bg-emerald-100 text-emerald-700 border-none text-xs font-bold">{approvedCount}</Badge>
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {approvedInspections.slice(0, 6).map((s) => (
-                            <Card key={s.id} className="border-none shadow-sm overflow-hidden bg-white group hover:shadow-md transition-all">
-                                <div className="h-1.5 bg-gradient-to-r from-emerald-400 to-emerald-600" />
-                                <CardContent className="p-4 space-y-3">
-                                    <div className="flex items-start justify-between gap-2">
-                                        <h4 className="text-sm font-bold truncate leading-tight group-hover:text-emerald-600 transition-colors">
-                                            {s.assignment?.project?.name}
-                                        </h4>
-                                        <Badge className="bg-emerald-100 text-emerald-700 border-none text-[10px] font-bold shrink-0 h-5 px-2 shadow-none">
-                                            ✓ Approved
-                                        </Badge>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
-                                        <Clock className="h-3 w-3" />
-                                        Approved {safeDistance(s.submittedAt || s.createdAt)} ago
-                                    </div>
-                                    <Link
-                                        href={`/inspection/${s.assignmentId}/form`}
-                                        className="text-[11px] font-bold text-emerald-600 hover:underline flex items-center gap-1"
-                                    >
-                                        View Report →
-                                    </Link>
-                                </CardContent>
-                            </Card>
-                        ))}
+            {/* SECTION 1: STATUS CARDS */}
+            <div className="grid grid-cols-4 gap-3 mb-6">
+                <div className="bg-white border border-[#e8e6e1] rounded-[12px] p-5 flex items-center gap-4 hover:shadow-md transition-shadow">
+                    <div className="w-[38px] h-[38px] rounded-full bg-[#eff6ff] flex items-center justify-center">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="3" width="7" height="7" />
+                            <rect x="14" y="3" width="7" height="7" />
+                            <rect x="14" y="14" width="7" height="7" />
+                            <rect x="3" y="14" width="7" height="7" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p className="text-[11px] font-semibold text-[#9e9b95] uppercase tracking-[0.6px] mb-1">Active</p>
+                        <p className="text-[26px] font-bold text-[#1a1a18] tracking-[-0.5px] tabular-nums">{activeCount}</p>
                     </div>
                 </div>
-            )}
+                <div className="bg-white border border-[#e8e6e1] rounded-[12px] p-5 flex items-center gap-4 hover:shadow-md transition-shadow">
+                    <div className="w-[38px] h-[38px] rounded-full bg-[#fef3c7] flex items-center justify-center">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p className="text-[11px] font-semibold text-[#9e9b95] uppercase tracking-[0.6px] mb-1">Drafts</p>
+                        <p className="text-[26px] font-bold text-[#1a1a18] tracking-[-0.5px] tabular-nums">{draftCount}</p>
+                    </div>
+                </div>
+                <div className="bg-white border border-[#e8e6e1] rounded-[12px] p-5 flex items-center gap-4 hover:shadow-md transition-shadow">
+                    <div className="w-[38px] h-[38px] rounded-full bg-[#f5f3ff] flex items-center justify-center">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13" />
+                            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p className="text-[11px] font-semibold text-[#9e9b95] uppercase tracking-[0.6px] mb-1">Pending</p>
+                        <p className="text-[26px] font-bold text-[#1a1a18] tracking-[-0.5px] tabular-nums">{pendingCount}</p>
+                    </div>
+                </div>
+                <div className="bg-white border border-[#e8e6e1] rounded-[12px] p-5 flex items-center gap-4 hover:shadow-md transition-shadow">
+                    <div className="w-[38px] h-[38px] rounded-full bg-[#e8f7f1] flex items-center justify-center">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a9e6e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                            <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p className="text-[11px] font-semibold text-[#0d6b4a] uppercase tracking-[0.6px] mb-1">Approved</p>
+                        <p className="text-[26px] font-bold text-[#1a9e6e] tracking-[-0.5px] tabular-nums">{approvedCount}</p>
+                    </div>
+                </div>
+            </div>
 
-            {/* Company Wise Report Section */}
-            <div className="space-y-4">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-primary" />
-                    Company Wise Reports (Current Month)
-                </h2>
+            {/* SECTION 2: COMPANY WISE REPORTS */}
+            <div className="mb-5">
+                <div className="flex items-center gap-2 mb-4">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b6860" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="20" x2="18" y2="10" />
+                        <line x1="12" y1="20" x2="12" y2="4" />
+                        <line x1="6" y1="20" x2="6" y2="14" />
+                    </svg>
+                    <h2 className="text-[15px] font-semibold text-[#1a1a18]">Company Wise Reports (Current Month)</h2>
+                </div>
+
                 {reportLoading ? (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}
+                    <div className="grid grid-cols-4 gap-3">
+                        {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-[80px] rounded-[10px]" />)}
                     </div>
                 ) : reportData?.summary ? (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <Card className="border-none shadow-sm bg-white">
-                            <CardContent className="p-4 flex items-center gap-3">
-                                <div className="bg-blue-50 text-blue-600 p-2 rounded-lg">
-                                    <ClipboardList className="h-5 w-5" />
+                    <>
+                        <div className="grid grid-cols-4 gap-3 mb-3">
+                            <div className="bg-white border border-[#e8e6e1] rounded-[10px] p-4 flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-[#eff6ff] flex items-center justify-center shrink-0">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                                    </svg>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-medium text-muted-foreground uppercase">Total Inspected</p>
-                                    <p className="text-xl font-bold">{reportData.summary.totalInspected.toLocaleString()}</p>
+                                    <p className="text-[11px] font-semibold text-[#9e9b95] uppercase tracking-[0.5px] mb-[3px]">Total Inspected</p>
+                                    <p className="text-[22px] font-bold text-[#1a1a18] tabular-nums">{reportData.summary.totalInspected.toLocaleString()}</p>
                                 </div>
-                            </CardContent>
-                        </Card>
-                        <Card className="border-none shadow-sm bg-white">
-                            <CardContent className="p-4 flex items-center gap-3">
-                                <div className="bg-emerald-50 text-emerald-600 p-2 rounded-lg">
-                                    <CheckCircle2 className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground uppercase">Accepted</p>
-                                    <p className="text-xl font-bold">{reportData.summary.totalAccepted.toLocaleString()}</p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card className="border-none shadow-sm bg-white">
-                            <CardContent className="p-4 flex items-center gap-3">
-                                <div className="bg-amber-50 text-amber-600 p-2 rounded-lg">
-                                    <FileEdit className="h-5 w-5" />
+                            </div>
+                            <div className="bg-white border border-[#e8e6e1] rounded-[10px] p-4 flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-[#e8f7f1] flex items-center justify-center shrink-0">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a9e6e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                        <polyline points="22 4 12 14.01 9 11.01" />
+                                    </svg>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-medium text-muted-foreground uppercase">Rework</p>
-                                    <p className="text-xl font-bold">{reportData.summary.totalRework.toLocaleString()}</p>
+                                    <p className="text-[11px] font-semibold text-[#9e9b95] uppercase tracking-[0.5px] mb-[3px]">Accepted</p>
+                                    <p className="text-[22px] font-bold text-[#1a1a18] tabular-nums">{reportData.summary.totalAccepted.toLocaleString()}</p>
                                 </div>
-                            </CardContent>
-                        </Card>
-                        <Card className="border-none shadow-sm bg-white">
-                            <CardContent className="p-4 flex items-center gap-3">
-                                <div className="bg-red-50 text-red-600 p-2 rounded-lg">
-                                    <AlertCircle className="h-5 w-5" />
+                            </div>
+                            <div className="bg-white border border-[#e8e6e1] rounded-[10px] p-4 flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-[#fef3c7] flex items-center justify-center shrink-0">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M12 20h9" />
+                                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                                    </svg>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-medium text-muted-foreground uppercase">Rejected</p>
-                                    <p className="text-xl font-bold">{reportData.summary.totalRejected.toLocaleString()}</p>
+                                    <p className="text-[11px] font-semibold text-[#9e9b95] uppercase tracking-[0.5px] mb-[3px]">Rework</p>
+                                    <p className="text-[22px] font-bold text-[#1a1a18] tabular-nums">{reportData.summary.totalRework.toLocaleString()}</p>
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                ) : (
-                    <Card className="border-dashed bg-muted/5">
-                        <CardContent className="p-8 text-center">
-                            <BarChart3 className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                            <p className="text-sm text-muted-foreground">No inspection data for this month</p>
-                        </CardContent>
-                    </Card>
-                )}
+                            </div>
+                            <div className="bg-white border border-[#e8e6e1] rounded-[10px] p-4 flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-[#fef2f2] flex items-center justify-center shrink-0">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <line x1="15" y1="9" x2="9" y2="15" />
+                                        <line x1="9" y1="9" x2="15" y2="15" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p className="text-[11px] font-semibold text-[#9e9b95] uppercase tracking-[0.5px] mb-[3px]">Rejected</p>
+                                    <p className="text-[22px] font-bold text-[#1a1a18] tabular-nums">{reportData.summary.totalRejected.toLocaleString()}</p>
+                                </div>
+                            </div>
+                        </div>
 
-                {reportData?.summary && (
-                    <div className="flex flex-wrap gap-3">
-                        <Card className="flex-1 min-w-[150px] border-none shadow-sm bg-gradient-to-r from-emerald-50 to-white">
-                            <CardContent className="p-4">
-                                <p className="text-xs font-medium text-muted-foreground uppercase mb-1">Quality Rate</p>
-                                <p className="text-2xl font-black text-emerald-600">{reportData.summary.acceptanceRate}%</p>
-                            </CardContent>
-                        </Card>
-                        <Card className="flex-1 min-w-[150px] border-none shadow-sm bg-gradient-to-r from-amber-50 to-white">
-                            <CardContent className="p-4">
-                                <p className="text-xs font-medium text-muted-foreground uppercase mb-1">Rework Rate</p>
-                                <p className="text-2xl font-black text-amber-600">{reportData.summary.reworkRate}%</p>
-                            </CardContent>
-                        </Card>
-                        <Card className="flex-1 min-w-[150px] border-none shadow-sm bg-gradient-to-r from-red-50 to-white">
-                            <CardContent className="p-4">
-                                <p className="text-xs font-medium text-muted-foreground uppercase mb-1">Rejection Rate</p>
-                                <p className="text-2xl font-black text-red-600">{reportData.summary.rejectionRate}%</p>
-                            </CardContent>
-                        </Card>
-                        <Card className="flex-1 min-w-[150px] border-none shadow-sm bg-gradient-to-r from-slate-50 to-white">
-                            <CardContent className="p-4">
-                                <p className="text-xs font-medium text-muted-foreground uppercase mb-1">Total Inspections</p>
-                                <p className="text-2xl font-black text-slate-600">{reportData.totalInspections || 0}</p>
-                            </CardContent>
-                        </Card>
+                        <div className="grid grid-cols-4 gap-3">
+                            <div className="bg-white border border-[#e8e6e1] rounded-[10px] p-4">
+                                <p className="text-[11px] font-semibold text-[#9e9b95] uppercase tracking-[0.5px] mb-1.5">Quality Rate</p>
+                                <p className="text-[22px] font-bold text-[#1a9e6e] tabular-nums">{reportData.summary.acceptanceRate}%</p>
+                            </div>
+                            <div className="bg-white border border-[#e8e6e1] rounded-[10px] p-4">
+                                <p className="text-[11px] font-semibold text-[#9e9b95] uppercase tracking-[0.5px] mb-1.5">Rework Rate</p>
+                                <p className="text-[22px] font-bold text-[#d97706] tabular-nums">{reportData.summary.reworkRate}%</p>
+                            </div>
+                            <div className="bg-white border border-[#e8e6e1] rounded-[10px] p-4">
+                                <p className="text-[11px] font-semibold text-[#9e9b95] uppercase tracking-[0.5px] mb-1.5">Rejection Rate</p>
+                                <p className="text-[22px] font-bold text-[#dc2626] tabular-nums">{reportData.summary.rejectionRate}%</p>
+                            </div>
+                            <div className="bg-white border border-[#e8e6e1] rounded-[10px] p-4">
+                                <p className="text-[11px] font-semibold text-[#9e9b95] uppercase tracking-[0.5px] mb-1.5">Total Inspections</p>
+                                <p className="text-[22px] font-bold text-[#1a1a18] tabular-nums">{reportData.summary.totalInspected || 0}</p>
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <div className="bg-white border border-dashed border-[#e8e6e1] rounded-[10px] p-8 text-center">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d4d1ca" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2">
+                            <line x1="18" y1="20" x2="18" y2="10" />
+                            <line x1="12" y1="20" x2="12" y2="4" />
+                            <line x1="6" y1="20" x2="6" y2="14" />
+                        </svg>
+                        <p className="text-[13px] text-[#9e9b95]">No inspection data for this month</p>
                     </div>
                 )}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Active Assignments */}
-                <div className="lg:col-span-2 space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-bold flex items-center gap-2">
-                            <ClipboardList className="h-5 w-5 text-primary" />
-                            Active Assignments
-                        </h2>
+            {/* SECTION 3: BOTTOM TWO COLUMNS */}
+            <div className="grid grid-cols-2 gap-4">
+                {/* LEFT — ACTIVE ASSIGNMENTS */}
+                <div>
+                    <div className="flex items-center gap-2 mb-4">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b6860" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                        </svg>
+                        <h2 className="text-[15px] font-semibold text-[#1a1a18]">Active Assignments</h2>
                     </div>
 
                     {assignments.filter(a => a.status === "active").length === 0 ? (
-                        <Card className="border-dashed h-[300px] flex flex-col items-center justify-center text-center p-8 bg-muted/5">
-                            <div className="p-3 rounded-full bg-muted mb-4">
-                                <ClipboardList className="h-8 w-8 text-muted-foreground" />
-                            </div>
-                            <h3 className="font-bold">No active assignments</h3>
-                            <p className="text-sm text-muted-foreground max-w-xs mt-2 font-medium">
-                                When a manager assigns you to a project, it will appear here.
-                            </p>
-                        </Card>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {assignments.filter(a => a.status === "active").map((a) => (
-                                <Card key={a.id} className="border-none shadow-md overflow-hidden group hover:shadow-lg transition-all flex flex-col">
-                                    <div className="h-2 bg-primary" />
-                                    <div className="p-5 flex-1 space-y-4">
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
-                                                <Building2 className="h-3 w-3" />
-                                                {a.project.company.name}
-                                            </p>
-                                            <h3 className="font-bold text-lg group-hover:text-primary transition-colors leading-tight">{a.project.name}</h3>
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                                                <UserIcon className="h-3.5 w-3.5" />
-                                                Assigned by: {a.assigner.name}
-                                            </div>
-                                            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                                                <Calendar className="h-3.5 w-3.5" />
-                                                Assigned {safeFormat(a.createdAt, "MMM d, yyyy")}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="p-4 bg-muted/30 border-t">
-                                        <Button className="w-full font-bold shadow-sm" asChild>
-                                            <Link href={`/inspection/${a.id}/form`}>
-                                                Start Inspection
-                                                <ArrowRight className="ml-2 h-4 w-4" />
-                                            </Link>
-                                        </Button>
-                                    </div>
-                                </Card>
-                            ))}
+                        <div className="bg-white border border-dashed border-[#e8e6e1] rounded-[12px] p-8 text-center">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d4d1ca" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
+                                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                                <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                            </svg>
+                            <p className="text-[13px] text-[#9e9b95]">No active assignments</p>
                         </div>
+                    ) : (
+                        assignments.filter(a => a.status === "active").map((a) => (
+                            <div key={a.id} className="bg-white border border-[#e8e6e1] rounded-[12px] p-5 mb-3 hover:shadow-md transition-shadow">
+                                <p className="text-[10.5px] font-semibold text-[#9e9b95] uppercase tracking-[0.6px] mb-1 flex items-center gap-1">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="4" y="4" width="16" height="16" rx="2" ry="2" />
+                                        <rect x="9" y="9" width="6" height="6" />
+                                        <line x1="9" y1="1" x2="9" y2="4" />
+                                        <line x1="15" y1="1" x2="15" y2="4" />
+                                        <line x1="9" y1="20" x2="9" y2="23" />
+                                        <line x1="15" y1="20" x2="15" y2="23" />
+                                        <line x1="20" y1="9" x2="23" y2="9" />
+                                        <line x1="20" y1="14" x2="23" y2="14" />
+                                        <line x1="1" y1="9" x2="4" y2="9" />
+                                        <line x1="1" y1="14" x2="4" y2="14" />
+                                    </svg>
+                                    {a.project.company.name}
+                                </p>
+                                <p className="text-[15px] font-semibold text-[#1a1a18] mb-3">{a.project.name}</p>
+                                <div className="flex flex-col gap-1.5 mb-3">
+                                    <div className="flex items-center gap-2 text-[12.5px] text-[#6b6860]">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9e9b95" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                            <circle cx="12" cy="7" r="4" />
+                                        </svg>
+                                        Assigned by: {a.assigner.name}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[12.5px] text-[#6b6860]">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9e9b95" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                            <line x1="16" y1="2" x2="16" y2="6" />
+                                            <line x1="8" y1="2" x2="8" y2="6" />
+                                            <line x1="3" y1="10" x2="21" y2="10" />
+                                        </svg>
+                                        {safeFormat(a.createdAt, "MMM d, yyyy")}
+                                    </div>
+                                </div>
+                                <Link
+                                    href={`/inspection/${a.id}/form`}
+                                    className="flex items-center justify-center gap-2 w-full bg-[#1a9e6e] text-white rounded-[9px] py-2.5 text-[13px] font-medium hover:bg-[#158a5e] transition-colors"
+                                >
+                                    Start Inspection
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <line x1="5" y1="12" x2="19" y2="12" />
+                                        <polyline points="12 5 19 12 12 19" />
+                                    </svg>
+                                </Link>
+                            </div>
+                        ))
                     )}
                 </div>
 
-                {/* Recently Submitted / History */}
-                <div className="space-y-4">
-                    <h2 className="text-xl font-bold flex items-center gap-2">
-                        <History className="h-5 w-5 text-emerald-500" />
-                        Activity Feed
-                    </h2>
-                    <Card className="border-none shadow-sm bg-white overflow-hidden">
-                        <CardContent className="p-0">
-                            <div className="divide-y">
-                                {recentSubmissions.slice(0, 10).map((s) => (
-                                    <div key={s.id} className={cn(
-                                        "p-4 hover:bg-muted/30 transition-colors",
-                                        s.status === "approved" && "bg-emerald-50/50 hover:bg-emerald-50"
-                                    )}>
-                                        <div className="flex items-start justify-between mb-1.5 gap-2">
-                                            <h4 className="text-sm font-bold truncate max-w-[130px]">{s.assignment.project.name}</h4>
-                                            <StatusBadge status={s.status} />
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            <p className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
-                                                <Clock className="h-2.5 w-2.5" />
-                                                {safeDistance(s.submittedAt || s.createdAt)} ago
-                                            </p>
-                                            <Link href={`/inspection/${s.assignmentId}/form`} className="text-[10px] font-bold text-primary hover:underline">
-                                                {s.status === "draft" ? "Resume →" : "View →"}
-                                            </Link>
-                                        </div>
+                {/* RIGHT — ACTIVITY FEED */}
+                <div>
+                    <div className="flex items-center gap-2 mb-4">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b6860" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                        </svg>
+                        <h2 className="text-[15px] font-semibold text-[#1a1a18]">Activity Feed</h2>
+                    </div>
+
+                    <div className="bg-white border border-[#e8e6e1] rounded-[12px] overflow-hidden">
+                        {recentSubmissions.slice(0, 10).map((s) => (
+                            <div key={s.id} className="p-4 border-b border-[#e8e6e1] last:border-b-0 flex items-center justify-between hover:bg-[#f9f8f5] transition-colors">
+                                <div>
+                                    <p className="text-[13px] font-medium text-[#1a1a18] mb-1">{s.assignment.project.name}</p>
+                                    <div className="flex items-center gap-1.5 text-[12px] text-[#9e9b95]">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <polyline points="12 6 12 12 16 14" />
+                                        </svg>
+                                        {safeDistance(s.submittedAt || s.createdAt)} ago
                                     </div>
-                                ))}
-                                {recentSubmissions.length === 0 && (
-                                    <div className="p-12 text-center text-muted-foreground italic text-xs">
-                                        No recent submissions.
-                                    </div>
-                                )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {s.status === "draft" && (
+                                        <span className="bg-[#fef3c7] text-[#d97706] rounded-[20px] px-3 py-1 text-[11.5px] font-medium">Draft</span>
+                                    )}
+                                    {s.status === "pending" && (
+                                        <span className="bg-[#e8f7f1] text-[#0d6b4a] rounded-[20px] px-3 py-1 text-[11.5px] font-medium">Submitted</span>
+                                    )}
+                                    {s.status === "approved" && (
+                                        <span className="bg-[#eff6ff] text-[#3b82f6] rounded-[20px] px-3 py-1 text-[11.5px] font-medium">Approved</span>
+                                    )}
+                                    {s.status === "rejected" && (
+                                        <span className="bg-[#fef2f2] text-[#dc2626] rounded-[20px] px-3 py-1 text-[11.5px] font-medium">Rejected</span>
+                                    )}
+                                    <Link href={`/inspection/${s.assignmentId}/form`} className="text-[12.5px] font-medium text-[#1a9e6e] hover:underline">
+                                        Resume →
+                                    </Link>
+                                </div>
                             </div>
-                        </CardContent>
-                    </Card>
+                        ))}
+                        {recentSubmissions.length === 0 && (
+                            <div className="p-8 text-center">
+                                <p className="text-[13px] text-[#9e9b95]">No recent submissions</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

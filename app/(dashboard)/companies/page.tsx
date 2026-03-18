@@ -54,62 +54,69 @@ export default async function CompaniesPage() {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold tracking-tight">Companies</h1>
-                <Button asChild>
-                    <Link href="/companies/create">
-                        <Plus className="mr-2 h-4 w-4" /> Add Company
-                    </Link>
-                </Button>
+                <h1 className="text-[24px] font-semibold tracking-[-0.4px] text-[var(--text)]">Companies</h1>
+                <Link
+                    href="/companies/create"
+                    className="inline-flex items-center justify-center bg-[var(--accent)] text-white rounded-[10px] text-[13px] font-medium px-4 py-2 hover:opacity-90 transition-opacity"
+                >
+                    <Plus className="mr-1.5 h-4 w-4" /> Add Company
+                </Link>
             </div>
 
             {companies.length === 0 ? (
-                <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed shadow-sm">
+                <div className="flex min-h-[400px] flex-col items-center justify-center rounded-[14px] bg-white border border-dashed border-[var(--border2)] shadow-sm">
                     <div className="flex flex-col items-center gap-1 text-center">
-                        <h3 className="text-2xl font-bold tracking-tight">
+                        <h3 className="text-xl font-semibold tracking-tight text-[var(--text)]">
                             No companies added
                         </h3>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-[13px] text-[var(--text2)]">
                             You can start by adding a new company.
                         </p>
-                        <Button asChild className="mt-4">
-                            <Link href="/companies/create">Add Company</Link>
-                        </Button>
+                        <Link
+                            href="/companies/create"
+                            className="mt-4 inline-flex items-center justify-center bg-[var(--accent)] text-white rounded-[10px] text-[13px] font-medium px-4 py-2 hover:opacity-90 transition-opacity"
+                        >
+                            Add Company
+                        </Link>
                     </div>
                 </div>
             ) : (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
                     {companies.map((company) => (
-                        <Card key={company.id} className="transition-all hover:bg-accent/5">
-                            <CardHeader>
-                                <div className="flex items-center gap-2">
-                                    <div className="p-2 bg-primary/10 rounded-full">
-                                        <Building2 className="h-5 w-5 text-primary" />
+                        <div key={company.id} className="bg-white border border-[var(--border)] rounded-[14px] overflow-hidden hover:shadow-[0_3px_14px_rgba(0,0,0,0.05)] hover:border-[var(--border2)] transition-all flex flex-col">
+                            <div className="p-[18px_20px] flex-1">
+                                <div className="flex items-start gap-3 mb-4">
+                                    <div className="w-[38px] h-[38px] bg-[var(--accent-light)] rounded-[9px] flex items-center justify-center shrink-0">
+                                        <Building2 className="h-5 w-5 text-[var(--accent)]" strokeWidth={2.5} />
                                     </div>
-                                    <div>
-                                        <CardTitle className="text-lg">{company.name}</CardTitle>
-                                        <CardDescription>{company.address || "No address provided"}</CardDescription>
+                                    <div className="flex-1 min-w-0 pt-0.5">
+                                        <h3 className="text-[15px] font-semibold text-[var(--text)] leading-tight truncate">{company.name}</h3>
+                                        <p className="text-[12px] text-[var(--text3)] mt-0.5 truncate">{company.address || "No address provided"}</p>
                                     </div>
                                 </div>
-                            </CardHeader>
-                            <CardContent className="grid gap-2 text-sm text-muted-foreground">
-                                <div className="flex items-center gap-2">
-                                    <User className="h-4 w-4" />
-                                    <span>{company.contactPerson || "N/A"}</span>
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2 text-[13px] text-[var(--text2)]">
+                                        <User className="h-[14px] w-[14px] text-[var(--text3)] shrink-0" />
+                                        <span className="truncate">{company.contactPerson || "N/A"}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[13px] text-[var(--text2)]">
+                                        <Phone className="h-[14px] w-[14px] text-[var(--text3)] shrink-0" />
+                                        <span className="truncate">{company.contactPhone || "N/A"}</span>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <Phone className="h-4 w-4" />
-                                    <span>{company.contactPhone || "N/A"}</span>
-                                </div>
-                            </CardContent>
-                            <CardFooter className="flex items-center justify-between border-t bg-muted/50 px-6 py-3">
-                                <div className="text-xs text-muted-foreground">
-                                    {company._count.projects} Projects
-                                </div>
-                                <Button variant="ghost" size="sm" asChild>
-                                    <Link href={`/companies/${company.id}`}>View Details</Link>
-                                </Button>
-                            </CardFooter>
-                        </Card>
+                            </div>
+                            <div className="border-t border-[var(--border)] px-[20px] py-[12px] flex items-center justify-between bg-[var(--surface2)]/30">
+                                <span className="text-[12px] text-[var(--text3)] font-medium">
+                                    {company._count.projects} Project{company._count.projects !== 1 ? 's' : ''}
+                                </span>
+                                <Link
+                                    href={`/companies/${company.id}`}
+                                    className="text-[12.5px] font-semibold text-[var(--accent-text)] hover:text-[var(--accent)] transition-colors flex items-center gap-1"
+                                >
+                                    View Details <span>&rarr;</span>
+                                </Link>
+                            </div>
+                        </div>
                     ))}
                 </div>
             )}

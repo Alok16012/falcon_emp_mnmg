@@ -196,135 +196,144 @@ function GroupDetailView({
     const totalMembers = project.managers.length + project.inspectors.length
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={onBack}>
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                    <div>
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Building2 className="h-3 w-3" /> {companyName}
-                        </p>
-                        <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
-                        <p className="text-sm text-muted-foreground">
-                            {totalMembers} member{totalMembers !== 1 ? "s" : ""} ·{" "}
-                            {project.managers.length} manager{project.managers.length !== 1 ? "s" : ""} ·{" "}
-                            {project.inspectors.length} inspector{project.inspectors.length !== 1 ? "s" : ""}
-                        </p>
+        <div className="p-6 lg:p-7 space-y-6">
+            <div>
+                <p className="text-[12.5px] text-[#6b6860] flex items-center gap-1.5">
+                    <Building2 className="h-[13px] w-[13px] text-[#9e9b95]" /> {companyName}
+                </p>
+                <div className="flex items-center justify-between flex-wrap gap-4 mt-3">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={onBack}
+                            className="h-8 w-8 bg-white border border-[#e8e6e1] rounded-[8px] flex items-center justify-center text-[#6b6860] cursor-pointer hover:bg-[#f9f8f5] transition-colors"
+                        >
+                            <ArrowLeft className="h-4 w-4" />
+                        </button>
+                        <h1 className="text-[22px] font-semibold tracking-tight text-[#1a1a18]">{project.name}</h1>
+                    </div>
+                    <div className="flex items-center gap-[10px]">
+                        {canEdit && (
+                            <Button
+                                onClick={openAddMembers}
+                                className="bg-[#1a9e6e] text-white hover:bg-[#1a9e6e]/90 rounded-[9px] text-[13px] font-medium h-9 px-3"
+                            >
+                                <UserPlus className="h-4 w-4 mr-2" />
+                                Add Members
+                            </Button>
+                        )}
+                        <Button
+                            variant="outline"
+                            onClick={exportToExcel}
+                            className="bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[9px] text-[13px] font-medium h-9 px-3"
+                        >
+                            <Download className="h-4 w-4 mr-2" />
+                            Export Excel
+                        </Button>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    {canEdit && (
-                        <Button onClick={openAddMembers}>
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            Add Members
-                        </Button>
-                    )}
-                    <Button variant="outline" onClick={exportToExcel}>
-                        <Download className="h-4 w-4 mr-2" />
-                        Export Excel
-                    </Button>
-                </div>
+                <p className="text-[13px] text-[#6b6860] mt-1.5 ml-[46px]">
+                    {totalMembers} member{totalMembers !== 1 ? "s" : ""} ·{" "}
+                    {project.managers.length} manager{project.managers.length !== 1 ? "s" : ""} ·{" "}
+                    {project.inspectors.length} inspector{project.inspectors.length !== 1 ? "s" : ""}
+                </p>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
-                {/* Managers Card */}
-                <Card>
-                    <CardHeader className="pb-3 border-b">
-                        <CardTitle className="flex items-center gap-2 text-base">
-                            <Shield className="h-4 w-4 text-purple-600" />
-                            Managers
-                            <Badge variant="secondary" className="ml-auto">{project.managers.length}</Badge>
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-4 space-y-2">
+            <div className="border-t border-[#e8e6e1] my-4" />
+
+            <div className="grid gap-4 md:grid-cols-2">
+                <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden">
+                    <div className="px-[18px] py-[14px] border-b border-[#e8e6e1] flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Shield className="h-[15px] w-[15px] text-[#6b6860]" />
+                            <span className="text-[13.5px] font-semibold text-[#1a1a18]">Managers</span>
+                        </div>
+                        <span className="bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[12px] font-semibold text-[#1a1a18] px-[10px] py-[2px]">
+                            {project.managers.length}
+                        </span>
+                    </div>
+                    <div className="divide-y divide-[#e8e6e1]">
                         {project.managers.length === 0 ? (
-                            <p className="text-sm text-muted-foreground italic text-center py-6">No managers assigned</p>
+                            <p className="text-sm text-[#9e9b95] italic text-center py-6">No managers assigned</p>
                         ) : (
                             project.managers.map(manager => (
                                 <div
                                     key={manager.id}
-                                    className="flex items-center justify-between bg-purple-50 border border-purple-100 rounded-lg p-3"
+                                    className="px-[18px] py-3 flex items-center gap-3 hover:bg-[#f9f8f5] transition-colors"
                                 >
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-sm shrink-0">
-                                            {manager.name.charAt(0).toUpperCase()}
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="font-medium text-sm truncate">{manager.name}</p>
-                                            <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
-                                                <Mail className="h-3 w-3" />{manager.email}
-                                            </p>
-                                        </div>
+                                    <div className="h-[34px] w-[34px] rounded-full bg-[#e8f7f1] flex items-center justify-center text-[#0d6b4a] font-semibold text-[13px] shrink-0">
+                                        {manager.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[13px] font-medium text-[#1a1a18] truncate">{manager.name}</p>
+                                        <p className="text-[12px] text-[#6b6860] flex items-center gap-1 truncate">
+                                            <Mail className="h-[11px] w-[11px] text-[#9e9b95]" />{manager.email}
+                                        </p>
                                     </div>
                                     {canEdit && (
                                         <button
                                             onClick={() => removeManager(manager.id)}
                                             disabled={deletingManagerId === manager.id}
-                                            className="text-red-400 hover:text-red-600 p-2 rounded-md hover:bg-red-50 transition-colors shrink-0"
+                                            className="ml-auto h-7 w-7 rounded-[7px] bg-transparent border-none hover:bg-[#fef2f2] text-[#9e9b95] hover:text-[#dc2626] transition-colors shrink-0 flex items-center justify-center"
                                             title="Remove manager"
                                         >
                                             {deletingManagerId === manager.id
-                                                ? <Loader2 className="h-4 w-4 animate-spin" />
-                                                : <Trash2 className="h-4 w-4" />
+                                                ? <Loader2 className="h-[14px] w-[14px] animate-spin" />
+                                                : <Trash2 className="h-[14px] w-[14px]" />
                                             }
                                         </button>
                                     )}
                                 </div>
                             ))
                         )}
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
 
-                {/* Inspectors Card */}
-                <Card>
-                    <CardHeader className="pb-3 border-b">
-                        <CardTitle className="flex items-center gap-2 text-base">
-                            <Users className="h-4 w-4 text-amber-600" />
-                            Inspectors
-                            <Badge variant="secondary" className="ml-auto">{project.inspectors.length}</Badge>
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-4 space-y-2">
+                <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden">
+                    <div className="px-[18px] py-[14px] border-b border-[#e8e6e1] flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Users className="h-[15px] w-[15px] text-[#6b6860]" />
+                            <span className="text-[13.5px] font-semibold text-[#1a1a18]">Inspectors</span>
+                        </div>
+                        <span className="bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[12px] font-semibold text-[#1a1a18] px-[10px] py-[2px]">
+                            {project.inspectors.length}
+                        </span>
+                    </div>
+                    <div className="divide-y divide-[#e8e6e1]">
                         {project.inspectors.length === 0 ? (
-                            <p className="text-sm text-muted-foreground italic text-center py-6">No inspectors assigned</p>
+                            <p className="text-sm text-[#9e9b95] italic text-center py-6">No inspectors assigned</p>
                         ) : (
                             project.inspectors.map(inspector => (
                                 <div
                                     key={inspector.id}
-                                    className="flex items-center justify-between bg-amber-50 border border-amber-100 rounded-lg p-3"
+                                    className="px-[18px] py-3 flex items-center gap-3 hover:bg-[#f9f8f5] transition-colors"
                                 >
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-sm shrink-0">
-                                            {inspector.name.charAt(0).toUpperCase()}
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="font-medium text-sm truncate">{inspector.name}</p>
-                                            <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
-                                                <Mail className="h-3 w-3" />{inspector.email}
-                                            </p>
-                                        </div>
+                                    <div className="h-[34px] w-[34px] rounded-full bg-[#fef3c7] flex items-center justify-center text-[#92400e] font-semibold text-[13px] shrink-0">
+                                        {inspector.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[13px] font-medium text-[#1a1a18] truncate">{inspector.name}</p>
+                                        <p className="text-[12px] text-[#6b6860] flex items-center gap-1 truncate">
+                                            <Mail className="h-[11px] w-[11px] text-[#9e9b95]" />{inspector.email}
+                                        </p>
                                     </div>
                                     {canEdit && (
                                         <button
                                             onClick={() => inspector.assignmentId && removeInspector(inspector.assignmentId)}
                                             disabled={deletingInspectorId === inspector.assignmentId}
-                                            className="text-red-400 hover:text-red-600 p-2 rounded-md hover:bg-red-50 transition-colors shrink-0"
+                                            className="ml-auto h-7 w-7 rounded-[7px] bg-transparent border-none hover:bg-[#fef2f2] text-[#9e9b95] hover:text-[#dc2626] transition-colors shrink-0 flex items-center justify-center"
                                             title="Remove inspector"
                                         >
                                             {deletingInspectorId === inspector.assignmentId
-                                                ? <Loader2 className="h-4 w-4 animate-spin" />
-                                                : <Trash2 className="h-4 w-4" />
+                                                ? <Loader2 className="h-[14px] w-[14px] animate-spin" />
+                                                : <Trash2 className="h-[14px] w-[14px]" />
                                             }
                                         </button>
                                     )}
                                 </div>
                             ))
                         )}
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
             </div>
 
             {/* Add Members Dialog */}
@@ -564,46 +573,56 @@ function GroupsContent() {
 
     // ─── Main List View ─────────────────────────────────────
     return (
-        <div className="space-y-8">
-            <div className="flex items-center justify-between">
+        <div className="min-h-screen bg-[#f5f4f0] p-6 lg:p-7">
+            <div className="flex items-center justify-between mb-5">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Groups</h1>
-                    <p className="text-muted-foreground">View company projects and team members</p>
+                    <h1 className="text-[22px] font-semibold tracking-tight text-[#1a1a18]">Groups</h1>
+                    <p className="text-[13px] text-[#6b6860] mt-[3px]">View company projects and team members</p>
                 </div>
                 {groups.length > 0 && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-[10px]">
                         {canEdit && (
-                            <Button onClick={openCreateGroupDialog}>
+                            <Button
+                                onClick={openCreateGroupDialog}
+                                className="bg-[#1a9e6e] text-white hover:bg-[#1a9e6e]/90 rounded-[9px] text-[13px] font-medium h-9 px-3"
+                            >
                                 <Users name="Plus" className="h-4 w-4 mr-2" />
                                 Create Group
                             </Button>
                         )}
-                        <Button variant="outline" onClick={() => exportToExcel()}>
+                        <Button
+                            variant="outline"
+                            onClick={() => exportToExcel()}
+                            className="bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[9px] text-[13px] font-medium h-9 px-3"
+                        >
                             <Download className="h-4 w-4 mr-2" />
                             Export All
                         </Button>
                     </div>
                 )}
                 {groups.length === 0 && canEdit && (
-                    <Button onClick={openCreateGroupDialog}>
+                    <Button
+                        onClick={openCreateGroupDialog}
+                        className="bg-[#1a9e6e] text-white hover:bg-[#1a9e6e]/90 rounded-[9px] text-[13px] font-medium h-9 px-3"
+                    >
                         <Users name="Plus" className="h-4 w-4 mr-2" />
                         Create Group
                     </Button>
                 )}
             </div>
 
-            <div className="relative w-full max-w-sm">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <div className="relative w-full max-w-full mb-4">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9e9b95]" />
                 <Input
                     placeholder="Search company or project..."
-                    className="pl-8"
+                    className="pl-9 pr-4 py-[9px] bg-white border border-[#e8e6e1] rounded-[10px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:border-[#1a9e6e] focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:outline-none transition-shadow w-full"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
 
             {filteredGroups.length === 0 ? (
-                <Card>
+                <Card className="bg-white border border-[#e8e6e1] rounded-xl">
                     <CardContent className="flex flex-col items-center justify-center py-12">
                         <Users className="h-12 w-12 text-muted-foreground opacity-20 mb-4" />
                         <p className="text-muted-foreground mb-4">No groups found</p>
@@ -613,136 +632,134 @@ function GroupsContent() {
                     </CardContent>
                 </Card>
             ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                     {filteredGroups.map((group) => (
-                        <Card key={group.id} className="overflow-hidden">
-                            <CardHeader
-                                className="cursor-pointer hover:bg-muted/50 transition-colors py-4"
+                        <div
+                            key={group.id}
+                            className="bg-white border border-[#e8e6e1] rounded-[12px] overflow-hidden"
+                        >
+                            <div
+                                className="p-[14px] pl-5 flex items-center gap-[10px] cursor-pointer hover:bg-[#f9f8f5] transition-colors"
                                 onClick={() => toggleCompany(group.id)}
                             >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        {expandedCompanies.has(group.id)
-                                            ? <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                                            : <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                                        }
-                                        <Building2 className="h-5 w-5 text-primary" />
-                                        <CardTitle className="text-lg">{group.name}</CardTitle>
-                                        <Badge variant="secondary">{group.projects.length} group{group.projects.length !== 1 ? "s" : ""}</Badge>
-                                    </div>
-                                </div>
-                            </CardHeader>
+                                {expandedCompanies.has(group.id)
+                                    ? <ChevronDown className="h-4 w-4 text-[#9e9b95] transition-transform duration-200" />
+                                    : <ChevronRight className="h-4 w-4 text-[#9e9b95] transition-transform duration-200" />
+                                }
+                                <Building2 className="h-4 w-4 text-[#6b6860] shrink-0" />
+                                <span className="text-[14px] font-semibold text-[#1a1a18]">{group.name}</span>
+                                <span className="bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[11.5px] font-medium text-[#6b6860] px-[10px] py-[2px]">
+                                    {group.projects.length} group{group.projects.length !== 1 ? "s" : ""}
+                                </span>
+                            </div>
 
                             {expandedCompanies.has(group.id) && (
-                                <CardContent className="pt-0">
-                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                <div className="px-4 pb-4 border-t border-[#e8e6e1]">
+                                    <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
                                         {group.projects.map((project) => (
-                                            <Card key={project.id} className="bg-muted/30 hover:bg-muted/50 transition-colors">
-                                                <CardHeader className="pb-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <Briefcase className="h-4 w-4 text-muted-foreground shrink-0" />
-                                                        <span className="font-semibold text-sm truncate">{project.name}</span>
-                                                    </div>
-                                                </CardHeader>
-                                                <CardContent className="space-y-3">
-                                                    {/* Managers */}
-                                                    <div>
-                                                        <p className="text-xs text-muted-foreground font-medium mb-1.5 flex items-center gap-1">
-                                                            <Shield className="h-3 w-3" /> Managers ({project.managers.length})
-                                                        </p>
-                                                        {project.managers.length > 0 ? (
-                                                            <div className="space-y-1 max-h-20 overflow-y-auto">
-                                                                {project.managers.map(m => (
-                                                                    <div key={m.id} className="flex items-center justify-between bg-purple-50 border border-purple-100 rounded px-2 py-1">
-                                                                        <span className="text-xs font-medium text-purple-800 truncate">{m.name}</span>
-                                                                        {canEdit && (
-                                                                            <button
-                                                                                onClick={async (e) => {
-                                                                                    e.stopPropagation()
-                                                                                    if (!confirm(`Are you sure you want to remove ${m.name} as manager from this group?`)) return
-                                                                                    try {
-                                                                                        const res = await fetch(`/api/groups?managerId=${m.id}&projectId=${project.id}`, { method: "DELETE" })
-                                                                                        if (res.ok) { toast.success("Manager removed"); fetchGroups() }
-                                                                                    } catch { toast.error("Failed") }
-                                                                                }}
-                                                                                className="text-red-400 hover:text-red-600 p-1 shrink-0 ml-1"
-                                                                                title="Remove manager"
-                                                                            >
-                                                                                <X className="h-3 w-3" />
-                                                                            </button>
-                                                                        )}
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-xs text-muted-foreground italic">No manager</span>
-                                                        )}
-                                                    </div>
+                                            <div key={project.id} className="bg-white border border-[#e8e6e1] rounded-[10px] p-4">
+                                                <div className="flex items-center gap-2 mb-[14px]">
+                                                    <Briefcase className="h-[14px] w-[14px] text-[#6b6860] shrink-0" />
+                                                    <span className="text-[14px] font-semibold text-[#1a1a18] truncate">{project.name}</span>
+                                                </div>
 
-                                                    {/* Inspectors */}
-                                                    <div>
-                                                        <p className="text-xs text-muted-foreground font-medium mb-1.5 flex items-center gap-1">
-                                                            <Users className="h-3 w-3" /> Inspectors ({project.inspectors.length})
-                                                        </p>
-                                                        {project.inspectors.length > 0 ? (
-                                                            <div className="space-y-1 max-h-24 overflow-y-auto">
-                                                                {project.inspectors.map(inspector => (
-                                                                    <div key={inspector.id} className="flex items-center justify-between bg-amber-50 border border-amber-100 rounded px-2 py-1">
-                                                                        <span className="text-xs font-medium text-amber-800 truncate">{inspector.name}</span>
-                                                                        {canEdit && (
-                                                                            <button
-                                                                                onClick={() => inspector.assignmentId && removeInspectorFromCard(inspector.assignmentId)}
-                                                                                disabled={deletingId === inspector.assignmentId}
-                                                                                className="text-red-400 hover:text-red-600 p-1 shrink-0 ml-1"
-                                                                                title="Remove inspector"
-                                                                            >
-                                                                                {deletingId === inspector.assignmentId
-                                                                                    ? <Loader2 className="h-3 w-3 animate-spin" />
-                                                                                    : <X className="h-3 w-3" />
-                                                                                }
-                                                                            </button>
-                                                                        )}
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-xs text-muted-foreground italic">No inspectors</span>
-                                                        )}
+                                                <div className="mb-3">
+                                                    <div className="flex items-center gap-1.5 mb-2">
+                                                        <Shield className="h-[13px] w-[13px] text-[#9e9b95]" />
+                                                        <span className="text-[12px] font-medium text-[#6b6860]">Managers</span>
+                                                        <span className="text-[12px] text-[#9e9b95] font-normal">({project.managers.length})</span>
                                                     </div>
+                                                    {project.managers.length > 0 ? (
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {project.managers.map(m => (
+                                                                <div key={m.id} className="flex items-center gap-[5px] bg-[#e8f7f1] text-[#0d6b4a] border border-[rgba(26,158,110,0.2)] rounded-[20px] px-[10px] py-[4px] pl-[10px] pr-[8px]">
+                                                                    <span className="text-[12px] font-medium">{m.name}</span>
+                                                                    {canEdit && (
+                                                                        <button
+                                                                            onClick={async (e) => {
+                                                                                e.stopPropagation()
+                                                                                if (!confirm(`Are you sure you want to remove ${m.name} as manager from this group?`)) return
+                                                                                try {
+                                                                                    const res = await fetch(`/api/groups?managerId=${m.id}&projectId=${project.id}`, { method: "DELETE" })
+                                                                                    if (res.ok) { toast.success("Manager removed"); fetchGroups() }
+                                                                                } catch { toast.error("Failed") }
+                                                                            }}
+                                                                            className="text-[#9e9b95] hover:text-[#dc2626] bg-transparent border-none cursor-pointer flex items-center justify-center p-0 leading-none"
+                                                                            title="Remove manager"
+                                                                        >
+                                                                            <X className="h-3.5 w-3.5" />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[11px] text-[#9e9b95] italic">No managers</span>
+                                                    )}
+                                                </div>
 
-                                                    {/* Action buttons */}
-                                                    <div className="flex gap-2 pt-1">
+                                                <div>
+                                                    <div className="flex items-center gap-1.5 mb-2">
+                                                        <Users className="h-[13px] w-[13px] text-[#9e9b95]" />
+                                                        <span className="text-[12px] font-medium text-[#6b6860]">Inspectors</span>
+                                                        <span className="text-[12px] text-[#9e9b95] font-normal">({project.inspectors.length})</span>
+                                                    </div>
+                                                    {project.inspectors.length > 0 ? (
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {project.inspectors.map(inspector => (
+                                                                <div key={inspector.id} className="flex items-center gap-[5px] bg-[#fef9ec] text-[#92400e] border border-[rgba(217,119,6,0.2)] rounded-[20px] px-[10px] py-[4px] pl-[10px] pr-[8px]">
+                                                                    <span className="text-[12px] font-medium">{inspector.name}</span>
+                                                                    {canEdit && (
+                                                                        <button
+                                                                            onClick={() => inspector.assignmentId && removeInspectorFromCard(inspector.assignmentId)}
+                                                                            disabled={deletingId === inspector.assignmentId}
+                                                                            className="text-[#9e9b95] hover:text-[#dc2626] bg-transparent border-none cursor-pointer flex items-center justify-center p-0 leading-none"
+                                                                            title="Remove inspector"
+                                                                        >
+                                                                            {deletingId === inspector.assignmentId
+                                                                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                                                : <X className="h-3.5 w-3.5" />
+                                                                            }
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[11px] text-[#9e9b95] italic">No inspectors</span>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex gap-2 mt-[14px] pt-3 border-t border-[#e8e6e1]">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="flex-1 text-[12px] h-8 rounded-[8px] border-[#e8e6e1] text-[#6b6860] bg-white hover:bg-[#e8f7f1] hover:text-[#0d6b4a] hover:border-[#1a9e6e] px-3"
+                                                        onClick={() => {
+                                                            setDetailProject(project)
+                                                            setDetailCompanyName(group.name)
+                                                        }}
+                                                    >
+                                                        <Eye className="h-3 w-3 mr-1.5" />
+                                                        View Details
+                                                    </Button>
+                                                    {canEdit && (
                                                         <Button
-                                                            variant="default"
                                                             size="sm"
-                                                            className="flex-1 text-xs h-8"
-                                                            onClick={() => {
-                                                                setDetailProject(project)
-                                                                setDetailCompanyName(group.name)
-                                                            }}
+                                                            className="flex-1 text-[12px] h-8 rounded-[8px] bg-[#e8f7f1] text-[#0d6b4a] border border-[rgba(26,158,110,0.3)] hover:bg-[#1a9e6e] hover:text-white px-3"
+                                                            onClick={() => openAddMembersDialog(project)}
                                                         >
-                                                            <Eye className="h-3 w-3 mr-1" />
-                                                            View Details
+                                                            <UserPlus className="h-3 w-3 mr-1.5" />
+                                                            Add
                                                         </Button>
-                                                        {canEdit && (
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="flex-1 text-xs h-8"
-                                                                onClick={() => openAddMembersDialog(project)}
-                                                            >
-                                                                <UserPlus className="h-3 w-3 mr-1" />
-                                                                Add
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
+                                                    )}
+                                                </div>
+                                            </div>
                                         ))}
                                     </div>
-                                </CardContent>
+                                </div>
                             )}
-                        </Card>
+                        </div>
                     ))}
                 </div>
             )}
@@ -864,27 +881,35 @@ function CreateGroupDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Users className="h-5 w-5" />
-                        Create New Group
-                    </DialogTitle>
-                    <DialogDescription>
-                        Create a new project group and assign team members
-                    </DialogDescription>
-                </DialogHeader>
+            <DialogContent className="bg-white rounded-2xl w-[640px] max-w-[95vw] max-h-[90vh] overflow-y-auto p-7 shadow-[0_20px_60px_rgba(0,0,0,0.12)] border-none [&>button]:hidden">
+                <div className="flex items-start justify-between mb-1.5">
+                    <div>
+                        <div className="flex items-center gap-2.5">
+                            <Users className="h-[18px] w-[18px] text-[#1a9e6e]" />
+                            <h2 className="text-[17px] font-semibold text-[#1a1a18]">Create New Group</h2>
+                        </div>
+                        <p className="text-[13px] text-[#6b6860] mt-1 ml-7">Create a new project group and assign team members</p>
+                    </div>
+                    <button
+                        onClick={() => onOpenChange(false)}
+                        className="h-[30px] w-[30px] rounded-[8px] bg-[#f9f8f5] border border-[#e8e6e1] text-[#6b6860] text-[16px] cursor-pointer hover:bg-[#fee2e2] hover:text-[#dc2626] hover:border-[#fca5a5] transition-colors flex items-center justify-center"
+                    >
+                        ✕
+                    </button>
+                </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6 py-4">
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Company</label>
+                <div className="border-t border-[#e8e6e1] my-4" />
+
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="grid grid-cols-2 gap-3.5">
+                        <div className="space-y-1.5">
+                            <label className="text-[12.5px] font-medium text-[#1a1a18]">Company</label>
                             <Select
                                 value={formData.companyId}
                                 onValueChange={(val) => setFormData({ ...formData, companyId: val })}
                                 disabled={fetchingCompanies}
                             >
-                                <SelectTrigger>
+                                <SelectTrigger className="w-full py-2.5 px-3.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] focus:bg-white focus:border-[#1a9e6e] focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:outline-none data-[placeholder]:text-[#9e9b95]">
                                     <SelectValue placeholder={fetchingCompanies ? "Loading..." : "Select company"} />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -894,46 +919,56 @@ function CreateGroupDialog({
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Group Name</label>
+                        <div className="space-y-1.5">
+                            <label className="text-[12.5px] font-medium text-[#1a1a18]">Group Name</label>
                             <Input
                                 placeholder="Enter group/project name"
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                className="py-2.5 px-3.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:bg-white focus:border-[#1a9e6e] focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:outline-none"
                                 required
                             />
                         </div>
                     </div>
 
-                    <div className="grid gap-6 md:grid-cols-2">
-                        {/* Managers Select */}
-                        <div className="space-y-3">
-                            <label className="text-sm font-medium flex items-center gap-2">
-                                <Shield className="h-4 w-4 text-purple-600" />
-                                Assign Managers
-                            </label>
-                            <div className="border rounded-xl p-3 space-y-2 max-h-60 overflow-y-auto bg-slate-50/50">
+                    <div className="grid grid-cols-2 gap-3.5">
+                        <div className="space-y-2.5">
+                            <div className="flex items-center gap-1.5 mb-2.5">
+                                <Shield className="h-[14px] w-[14px] text-[#6b6860]" />
+                                <span className="text-[13px] font-semibold text-[#1a1a18]">Assign Managers</span>
+                            </div>
+                            <div className="bg-[#f9f8f5] border border-[#e8e6e1] rounded-[10px] overflow-hidden max-h-[220px] overflow-y-auto">
                                 {loadingUsers ? (
-                                    <Loader2 className="h-4 w-4 animate-spin mx-auto text-slate-400" />
+                                    <div className="flex items-center justify-center py-8">
+                                        <Loader2 className="h-5 w-5 animate-spin text-[#9e9b95]" />
+                                    </div>
                                 ) : availableManagers.length === 0 ? (
-                                    <p className="text-xs text-muted-foreground italic text-center py-4">No managers found</p>
+                                    <p className="text-[12px] text-[#9e9b95] italic text-center py-4">No managers found</p>
                                 ) : (
-                                    availableManagers.map(m => (
-                                        <label key={m.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white transition-colors cursor-pointer group">
-                                            <input
-                                                type="checkbox"
-                                                checked={formData.managerIds.includes(m.id)}
-                                                onChange={(e) => {
-                                                    const ids = e.target.checked
-                                                        ? [...formData.managerIds, m.id]
-                                                        : formData.managerIds.filter(id => id !== m.id)
-                                                    setFormData({ ...formData, managerIds: ids })
-                                                }}
-                                                className="h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
-                                            />
+                                    availableManagers.map((m, idx) => (
+                                        <label
+                                            key={m.id}
+                                            className={`flex items-center gap-2.5 p-[10px] cursor-pointer transition-colors hover:bg-[#f0fdf4] ${idx !== availableManagers.length - 1 ? 'border-b border-[#e8e6e1]' : ''}`}
+                                        >
+                                            <div className="relative">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formData.managerIds.includes(m.id)}
+                                                    onChange={(e) => {
+                                                        const ids = e.target.checked
+                                                            ? [...formData.managerIds, m.id]
+                                                            : formData.managerIds.filter(id => id !== m.id)
+                                                        setFormData({ ...formData, managerIds: ids })
+                                                    }}
+                                                    className="w-4 h-4 rounded border-[1.5px] border-[#d4d1ca] bg-white appearance-none cursor-pointer checked:bg-[#1a9e6e] checked:border-[#1a9e6e] relative [&:checked:after]:content-['✓'] [&:checked:after]:absolute [&:checked:after]:text-white [&:checked:after]:text-[10px] [&:checked:after]:font-bold [&:checked:after]:left-[2px] [&:checked:after]:top-[0px]"
+                                                />
+                                            </div>
+                                            <div className="h-8 w-8 rounded-full bg-[#e8f7f1] flex items-center justify-center text-[#0d6b4a] font-semibold text-[12px] shrink-0">
+                                                {m.name.charAt(0).toUpperCase()}
+                                            </div>
                                             <div className="min-w-0">
-                                                <p className="text-sm font-bold text-slate-700 truncate">{m.name}</p>
-                                                <p className="text-[10px] font-medium text-slate-400 truncate">{m.email}</p>
+                                                <p className="text-[13px] font-medium text-[#1a1a18] truncate">{m.name}</p>
+                                                <p className="text-[11.5px] text-[#9e9b95] mt-0.5">{m.email}</p>
                                             </div>
                                         </label>
                                     ))
@@ -941,34 +976,43 @@ function CreateGroupDialog({
                             </div>
                         </div>
 
-                        {/* Inspectors Select */}
-                        <div className="space-y-3">
-                            <label className="text-sm font-medium flex items-center gap-2">
-                                <Users className="h-4 w-4 text-amber-600" />
-                                Assign Inspectors
-                            </label>
-                            <div className="border rounded-xl p-3 space-y-2 max-h-60 overflow-y-auto bg-slate-50/50">
+                        <div className="space-y-2.5">
+                            <div className="flex items-center gap-1.5 mb-2.5">
+                                <Users className="h-[14px] w-[14px] text-[#6b6860]" />
+                                <span className="text-[13px] font-semibold text-[#1a1a18]">Assign Inspectors</span>
+                            </div>
+                            <div className="bg-[#f9f8f5] border border-[#e8e6e1] rounded-[10px] overflow-hidden max-h-[220px] overflow-y-auto">
                                 {loadingUsers ? (
-                                    <Loader2 className="h-4 w-4 animate-spin mx-auto text-slate-400" />
+                                    <div className="flex items-center justify-center py-8">
+                                        <Loader2 className="h-5 w-5 animate-spin text-[#9e9b95]" />
+                                    </div>
                                 ) : availableInspectors.length === 0 ? (
-                                    <p className="text-xs text-muted-foreground italic text-center py-4">No inspectors found</p>
+                                    <p className="text-[12px] text-[#9e9b95] italic text-center py-4">No inspectors found</p>
                                 ) : (
-                                    availableInspectors.map(i => (
-                                        <label key={i.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white transition-colors cursor-pointer group">
-                                            <input
-                                                type="checkbox"
-                                                checked={formData.inspectorIds.includes(i.id)}
-                                                onChange={(e) => {
-                                                    const ids = e.target.checked
-                                                        ? [...formData.inspectorIds, i.id]
-                                                        : formData.inspectorIds.filter(id => id !== i.id)
-                                                    setFormData({ ...formData, inspectorIds: ids })
-                                                }}
-                                                className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
-                                            />
+                                    availableInspectors.map((i, idx) => (
+                                        <label
+                                            key={i.id}
+                                            className={`flex items-center gap-2.5 p-[10px] cursor-pointer transition-colors hover:bg-[#f0fdf4] ${idx !== availableInspectors.length - 1 ? 'border-b border-[#e8e6e1]' : ''}`}
+                                        >
+                                            <div className="relative">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formData.inspectorIds.includes(i.id)}
+                                                    onChange={(e) => {
+                                                        const ids = e.target.checked
+                                                            ? [...formData.inspectorIds, i.id]
+                                                            : formData.inspectorIds.filter(id => id !== i.id)
+                                                        setFormData({ ...formData, inspectorIds: ids })
+                                                    }}
+                                                    className="w-4 h-4 rounded border-[1.5px] border-[#d4d1ca] bg-white appearance-none cursor-pointer checked:bg-[#d97706] checked:border-[#d97706] relative [&:checked:after]:content-['✓'] [&:checked:after]:absolute [&:checked:after]:text-white [&:checked:after]:text-[10px] [&:checked:after]:font-bold [&:checked:after]:left-[2px] [&:checked:after]:top-[0px]"
+                                                />
+                                            </div>
+                                            <div className="h-8 w-8 rounded-full bg-[#fef3c7] flex items-center justify-center text-[#92400e] font-semibold text-[12px] shrink-0">
+                                                {i.name.charAt(0).toUpperCase()}
+                                            </div>
                                             <div className="min-w-0">
-                                                <p className="text-sm font-bold text-slate-700 truncate">{i.name}</p>
-                                                <p className="text-[10px] font-medium text-slate-400 truncate">{i.email}</p>
+                                                <p className="text-[13px] font-medium text-[#1a1a18] truncate">{i.name}</p>
+                                                <p className="text-[11.5px] text-[#9e9b95] mt-0.5">{i.email}</p>
                                             </div>
                                         </label>
                                     ))
@@ -977,30 +1021,29 @@ function CreateGroupDialog({
                         </div>
                     </div>
 
-                    <div className="flex gap-3 pt-2">
-                        <Button
+                    <div className="border-t border-[#e8e6e1] pt-5 flex justify-end gap-2.5">
+                        <button
                             type="button"
-                            variant="outline"
-                            className="flex-1 h-11"
                             onClick={() => onOpenChange(false)}
                             disabled={loading}
+                            className="px-6 py-2.5 bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[9px] text-[13px] font-medium hover:bg-[#f9f8f5] hover:text-[#1a1a18] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                             Cancel
-                        </Button>
-                        <Button
+                        </button>
+                        <button
                             type="submit"
-                            className="flex-1 h-11 bg-slate-900"
                             disabled={loading}
+                            className="px-6 py-2.5 bg-[#1a9e6e] text-white border-none rounded-[9px] text-[13px] font-medium hover:bg-[#158a5e] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                             {loading ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Creating Group...
-                                </>
+                                <span className="flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Creating...
+                                </span>
                             ) : (
                                 "Create Group"
                             )}
-                        </Button>
+                        </button>
                     </div>
                 </form>
             </DialogContent>

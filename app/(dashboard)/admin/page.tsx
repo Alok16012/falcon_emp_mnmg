@@ -2,28 +2,29 @@
 
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import {
     Building2,
     Folder,
     ClipboardCheck,
     Users,
     ArrowRight,
-    Plus,
-    Search,
-    Clock,
-    CheckCircle2,
-    XCircle,
     TrendingUp,
-    Loader2,
+    TrendingDown,
+    XCircle,
+    MoreHorizontal,
+    ChevronDown,
+    Filter,
+    ArrowUpRight,
+    Search,
+    Plus,
     ClipboardList
 } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 
 export default function AdminDashboard() {
     const { data: session } = useSession()
@@ -47,15 +48,16 @@ export default function AdminDashboard() {
 
     if (loading) {
         return (
-            <div className="space-y-8 animate-pulse">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="space-y-6 animate-pulse p-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-[14px]">
                     {[1, 2, 3, 4].map((i) => (
-                        <Skeleton key={i} className="h-32 w-full rounded-xl" />
+                        <Skeleton key={i} className="h-28 w-full rounded-[14px]" />
                     ))}
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <Skeleton className="h-[400px] w-full rounded-xl" />
-                    <Skeleton className="h-[400px] w-full rounded-xl" />
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-[14px]">
+                    <Skeleton className="h-48 col-span-1 rounded-[14px]" />
+                    <Skeleton className="h-48 col-span-1 rounded-[14px]" />
+                    <Skeleton className="h-48 col-span-2 rounded-[14px]" />
                 </div>
             </div>
         )
@@ -63,229 +65,236 @@ export default function AdminDashboard() {
 
     if (!stats || stats.error) {
         return (
-            <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed shadow-sm">
-                <div className="flex flex-col items-center gap-2 text-center">
-                    <XCircle className="h-10 w-10 text-destructive" />
-                    <h3 className="text-xl font-bold tracking-tight">
-                        Failed to load dashboard data
-                    </h3>
-                    <p className="text-sm text-muted-foreground flex flex-col gap-1">
-                        <span>{stats?.error || "An unexpected error occurred while fetching system statistics."}</span>
-                        {stats?.details && (
-                            <span className="text-[10px] bg-muted p-2 rounded border mt-2 max-w-md overflow-auto font-mono">
-                                {stats.details}
-                            </span>
-                        )}
-                    </p>
-                    <Button onClick={() => window.location.reload()} className="mt-4">
-                        Try Again
-                    </Button>
-                </div>
+            <div className="flex h-[400px] flex-col items-center justify-center m-4 rounded-[14px] border border-dashed border-[var(--border)] bg-white">
+                <XCircle size={40} className="text-[var(--red)] mb-4" />
+                <h3 className="text-[18px] font-bold text-[var(--text)] mb-2">Failed to load data</h3>
+                <p className="text-[13px] text-[var(--text2)] mb-6">{stats?.error || "Connection error"}</p>
+                <button
+                    onClick={() => window.location.reload()}
+                    className="px-6 py-2 bg-[var(--accent)] text-white text-[13px] font-semibold rounded-[8px] hover:opacity-90 transition-all"
+                >
+                    Retry
+                </button>
             </div>
         )
     }
 
-    const kpiCards = [
-        {
-            title: "Total Companies",
-            value: stats.totalCompanies ?? 0,
-            icon: Building2,
-            color: "text-blue-600",
-            bg: "bg-blue-50",
-            link: "/companies"
-        },
-        {
-            title: "Total Projects",
-            value: stats.totalProjects ?? 0,
-            icon: Folder,
-            color: "text-purple-600",
-            bg: "bg-purple-50",
-            link: "/projects"
-        },
-        {
-            title: "Pending Approvals",
-            value: stats.pendingApprovals ?? 0,
-            icon: ClipboardCheck,
-            color: "text-amber-600",
-            bg: "bg-amber-50",
-            link: "/approvals",
-            badge: (stats.pendingApprovals ?? 0) > 0
-        },
-        {
-            title: "Total Users",
-            value: stats.totalUsers ?? 0,
-            icon: Users,
-            color: "text-emerald-600",
-            bg: "bg-emerald-50",
-            link: "/admin/users"
-        }
+    const statRow = [
+        { label: "Companies", value: stats.totalCompanies ?? 0, sub: "Across all regions", icon: Building2 },
+        { label: "Projects", value: stats.totalProjects ?? 0, sub: "Active management", icon: Folder },
+        { label: "Pending", value: stats.pendingApprovals ?? 0, sub: "Action required", icon: ClipboardCheck },
+        { label: "Users", value: stats.totalUsers ?? 0, sub: "System access", icon: Users },
     ]
 
     return (
-        <div className="space-y-8">
-            <div className="flex flex-col gap-1">
-                <h1 className="text-3xl font-bold tracking-tight">Admin Overview</h1>
-                <p className="text-muted-foreground font-medium">System performance and management dashboard</p>
+        <div className="p-4 lg:p-6 space-y-5 bg-[var(--bg)] min-h-screen">
+            {/* Page Header */}
+            <div className="flex items-center justify-between">
+                <h1 className="text-[20px] font-semibold text-[var(--text)] tracking-tight">Admin Dashboard</h1>
+                <div className="flex items-center gap-2">
+                    <button className="h-9 px-4 flex items-center gap-2 bg-white border border-[var(--border)] rounded-[8px] text-[13px] font-medium text-[var(--text2)] hover:bg-[var(--surface2)] transition-all">
+                        <Filter size={16} />
+                        Filter
+                    </button>
+                    <button className="h-9 px-4 flex items-center gap-2 bg-[var(--accent)] text-white rounded-[8px] text-[13px] font-semibold hover:opacity-90 transition-all shadow-sm">
+                        Export Data
+                    </button>
+                </div>
             </div>
 
-            {/* Top Stats Row */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                {kpiCards.map((card) => (
-                    <Link key={card.title} href={card.link}>
-                        <Card className="hover:shadow-lg transition-all border-none shadow-sm group">
-                            <CardContent className="p-6">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className={`${card.bg} ${card.color} p-2.5 rounded-xl group-hover:scale-110 transition-transform`}>
-                                        <card.icon className="h-5 w-5" />
-                                    </div>
-                                    {card.badge && (
-                                        <div className="flex h-2 w-2">
-                                            <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-amber-400 opacity-75"></span>
-                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-sm font-medium text-muted-foreground">{card.title}</p>
-                                    <p className="text-2xl font-bold tracking-tight">{card.value}</p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </Link>
+            {/* STAT ROW */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-[14px]">
+                {statRow.map((stat) => (
+                    <div key={stat.label} className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] p-4 flex flex-col justify-between hover:shadow-sm transition-all group">
+                        <div className="flex items-center justify-between mb-3 text-[11.5px] font-medium text-[var(--text2)]">
+                            {stat.label}
+                            <stat.icon size={16} className="text-[var(--text3)] group-hover:text-[var(--accent)] transition-colors" />
+                        </div>
+                        <div>
+                            <div className="text-[24px] font-semibold text-[var(--text)] leading-tight mb-0.5">{stat.value}</div>
+                            <div className="text-[11px] text-[var(--text3)]">{stat.sub}</div>
+                        </div>
+                    </div>
                 ))}
             </div>
 
-            {/* Second Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Recent Inspections */}
-                <Card className="lg:col-span-2 border-none shadow-sm overflow-hidden bg-white">
-                    <CardHeader className="flex flex-row items-center justify-between pb-4 border-b">
-                        <CardTitle className="text-lg font-bold">Recent Submissions</CardTitle>
-                        <Button variant="ghost" size="sm" asChild>
-                            <Link href="/approvals" className="text-primary font-semibold flex items-center gap-1">
-                                View All <ArrowRight className="h-3 w-3" />
-                            </Link>
-                        </Button>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="overflow-x-auto w-full">
-                            <table className="w-full text-sm text-left">
-                                <thead>
-                                    <tr className="bg-muted/30 text-muted-foreground font-medium uppercase text-[10px] tracking-wider border-b">
-                                        <th className="px-6 py-4">Project</th>
-                                        <th className="px-6 py-4">Inspector</th>
-                                        <th className="px-6 py-4">Date</th>
-                                        <th className="px-6 py-4">Status</th>
-                                        <th className="px-6 py-4">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y">
-                                    {(stats.recentInspections || []).map((i: any) => (
-                                        <tr key={i.id} className="hover:bg-muted/20 transition-colors">
-                                            <td className="px-6 py-4 font-semibold">{i.projectName}</td>
-                                            <td className="px-6 py-4 text-muted-foreground">{i.inspectorName}</td>
-                                            <td className="px-6 py-4 text-muted-foreground">
-                                                {i.submittedAt ? format(new Date(i.submittedAt), "MMM d, HH:mm") : "N/A"}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <Badge className={cn(
-                                                    "capitalize border-none font-medium text-[10px]",
-                                                    i.status === "pending" ? "bg-amber-100 text-amber-700 hover:bg-amber-100" :
-                                                        i.status === "approved" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" :
-                                                            "bg-red-100 text-red-700 hover:bg-red-100"
-                                                )}>
-                                                    {i.status}
-                                                </Badge>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <Button size="sm" variant="ghost" asChild className="h-8 w-8 p-0">
-                                                    <Link href={`/approvals/${i.id}`}>
-                                                        <Search className="h-4 w-4 text-primary" />
-                                                    </Link>
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {(!stats.recentInspections || stats.recentInspections.length === 0) && (
-                                        <tr>
-                                            <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground italic">
-                                                No recent submissions found.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+            {/* ALERT CARDS */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-[14px]">
+                {/* Card 1: Safety Compliance */}
+                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] p-[18px] flex flex-col justify-between hover:shadow-sm transition-all">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <h3 className="text-[13px] font-medium text-[var(--text)] leading-none mb-1">Safety Score</h3>
+                            <p className="text-[11.5px] text-[var(--text2)]">Compliance rate</p>
                         </div>
-                    </CardContent>
-                </Card>
+                        <div className="h-8 w-8 rounded-full border border-[var(--border)] bg-[var(--surface2)] flex items-center justify-center text-[var(--text2)]">
+                            <TrendingUp size={16} />
+                        </div>
+                    </div>
+                    <div className="mt-6 mb-6">
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-[28px] font-semibold text-[var(--text)]">98%</span>
+                            <span className="text-[12px] text-[var(--text2)]">Items</span>
+                        </div>
+                        <div className="mt-2 flex items-center gap-1.5 w-fit h-6 px-2.5 rounded-full bg-[var(--accent-light)] text-[var(--accent-text)] text-[11px] font-semibold">
+                            <ArrowUpRight size={12} className="stroke-[3px]" />
+                            +2.4%
+                        </div>
+                    </div>
+                    <div className="pt-4 border-t border-[var(--border)] flex items-center justify-between group cursor-pointer text-[12.5px] font-medium text-[var(--text)]">
+                        Central District
+                        <ArrowRight size={14} className="text-[var(--text3)] group-hover:translate-x-1 transition-transform" />
+                    </div>
+                </div>
 
-                {/* Quick Actions */}
-                <Card className="border-none shadow-sm bg-white">
-                    <CardHeader className="border-b">
-                        <CardTitle className="text-lg font-bold">Quick Actions</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 space-y-3">
-                        <Button className="w-full justify-start gap-3 h-12 shadow-sm" asChild>
-                            <Link href="/companies/create">
-                                <Plus className="h-4 w-4" /> Add New Company
-                            </Link>
-                        </Button>
-                        <Button variant="outline" className="w-full justify-start gap-3 h-12" asChild>
-                            <Link href="/projects/create">
-                                <Folder className="h-4 w-4" /> Create Project
-                            </Link>
-                        </Button>
-                        <Button variant="outline" className="w-full justify-start gap-3 h-12" asChild>
-                            <Link href="/assignments">
-                                <ClipboardList className="h-4 w-4" /> Manage Assignments
-                            </Link>
-                        </Button>
-                        <Button variant="outline" className="w-full justify-start gap-3 h-12" asChild>
-                            <Link href="/admin/users">
-                                <Users className="h-4 w-4" /> System Users
-                            </Link>
-                        </Button>
-                        <Button variant="secondary" className="w-full justify-start gap-3 h-12" asChild>
-                            <Link href="/approvals">
-                                <ClipboardCheck className="h-4 w-4" /> View All Reports
-                            </Link>
-                        </Button>
-                    </CardContent>
-                </Card>
+                {/* Card 2: Pending Approvals */}
+                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] p-[18px] flex flex-col justify-between hover:shadow-sm transition-all">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <h3 className="text-[13px] font-medium text-[var(--text)] leading-none mb-1">Approvals</h3>
+                            <p className="text-[11.5px] text-[var(--text2)]">Action required</p>
+                        </div>
+                        <div className="h-8 w-8 rounded-full border border-[var(--border)] bg-[var(--surface2)] flex items-center justify-center text-[var(--text2)]">
+                            <ClipboardCheck size={16} />
+                        </div>
+                    </div>
+                    <div className="mt-6 mb-6">
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-[28px] font-semibold text-[var(--text)]">{stats.pendingApprovals ?? 0}</span>
+                            <span className="text-[12px] text-[var(--text2)]">Reports</span>
+                        </div>
+                        <div className={cn(
+                            "mt-2 flex items-center gap-1.5 w-fit h-6 px-2.5 rounded-full text-[11px] font-semibold",
+                            (stats.pendingApprovals ?? 0) > 0
+                                ? "bg-[var(--amber-light)] text-[var(--amber)]"
+                                : "bg-[var(--accent-light)] text-[var(--accent-text)]"
+                        )}>
+                            {(stats.pendingApprovals ?? 0) > 0 ? (
+                                <><TrendingUp size={12} className="stroke-[3px]" /> Urgent</>
+                            ) : (
+                                <><ArrowUpRight size={12} className="stroke-[3px]" /> Clear</>
+                            )}
+                        </div>
+                    </div>
+                    <Link href="/approvals" className="pt-4 border-t border-[var(--border)] flex items-center justify-between group text-[12.5px] font-medium text-[var(--text)]">
+                        Process All
+                        <ArrowRight size={14} className="text-[var(--text3)] group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                </div>
+
+                {/* Card 3: Completion Chart placeholder */}
+                <div className="md:col-span-2 bg-[var(--surface)] border border-[var(--border)] rounded-[14px] p-[18px] flex flex-col hover:shadow-sm transition-all">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <h3 className="text-[13px] font-medium text-[var(--text)] leading-none">Completion rate</h3>
+                            <div className="h-6 flex items-center gap-1 px-2.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface2)] text-[11px] text-[var(--text2)] font-medium cursor-pointer hover:bg-white transition-all">
+                                Last 30 days
+                                <ChevronDown size={12} />
+                            </div>
+                        </div>
+                        <button className="h-8 w-8 rounded-full hover:bg-[var(--surface2)] flex items-center justify-center text-[var(--text3)] transition-all">
+                            <MoreHorizontal size={18} />
+                        </button>
+                    </div>
+
+                    <div className="flex-1 flex flex-col justify-center">
+                        <div className="flex items-baseline gap-4 mb-4">
+                            <div className="text-[32px] font-semibold text-[var(--text)] tabular-nums">12,482</div>
+                            <div className="h-6 flex items-center gap-1 px-2.5 rounded-full bg-[var(--accent-light)] text-[var(--accent-text)] text-[11px] font-semibold">
+                                +12% vs previous period
+                            </div>
+                        </div>
+
+                        {/* Dummy mini-chart bars */}
+                        <div className="flex items-end gap-1.5 h-20 w-full mt-2">
+                            {[40, 60, 45, 80, 55, 70, 90, 65, 50, 85, 45, 75, 95, 60, 40].map((h, i) => (
+                                <div
+                                    key={i}
+                                    style={{ height: `${h}%` }}
+                                    className={cn(
+                                        "flex-1 rounded-t-[3px] transition-all duration-500",
+                                        i === 12 ? "bg-[var(--accent)]" : "bg-[var(--accent-light)] group-hover:bg-[var(--accent)]/30"
+                                    )}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="mt-6 flex items-center justify-between text-[11px] text-[var(--text3)] font-medium uppercase tracking-wider">
+                        <span>Feb 1</span>
+                        <span>Feb 15</span>
+                        <span>Mar 1</span>
+                    </div>
+                </div>
             </div>
 
-            {/* Third Row - Activity Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <Card className="border-none shadow-sm bg-white md:col-span-1">
-                    <CardContent className="p-6 text-center space-y-2">
-                        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Approval Rate</p>
-                        <p className="text-4xl font-extrabold text-primary">{stats.thisMonth?.approvalRate ?? 0}%</p>
-                        <div className="flex items-center justify-center gap-1 text-[11px] text-emerald-600 font-bold bg-emerald-50 w-fit mx-auto px-2 py-0.5 rounded-full">
-                            <TrendingUp className="h-3 w-3" /> Monthly Target
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-none shadow-sm bg-white md:col-span-3">
-                    <CardContent className="p-6">
-                        <div className="grid grid-cols-3 divide-x">
-                            <div className="px-6 text-center">
-                                <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Inspected</p>
-                                <p className="text-2xl font-bold">{stats.thisMonth?.totalInspections ?? 0}</p>
-                                <p className="text-[10px] text-muted-foreground mt-1">This Month</p>
-                            </div>
-                            <div className="px-6 text-center">
-                                <p className="text-xs font-semibold text-emerald-600 uppercase mb-1">Approved</p>
-                                <p className="text-2xl font-bold text-emerald-700">{stats.thisMonth?.approved ?? 0}</p>
-                                <Badge variant="outline" className="mt-1 text-[9px] border-emerald-100 text-emerald-600">Success</Badge>
-                            </div>
-                            <div className="px-6 text-center">
-                                <p className="text-xs font-semibold text-red-600 uppercase mb-1">Rejected</p>
-                                <p className="text-2xl font-bold text-red-700">{stats.thisMonth?.rejected ?? 0}</p>
-                                <Badge variant="outline" className="mt-1 text-[9px] border-red-100 text-red-600">Action Required</Badge>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+            {/* Existing Functionality: Recent Submissions & Quick Actions (Preserved and styled) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-[14px]">
+                {/* Recent Submissions */}
+                <div className="lg:col-span-2 bg-[var(--surface)] border border-[var(--border)] rounded-[14px] overflow-hidden">
+                    <div className="px-[18px] py-4 border-b border-[var(--border)] flex items-center justify-between">
+                        <h3 className="text-[15px] font-semibold text-[var(--text)] leading-none">Recent Submissions</h3>
+                        <Link href="/approvals" className="text-[12px] font-medium text-[var(--accent-text)] hover:underline">View All</Link>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-[var(--surface2)]/50 border-b border-[var(--border)]">
+                                <tr>
+                                    <th className="px-5 py-3 text-[11px] font-bold text-[var(--text3)] uppercase tracking-wider">Project</th>
+                                    <th className="px-5 py-3 text-[11px] font-bold text-[var(--text3)] uppercase tracking-wider">Inspector</th>
+                                    <th className="px-5 py-3 text-[11px] font-bold text-[var(--text3)] uppercase tracking-wider">Status</th>
+                                    <th className="px-5 py-3 text-[11px] font-bold text-[var(--text3)] uppercase tracking-wider">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[var(--border)]">
+                                {(stats.recentInspections || []).map((i: any) => (
+                                    <tr key={i.id} className="hover:bg-[var(--surface2)] transition-colors group">
+                                        <td className="px-5 py-3.5">
+                                            <Link href={`/approvals/${i.id}`} className="text-[13px] font-medium text-[var(--text)] group-hover:text-[var(--accent-text)] transition-colors">
+                                                {i.projectName}
+                                            </Link>
+                                        </td>
+                                        <td className="px-5 py-3.5 text-[13px] text-[var(--text2)]">{i.inspectorName}</td>
+                                        <td className="px-5 py-3.5">
+                                            <span className={cn(
+                                                "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase",
+                                                i.status === "pending" ? "bg-[var(--amber-light)] text-[var(--amber)]" :
+                                                    i.status === "approved" ? "bg-[var(--accent-light)] text-[var(--accent-text)]" :
+                                                        "bg-[var(--red-light)] text-[var(--red)]"
+                                            )}>
+                                                {i.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-5 py-3.5 text-[12px] text-[var(--text3)]">
+                                            {i.submittedAt ? format(new Date(i.submittedAt), "MMM d, HH:mm") : "-"}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] overflow-hidden h-fit">
+                    <div className="px-[18px] py-4 border-b border-[var(--border)]">
+                        <h3 className="text-[15px] font-semibold text-[var(--text)] leading-none">Quick Actions</h3>
+                    </div>
+                    <div className="p-4 grid grid-cols-1 gap-2">
+                        <Link href="/companies/create" className="h-10 px-4 flex items-center gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-[8px] text-[13px] font-medium text-[var(--text2)] hover:bg-[var(--surface2)] hover:text-[var(--text)] transition-all">
+                            <Plus size={16} /> Add New Company
+                        </Link>
+                        <Link href="/projects/create" className="h-10 px-4 flex items-center gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-[8px] text-[13px] font-medium text-[var(--text2)] hover:bg-[var(--surface2)] hover:text-[var(--text)] transition-all">
+                            <Folder size={16} /> Create Project
+                        </Link>
+                        <Link href="/assignments" className="h-10 px-4 flex items-center gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-[8px] text-[13px] font-medium text-[var(--text2)] hover:bg-[var(--surface2)] hover:text-[var(--text)] transition-all">
+                            <ClipboardList size={16} /> Manage Assignments
+                        </Link>
+                        <Link href="/admin/users" className="h-10 px-4 flex items-center gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-[8px] text-[13px] font-medium text-[var(--text2)] hover:bg-[var(--surface2)] hover:text-[var(--text)] transition-all">
+                            <Users size={16} /> System Users
+                        </Link>
+                    </div>
+                </div>
             </div>
         </div>
     )

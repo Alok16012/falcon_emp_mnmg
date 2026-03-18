@@ -1,13 +1,12 @@
 
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function LoginPage() {
     const router = useRouter()
@@ -15,6 +14,19 @@ export default function LoginPage() {
     const [password, setPassword] = useState("")
     const [error, setError] = useState("")
     const [loading, setLoading] = useState(false)
+    const [isRecovering, setIsRecovering] = useState(false)
+
+    useEffect(() => {
+        const handleError = (e: ErrorEvent) => {
+            if (e.message?.includes("ChunkLoadError") || e.message?.includes("Loading chunk")) {
+                console.warn("ChunkLoadError detected, performing emergency reload...")
+                setIsRecovering(true)
+                window.location.reload()
+            }
+        }
+        window.addEventListener("error", handleError, true)
+        return () => window.removeEventListener("error", handleError, true)
+    }, [])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -31,15 +43,8 @@ export default function LoginPage() {
             if (result?.error) {
                 setError("Invalid email or password")
             } else {
-                // Redirection is handled by middleware but we can also push here safely
-                // But since we use redirect: false, we need to handle it client side or reload
-                // Actually middleware runs on request, client side navigation might need explicit push
-                // Ideally we let effective redirection handle it, but for SPA feel:
                 router.refresh()
-                // We can also let the middleware redirect logic run on next page load or
-                // we can guess the path. Middleware handles protection.
-                // Let's just reload or push to root and let middleware intercept.
-                window.location.href = "/" // Hard reload to ensure session is picked up
+                window.location.href = "/"
             }
         } catch (err) {
             setError("An unexpected error occurred")
@@ -51,13 +56,12 @@ export default function LoginPage() {
     const handleDemoLogin = async (roleEmail: string) => {
         setLoading(true)
         setError("")
-        const demoEmail = roleEmail
         const demoPassword = "demo123"
 
         try {
             const result = await signIn("credentials", {
                 redirect: false,
-                email: demoEmail,
+                email: roleEmail,
                 password: demoPassword,
             })
 
@@ -74,74 +78,130 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100">
-            <Card className="w-full max-w-md">
-                <CardHeader>
-                    <CardTitle className="text-2xl text-center">CIMS Login v2</CardTitle>
-                    <CardDescription className="text-center">
+        <div className="min-h-screen bg-[#f5f4f0] flex items-center justify-center p-6">
+            <div className="bg-white border border-[#e8e6e1] rounded-[16px] w-[420px] max-w-full p-9" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
+                <div className="text-center mb-7">
+                    <div className="flex items-center justify-center gap-2.5 mb-4">
+                        <div className="w-9 h-9 bg-[#1a9e6e] rounded-[10px] flex items-center justify-center">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="3" width="7" height="7" />
+                                <rect x="14" y="3" width="7" height="7" />
+                                <rect x="14" y="14" width="7" height="7" />
+                                <rect x="3" y="14" width="7" height="7" />
+                            </svg>
+                        </div>
+                        <span className="text-[20px] font-bold text-[#1a1a18] tracking-[-0.4px]">CIMS</span>
+                    </div>
+                    <p className="text-[13px] text-[#9e9b95] leading-relaxed">
                         Enter your credentials to access the system
-                    </CardDescription>
-                </CardHeader>
+                    </p>
+                </div>
+
+                <div className="border-t border-[#e8e6e1] mb-6"></div>
+
                 <form onSubmit={handleSubmit}>
-                    <CardContent className="space-y-4">
-                        {error && (
-                            <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md text-center">
-                                {error}
-                            </div>
-                        )}
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
+                    {error && (
+                        <div className="bg-[#fef2f2] border border-[#fca5a5] rounded-[8px] p-[10px_14px] mb-3 flex items-center gap-2 text-[13px] text-[#dc2626]">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="8" x2="12" y2="12" />
+                                <line x1="12" y1="16" x2="12.01" y2="16" />
+                            </svg>
+                            {error}
+                        </div>
+                    )}
+                    
+                    <div className="space-y-4">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="email" className="text-[13px] font-medium text-[#1a1a18]">Email</Label>
                             <Input
                                 id="email"
                                 type="email"
                                 placeholder="user@cims.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
+                                className="w-full py-[10px] px-[14px] bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:outline-none transition-all"
                                 required
                             />
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="password">Password</Label>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="password" className="text-[13px] font-medium text-[#1a1a18]">Password</Label>
                             <Input
                                 id="password"
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
+                                className="w-full py-[10px] px-[14px] bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:outline-none transition-all"
                                 required
                             />
                         </div>
-                    </CardContent>
-                    <CardFooter className="flex flex-col space-y-4">
-                        <Button className="w-full" type="submit" disabled={loading}>
-                            {loading ? "Signing in..." : "Sign In"}
-                        </Button>
+                    </div>
 
-                        <div className="relative w-full">
-                            <div className="absolute inset-0 flex items-center">
-                                <span className="w-full border-t" />
-                            </div>
-                            <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-background px-2 text-muted-foreground">Or demo access</span>
-                            </div>
-                        </div>
+                    <Button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full mt-3 py-[11px] bg-[#1a9e6e] hover:bg-[#158a5e] text-white border-none rounded-[9px] text-[14px] font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                    >
+                        {loading ? "Signing in..." : "Sign In"}
+                    </Button>
 
-                        <div className="grid grid-cols-2 gap-2 w-full">
-                            <Button variant="outline" size="sm" onClick={() => handleDemoLogin("admin@cims.com")} disabled={loading}>
-                                Admin
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleDemoLogin("manager@cims.com")} disabled={loading}>
-                                Manager
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleDemoLogin("inspector@cims.com")} disabled={loading}>
-                                Inspector
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleDemoLogin("client@cims.com")} disabled={loading}>
-                                Client
-                            </Button>
-                        </div>
-                    </CardFooter>
+                    <div className="flex items-center gap-3 my-5">
+                        <div className="flex-1 h-px bg-[#e8e6e1]"></div>
+                        <span className="text-[11px] font-medium text-[#9e9b95] tracking-[0.8px] uppercase whitespace-nowrap">OR DEMO ACCESS</span>
+                        <div className="flex-1 h-px bg-[#e8e6e1]"></div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                        <button
+                            type="button"
+                            onClick={() => handleDemoLogin("admin@cims.com")}
+                            disabled={loading}
+                            className="flex items-center justify-center gap-1.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] py-[9px] px-3 text-[13px] font-medium text-[#6b6860] cursor-pointer transition-all hover:bg-[#e8f7f1] hover:text-[#0d6b4a] hover:border-[rgba(26,158,110,0.3)] disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            </svg>
+                            Admin
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleDemoLogin("manager@cims.com")}
+                            disabled={loading}
+                            className="flex items-center justify-center gap-1.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] py-[9px] px-3 text-[13px] font-medium text-[#6b6860] cursor-pointer transition-all hover:bg-[#eff6ff] hover:text-[#1d4ed8] hover:border-[rgba(29,78,216,0.2)] disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                            </svg>
+                            Manager
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleDemoLogin("inspector@cims.com")}
+                            disabled={loading}
+                            className="flex items-center justify-center gap-1.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] py-[9px] px-3 text-[13px] font-medium text-[#6b6860] cursor-pointer transition-all hover:bg-[#fef3c7] hover:text-[#92400e] hover:border-[rgba(217,119,6,0.2)] disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                                <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                            </svg>
+                            Inspector
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleDemoLogin("client@cims.com")}
+                            disabled={loading}
+                            className="flex items-center justify-center gap-1.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] py-[9px] px-3 text-[13px] font-medium text-[#6b6860] cursor-pointer transition-all hover:bg-[#f5f3ff] hover:text-[#6d28d9] hover:border-[rgba(109,40,217,0.2)] disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>
+                            Client
+                        </button>
+                    </div>
                 </form>
-            </Card>
+            </div>
         </div>
     )
 }

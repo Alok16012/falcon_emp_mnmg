@@ -2,29 +2,11 @@
 
 import { useState, useRef, useEffect } from "react"
 import * as XLSX from "xlsx"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-    Upload,
-    Download,
-    FileSpreadsheet,
-    CheckCircle2,
-    XCircle,
-    Loader2,
-    Users,
-    Building2,
-    Briefcase
-} from "lucide-react"
 import { toast } from "sonner"
 
 interface InspectorData {
@@ -265,170 +247,201 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button variant="outline">
-                    <Users className="h-4 w-4 mr-2" />
+                <button className="inline-flex items-center justify-center bg-white border border-[#e8e6e1] text-[#6b6860] px-3 rounded-[9px] text-[13px] font-medium hover:bg-[#f9f8f5] transition-colors">
+                    <svg className="h-4 w-4 mr-2" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
                     Bulk Import
-                </Button>
+                </button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>Bulk Import Inspectors</DialogTitle>
-                    <DialogDescription>
-                        Import multiple inspectors from an Excel file and optionally assign to a group
-                    </DialogDescription>
-                </DialogHeader>
+            <DialogContent className="bg-white rounded-[16px] w-[520px] max-w-[90vw] p-7" style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.12)" }}>
+                <div className="flex items-start justify-between mb-5">
+                    <div>
+                        <h2 className="text-[17px] font-semibold text-[#1a1a18]">Bulk Import Inspectors</h2>
+                        <p className="text-[13px] text-[#6b6860] mt-1">Import multiple inspectors from an Excel file and optionally assign to a group</p>
+                    </div>
+                    <button
+                        onClick={() => handleOpenChange(false)}
+                        className="w-[30px] h-[30px] rounded-[8px] bg-[#f9f8f5] border border-[#e8e6e1] flex items-center justify-center hover:bg-red-50 hover:border-red-200 transition-colors"
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
 
                 {step === "template" && (
-                    <div className="space-y-4 py-4">
-                        {/* Group Assignment Section */}
-                        <Card className="border-blue-200 bg-blue-50/30">
-                            <CardHeader className="pb-2">
-                                <CardTitle className="flex items-center gap-2 text-base">
-                                    <Building2 className="h-5 w-5 text-blue-600" />
-                                    Assign to Group (Optional)
-                                </CardTitle>
-                                <CardDescription>
-                                    Select a project to auto-assign imported inspectors
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                                <div className="space-y-1">
-                                    <label className="text-sm font-medium">Company</label>
+                    <div className="space-y-4">
+                        <div className="bg-[#f9f8f5] border border-[#e8e6e1] rounded-[12px] p-4">
+                            <div className="flex items-center gap-2 mb-1">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a9e6e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                                </svg>
+                                <span className="text-[13.5px] font-semibold text-[#1a1a18]">Assign to Group (Optional)</span>
+                            </div>
+                            <p className="text-[12.5px] text-[#6b6860] mb-3">Select a project to auto-assign imported inspectors</p>
+                            <div className="space-y-2">
+                                <label className="text-[11.5px] font-medium text-[#9e9b95] uppercase tracking-[0.5px]">Company</label>
+                                <select
+                                    className="w-full bg-white border border-[#e8e6e1] rounded-[9px] px-[14px] py-[10px] text-[13px] text-[#1a1a18] focus:border-[#1a9e6e] focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:outline-none transition-all cursor-pointer"
+                                    value={selectedCompanyId}
+                                    onChange={(e) => setSelectedCompanyId(e.target.value)}
+                                >
+                                    <option value="">Select Company (Optional)</option>
+                                    {companies.map((c) => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {selectedCompanyId && (
+                                <div className="space-y-2 mt-3">
+                                    <label className="text-[11.5px] font-medium text-[#9e9b95] uppercase tracking-[0.5px]">Project</label>
                                     <select
-                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                        value={selectedCompanyId}
-                                        onChange={(e) => setSelectedCompanyId(e.target.value)}
+                                        className="w-full bg-white border border-[#e8e6e1] rounded-[9px] px-[14px] py-[10px] text-[13px] text-[#1a1a18] focus:border-[#1a9e6e] focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:outline-none transition-all cursor-pointer"
+                                        value={selectedProjectId}
+                                        onChange={(e) => setSelectedProjectId(e.target.value)}
                                     >
-                                        <option value="">Select Company (Optional)</option>
-                                        {companies.map((c) => (
-                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        <option value="">Select Project</option>
+                                        {projects.map((p) => (
+                                            <option key={p.id} value={p.id}>{p.name}</option>
                                         ))}
                                     </select>
                                 </div>
+                            )}
 
-                                {selectedCompanyId && (
-                                    <div className="space-y-1">
-                                        <label className="text-sm font-medium">Project</label>
-                                        <select
-                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                            value={selectedProjectId}
-                                            onChange={(e) => setSelectedProjectId(e.target.value)}
-                                        >
-                                            <option value="">Select Project</option>
-                                            {projects.map((p) => (
-                                                <option key={p.id} value={p.id}>{p.name}</option>
-                                            ))}
-                                        </select>
+                            {selectedProjectId && managers.length > 0 && (
+                                <div className="space-y-2 mt-3">
+                                    <label className="text-[11.5px] font-medium text-[#9e9b95] uppercase tracking-[0.5px]">Assign Managers (Optional)</label>
+                                    <div className="border border-[#e8e6e1] rounded-[9px] max-h-[100px] overflow-y-auto bg-white">
+                                        {managers.map((m) => (
+                                            <label key={m.id} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[#f9f8f5] transition-colors border-b border-[#e8e6e1] last:border-b-0">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedManagerIds.includes(m.id)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedManagerIds([...selectedManagerIds, m.id])
+                                                        } else {
+                                                            setSelectedManagerIds(selectedManagerIds.filter(id => id !== m.id))
+                                                        }
+                                                    }}
+                                                    className="rounded border-[#d4d1ca]"
+                                                />
+                                                <span className="text-[13px] text-[#1a1a18]">{m.name}</span>
+                                                <span className="text-[12px] text-[#9e9b95]">({m.email})</span>
+                                            </label>
+                                        ))}
                                     </div>
-                                )}
+                                    {selectedManagerIds.length > 0 && (
+                                        <p className="text-[12px] text-[#6b6860]">{selectedManagerIds.length} manager(s) selected</p>
+                                    )}
+                                </div>
+                            )}
 
-                                {selectedProjectId && managers.length > 0 && (
-                                    <div className="space-y-1">
-                                        <label className="text-sm font-medium">Assign Managers (Optional)</label>
-                                        <div className="border rounded-md max-h-32 overflow-y-auto p-2 space-y-1 bg-white">
-                                            {managers.map((m) => (
-                                                <label key={m.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded text-sm">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedManagerIds.includes(m.id)}
-                                                        onChange={(e) => {
-                                                            if (e.target.checked) {
-                                                                setSelectedManagerIds([...selectedManagerIds, m.id])
-                                                            } else {
-                                                                setSelectedManagerIds(selectedManagerIds.filter(id => id !== m.id))
-                                                            }
-                                                        }}
-                                                        className="rounded border-gray-300"
-                                                    />
-                                                    <span>{m.name}</span>
-                                                    <span className="text-xs text-muted-foreground">({m.email})</span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                        {selectedManagerIds.length > 0 && (
-                                            <p className="text-xs text-muted-foreground">{selectedManagerIds.length} manager(s) selected</p>
-                                        )}
-                                    </div>
-                                )}
-
-                                {selectedProjectId && (
-                                    <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-100 rounded p-2">
-                                        <Briefcase className="h-3 w-3" />
-                                        <span>Inspectors will be auto-assigned to this project after import</span>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {/* Template & Upload */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <FileSpreadsheet className="h-5 w-5 text-green-600" />
-                                    Step 1: Download Template
-                                </CardTitle>
-                                <CardDescription>
-                                    Download the Excel template and fill in inspector details
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Button onClick={downloadTemplate} className="w-full">
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Download Excel Template
-                                </Button>
-                                <p className="text-xs text-muted-foreground mt-3 text-center">
-                                    Template contains columns: Name, Email, Phone
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        <div className="text-center">
-                            <p className="text-sm text-muted-foreground mb-2">After filling the template, upload it below</p>
-                            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                                <Upload className="h-4 w-4 mr-2" />
-                                Upload Filled Template
-                            </Button>
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept=".xlsx,.xls"
-                                className="hidden"
-                                onChange={handleFileChange}
-                            />
+                            {selectedProjectId && (
+                                <div className="flex items-center gap-2 text-[12px] text-[#0d6b4a] bg-[#e8f7f1] rounded-[6px] p-2 mt-3">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                                    </svg>
+                                    <span>Inspectors will be auto-assigned to this project after import</span>
+                                </div>
+                            )}
                         </div>
+
+                        <div className="bg-white border border-[#e8e6e1] rounded-[12px] p-5">
+                            <div className="flex items-center gap-2 mb-1">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a9e6e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                    <line x1="8" y1="13" x2="16" y2="13" />
+                                    <line x1="8" y1="17" x2="16" y2="17" />
+                                </svg>
+                                <span className="text-[15px] font-semibold text-[#1a1a18]">Step 1: Download Template</span>
+                            </div>
+                            <p className="text-[12.5px] text-[#6b6860] mb-4">Download the Excel template and fill in inspector details</p>
+                            <button
+                                onClick={downloadTemplate}
+                                className="w-full bg-white border border-[1.5px] border-[#1a9e6e] text-[#0d6b4a] rounded-[9px] py-[10px] px-6 text-[13px] font-medium hover:bg-[#e8f7f1] transition-colors flex items-center justify-center gap-2"
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="7 10 12 15 17 10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
+                                Download Excel Template
+                            </button>
+                            <p className="text-[12px] text-[#9e9b95] bg-[#f9f8f5] border border-[#e8e6e1] rounded-[6px] p-2 text-center mt-3">
+                                Template contains columns: Name, Email, Phone
+                            </p>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <div className="flex-1 h-px bg-[#e8e6e1]"></div>
+                            <span className="text-[12.5px] text-[#6b6860] whitespace-nowrap">After filling the template, upload it below</span>
+                            <div className="flex-1 h-px bg-[#e8e6e1]"></div>
+                        </div>
+
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="w-full bg-[#1a9e6e] text-white rounded-[9px] py-[10px] px-7 text-[13px] font-medium hover:bg-[#158a5e] transition-colors flex items-center justify-center gap-2"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                            Upload Filled Template
+                        </button>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".xlsx,.xls"
+                            className="hidden"
+                            onChange={handleFileChange}
+                        />
                     </div>
                 )}
 
                 {step === "preview" && (
-                    <div className="space-y-4 py-4">
+                    <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                            <h3 className="font-medium">Preview</h3>
+                            <h3 className="text-[13.5px] font-semibold text-[#1a1a18]">Preview</h3>
                             <div className="flex items-center gap-2">
-                                <Badge variant="secondary">{parsedData.length} inspectors</Badge>
+                                <span className="bg-[#f9f8f5] border border-[#e8e6e1] rounded-[20px] px-[10px] py-[2px] text-[11.5px] font-medium text-[#6b6860]">{parsedData.length} inspectors</span>
                                 {selectedProjectId && (
-                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                        <Briefcase className="h-3 w-3 mr-1" />
+                                    <span className="bg-[#e8f7f1] border border-[rgba(26,158,110,0.3)] rounded-[20px] px-[10px] py-[2px] text-[11.5px] font-medium text-[#0d6b4a] flex items-center gap-1">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                                        </svg>
                                         + Group Assign
-                                    </Badge>
+                                    </span>
                                 )}
                             </div>
                         </div>
 
-                        <div className="border rounded-lg overflow-hidden max-h-64 overflow-y-auto">
-                            <table className="w-full text-sm">
-                                <thead className="bg-muted">
+                        <div className="border border-[#e8e6e1] rounded-[10px] overflow-hidden max-h-[200px] overflow-y-auto">
+                            <table className="w-full text-[13px]">
+                                <thead className="bg-[#f9f8f5]">
                                     <tr>
-                                        <th className="px-3 py-2 text-left font-medium">Name</th>
-                                        <th className="px-3 py-2 text-left font-medium">Email</th>
-                                        <th className="px-3 py-2 text-left font-medium">Phone</th>
+                                        <th className="px-4 py-2.5 text-left font-medium text-[#6b6860]">Name</th>
+                                        <th className="px-4 py-2.5 text-left font-medium text-[#6b6860]">Email</th>
+                                        <th className="px-4 py-2.5 text-left font-medium text-[#6b6860]">Phone</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {parsedData.map((row, idx) => (
-                                        <tr key={idx} className="border-t">
-                                            <td className="px-3 py-2">{row.name}</td>
-                                            <td className="px-3 py-2">{row.email}</td>
-                                            <td className="px-3 py-2 text-muted-foreground">{row.phone || "-"}</td>
+                                        <tr key={idx} className="border-t border-[#e8e6e1]">
+                                            <td className="px-4 py-2.5 text-[#1a1a18]">{row.name}</td>
+                                            <td className="px-4 py-2.5 text-[#6b6860]">{row.email}</td>
+                                            <td className="px-4 py-2.5 text-[#9e9b95]">{row.phone || "-"}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -436,62 +449,80 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
                         </div>
 
                         <div className="flex gap-3">
-                            <Button variant="outline" onClick={() => { setStep("template"); setFile(null); }}>
+                            <button
+                                onClick={() => { setStep("template"); setFile(null); }}
+                                className="flex-1 bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[9px] py-[10px] px-4 text-[13px] font-medium hover:bg-[#f9f8f5] transition-colors"
+                            >
                                 Back
-                            </Button>
-                            <Button className="flex-1" onClick={handleImport}>
+                            </button>
+                            <button
+                                onClick={handleImport}
+                                className="flex-1 bg-[#1a9e6e] text-white rounded-[9px] py-[10px] px-4 text-[13px] font-medium hover:bg-[#158a5e] transition-colors"
+                            >
                                 Import {parsedData.length} Inspectors{selectedProjectId ? " + Assign to Group" : ""}
-                            </Button>
+                            </button>
                         </div>
                     </div>
                 )}
 
                 {step === "importing" && (
-                    <div className="py-12 text-center space-y-4">
-                        <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
-                        <p className="text-muted-foreground">
+                    <div className="py-12 text-center">
+                        <svg className="h-12 w-12 animate-spin mx-auto text-[#1a9e6e]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                        </svg>
+                        <p className="text-[13px] text-[#6b6860] mt-4">
                             Importing inspectors{selectedProjectId ? " and assigning to group" : ""}...
                         </p>
                     </div>
                 )}
 
                 {step === "results" && results && (
-                    <div className="space-y-4 py-4">
+                    <div className="space-y-4">
                         <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2 text-green-600">
-                                <CheckCircle2 className="h-5 w-5" />
-                                <span className="font-medium">{results.created.length} created</span>
+                            <div className="flex items-center gap-2 text-[#0d6b4a]">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                    <polyline points="22 4 12 14.01 9 11.01" />
+                                </svg>
+                                <span className="text-[13px] font-medium">{results.created.length} created</span>
                             </div>
                             {results.failed.length > 0 && (
-                                <div className="flex items-center gap-2 text-red-600">
-                                    <XCircle className="h-5 w-5" />
-                                    <span className="font-medium">{results.failed.length} failed</span>
+                                <div className="flex items-center gap-2 text-[#dc2626]">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <line x1="15" y1="9" x2="9" y2="15" />
+                                        <line x1="9" y1="9" x2="15" y2="15" />
+                                    </svg>
+                                    <span className="text-[13px] font-medium">{results.failed.length} failed</span>
                                 </div>
                             )}
                             {results.projectAssigned && (
-                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                    <Briefcase className="h-3 w-3 mr-1" />
+                                <span className="bg-[#e8f7f1] border border-[rgba(26,158,110,0.3)] rounded-[20px] px-[10px] py-[2px] text-[11.5px] font-medium text-[#0d6b4a] flex items-center gap-1">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                                    </svg>
                                     Group Assigned
-                                </Badge>
+                                </span>
                             )}
                         </div>
 
                         {results.created.length > 0 && (
-                            <div className="border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-muted">
+                            <div className="border border-[#e8e6e1] rounded-[10px] overflow-hidden max-h-[180px] overflow-y-auto">
+                                <table className="w-full text-[13px]">
+                                    <thead className="bg-[#f9f8f5]">
                                         <tr>
-                                            <th className="px-3 py-2 text-left font-medium">Name</th>
-                                            <th className="px-3 py-2 text-left font-medium">Email</th>
-                                            <th className="px-3 py-2 text-left font-medium">Temp Password</th>
+                                            <th className="px-4 py-2.5 text-left font-medium text-[#6b6860]">Name</th>
+                                            <th className="px-4 py-2.5 text-left font-medium text-[#6b6860]">Email</th>
+                                            <th className="px-4 py-2.5 text-left font-medium text-[#6b6860]">Temp Password</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {results.created.map((row, idx) => (
-                                            <tr key={idx} className="border-t bg-green-50/50">
-                                                <td className="px-3 py-2">{row.name}</td>
-                                                <td className="px-3 py-2">{row.email}</td>
-                                                <td className="px-3 py-2 font-mono text-xs">{row.tempPassword}</td>
+                                            <tr key={idx} className="border-t border-[#e8e6e1] bg-[#f0fdf4]">
+                                                <td className="px-4 py-2.5 text-[#1a1a18]">{row.name}</td>
+                                                <td className="px-4 py-2.5 text-[#6b6860]">{row.email}</td>
+                                                <td className="px-4 py-2.5 font-mono text-[12px] text-[#1a1a18]">{row.tempPassword}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -500,21 +531,21 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
                         )}
 
                         {results.failed.length > 0 && (
-                            <div className="border rounded-lg overflow-hidden max-h-32 overflow-y-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-muted">
+                            <div className="border border-[#e8e6e1] rounded-[10px] overflow-hidden max-h-[120px] overflow-y-auto">
+                                <table className="w-full text-[13px]">
+                                    <thead className="bg-[#f9f8f5]">
                                         <tr>
-                                            <th className="px-3 py-2 text-left font-medium">Name</th>
-                                            <th className="px-3 py-2 text-left font-medium">Email</th>
-                                            <th className="px-3 py-2 text-left font-medium">Error</th>
+                                            <th className="px-4 py-2.5 text-left font-medium text-[#6b6860]">Name</th>
+                                            <th className="px-4 py-2.5 text-left font-medium text-[#6b6860]">Email</th>
+                                            <th className="px-4 py-2.5 text-left font-medium text-[#6b6860]">Error</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {results.failed.map((row, idx) => (
-                                            <tr key={idx} className="border-t bg-red-50/50">
-                                                <td className="px-3 py-2">{row.name}</td>
-                                                <td className="px-3 py-2">{row.email}</td>
-                                                <td className="px-3 py-2 text-red-600 text-xs">{row.error}</td>
+                                            <tr key={idx} className="border-t border-[#e8e6e1] bg-[#fef2f2]">
+                                                <td className="px-4 py-2.5 text-[#1a1a18]">{row.name}</td>
+                                                <td className="px-4 py-2.5 text-[#6b6860]">{row.email}</td>
+                                                <td className="px-4 py-2.5 text-[#dc2626] text-[12px]">{row.error}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -523,13 +554,23 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
                         )}
 
                         <div className="flex gap-3 pt-2">
-                            <Button variant="outline" onClick={exportResults}>
-                                <Download className="h-4 w-4 mr-2" />
+                            <button
+                                onClick={exportResults}
+                                className="bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[9px] py-[10px] px-4 text-[13px] font-medium hover:bg-[#f9f8f5] transition-colors flex items-center gap-2"
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="7 10 12 15 17 10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
                                 Export Results
-                            </Button>
-                            <Button className="flex-1" onClick={() => handleOpenChange(false)}>
+                            </button>
+                            <button
+                                onClick={() => handleOpenChange(false)}
+                                className="flex-1 bg-[#1a9e6e] text-white rounded-[9px] py-[10px] px-4 text-[13px] font-medium hover:bg-[#158a5e] transition-colors"
+                            >
                                 Done
-                            </Button>
+                            </button>
                         </div>
                     </div>
                 )}

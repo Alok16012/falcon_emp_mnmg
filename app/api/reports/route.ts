@@ -38,10 +38,10 @@ export async function GET(req: Request) {
         const user = await prisma.user.findUnique({ where: { id: session.user.id } })
         companyId = user?.companyId ?? null
     } else if (role === "INSPECTION_BOY") {
-        // Find companies where this inspector has assignments
+        // Lean query — only select the companyId we need, no heavy includes
         const assignments = await prisma.assignment.findMany({
             where: { inspectionBoyId: session.user.id },
-            include: { project: { include: { company: true } } }
+            select: { project: { select: { companyId: true } } }
         })
         const allowedCompanyIds = Array.from(new Set(assignments.map(a => a.project.companyId)))
 
@@ -51,13 +51,15 @@ export async function GET(req: Request) {
         } else if (allowedCompanyIds.length > 0) {
             companyId = allowedCompanyIds[0]
         } else {
-            // No assignments, but check if they have a companyId on their profile
-            const user = await prisma.user.findUnique({ where: { id: session.user.id } })
+            // No assignments — fall back to profile companyId
+            const user = await prisma.user.findUnique({
+                where: { id: session.user.id },
+                select: { companyId: true }
+            })
             companyId = user?.companyId ?? null
         }
 
-        // IMPORTANT: To show "Company Report", we do NOT filter by inspectorId
-        // This allows them to see aggregate data for the company they work for.
+        // Show aggregate company data, not filtered by inspector
         inspectorId = null
     } else if (role === "ADMIN" || role === "MANAGER") {
         companyId = searchParams.get("companyId") || null
@@ -118,9 +120,7 @@ export async function GET(req: Request) {
             rejectionPPM: 0,
             overallPPM: 0,
             period: `${getMonthName(month)} ${year}`,
-            companyName: companyId
-                ? (await prisma.company.findUnique({ where: { id: companyId } }))?.name ?? "All Companies"
-                : "All Companies",
+            companyName: "All Companies",
             partModel: "",
         }
 
@@ -132,12 +132,14 @@ export async function GET(req: Request) {
         const companyMap: Record<string, any> = {}
         const defectMap: Record<string, number> = {}
         const partModels = new Set<string>()
+        let resolvedCompanyName: string | null = null
 
         for (const inspection of inspections) {
             const responses = inspection.responses
             const inspectorName = inspection.assignment.inspectionBoy.name
             const companyName = inspection.assignment.project.company.name
             const companyId = inspection.assignment.project.companyId
+            if (!resolvedCompanyName) resolvedCompanyName = companyName
             const date = inspection.submittedAt
                 ? new Date(inspection.submittedAt).toISOString().slice(0, 10)
                 : new Date(inspection.createdAt).toISOString().slice(0, 10)
@@ -217,6 +219,7 @@ export async function GET(req: Request) {
             summary.overallPPM = Math.round(((summary.totalRework + summary.totalRejected) / total) * 1_000_000)
         }
         summary.partModel = Array.from(partModels).join(", ") || "N/A"
+        if (resolvedCompanyName) summary.companyName = resolvedCompanyName
 
         // Helper for map to array
         const mapToArray = (map: any, sortFn: (a: any, b: any) => number) =>
