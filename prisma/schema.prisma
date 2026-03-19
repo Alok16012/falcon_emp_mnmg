@@ -52,6 +52,7 @@ model Project {
   formTemplates FormTemplate[]
   company       Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
   projectManagers ProjectManager[]
+  defectColumns Json?
 }
 
 model Assignment {
@@ -112,6 +113,7 @@ model FormTemplate {
   options      String?
   defaultValue String?
   isRequired   Boolean          @default(false)
+  category     String           @default("FIXED")
   displayOrder Int              @default(0)
   createdAt    DateTime         @default(now())
   project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)

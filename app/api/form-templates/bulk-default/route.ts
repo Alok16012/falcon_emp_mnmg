@@ -3,118 +3,39 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
 
-const DEFAULT_FIELDS = [
-    // Section 1: Basic Entry Fields
-    { fieldLabel: "INSP. DATE", fieldType: "date", isRequired: true },
-    { fieldLabel: "SHIFT", fieldType: "dropdown", options: "G, A", isRequired: true },
-    { fieldLabel: "LOCATION", fieldType: "dropdown", options: "JIJAU, DUROSEAT", isRequired: true },
-    { fieldLabel: "PART NAME", fieldType: "dropdown", options: "DRIVER SEAT, CARGO SEAT, NIGERIA SEAT, PF SEAT", isRequired: true },
-    { fieldLabel: "PART NUMBER", fieldType: "text", isRequired: false },
-    { fieldLabel: "INSPECTED QTY", fieldType: "number", isRequired: true },
-    { fieldLabel: "ACCEPTED QTY", fieldType: "number", isRequired: true },
-    { fieldLabel: "REWORK QTY", fieldType: "number", isRequired: true },
-    { fieldLabel: "REWORK %", fieldType: "number", isRequired: false },
-    { fieldLabel: "REJECTED QTY", fieldType: "number", isRequired: true },
-    { fieldLabel: "REJECTED %", fieldType: "number", isRequired: false },
-
-    // Section 2: Defect Type Columns (Stitching/Fabric Defects)
-    { fieldLabel: "WRINKLES", fieldType: "number", isRequired: false },
-    { fieldLabel: "STICHING ISSUE", fieldType: "number", isRequired: false },
-    { fieldLabel: "STICHES OPEN", fieldType: "number", isRequired: false },
-    { fieldLabel: "STITCHING OPEN & WRINKLE", fieldType: "number", isRequired: false },
-    { fieldLabel: "STITCHING LINE ISSUE", fieldType: "number", isRequired: false },
-    { fieldLabel: "ZIGZAG STICHING", fieldType: "number", isRequired: false },
-    { fieldLabel: "ZIGZAG PVC LINING", fieldType: "number", isRequired: false },
-    { fieldLabel: "BEADING OPEN", fieldType: "number", isRequired: false },
-    { fieldLabel: "BEADING NOT IN LINE", fieldType: "number", isRequired: false },
-    { fieldLabel: "PINING ISSUE", fieldType: "number", isRequired: false },
-    { fieldLabel: "PINING OPEN", fieldType: "number", isRequired: false },
-    { fieldLabel: "EMBOSSING SHIFT", fieldType: "number", isRequired: false },
-    { fieldLabel: "EMBASSY SHIFTING", fieldType: "number", isRequired: false },
-    { fieldLabel: "UNWANTED STICH", fieldType: "number", isRequired: false },
-    { fieldLabel: "BIDING MARK", fieldType: "number", isRequired: false },
-
-    // Structural/Foam Defects
-    { fieldLabel: "CRACKED ISSUE", fieldType: "number", isRequired: false },
-    { fieldLabel: "TORN STICH", fieldType: "number", isRequired: false },
-    { fieldLabel: "FOAM SLACK", fieldType: "number", isRequired: false },
-    { fieldLabel: "FOAM VOIDE", fieldType: "number", isRequired: false },
-    { fieldLabel: "FOAM DAMAGE", fieldType: "number", isRequired: false },
-    { fieldLabel: "COVER ISSUE", fieldType: "number", isRequired: false },
-    { fieldLabel: "CHOPPED", fieldType: "number", isRequired: false },
-    { fieldLabel: "WELPRO OPEN", fieldType: "number", isRequired: false },
-    { fieldLabel: "SCREEN PRINTING TILT", fieldType: "number", isRequired: false },
-    { fieldLabel: "STUD MISSING", fieldType: "number", isRequired: false },
-
-    // Plastic/Metal Parts
-    { fieldLabel: "SCREW PROBLEM", fieldType: "number", isRequired: false },
-    { fieldLabel: "WIRE PROBLEM", fieldType: "number", isRequired: false },
-    { fieldLabel: "PLASTIC PART BEND", fieldType: "number", isRequired: false },
-    { fieldLabel: "PLASTIC PART GAP", fieldType: "number", isRequired: false },
-    { fieldLabel: "FITMENT NOT OK", fieldType: "number", isRequired: false },
-    { fieldLabel: "SCRATCH MARK", fieldType: "number", isRequired: false },
-    { fieldLabel: "SEAT BEST CRACK", fieldType: "number", isRequired: false },
-    { fieldLabel: "SEAT COVER STITCHES OPEN", fieldType: "number", isRequired: false },
-    { fieldLabel: "SEAT COVER BURNED", fieldType: "number", isRequired: false },
-    { fieldLabel: "BASE ISSUE", fieldType: "number", isRequired: false },
-    { fieldLabel: "METAL PART RUSTY", fieldType: "number", isRequired: false },
-    { fieldLabel: "TRIM DAMAGE", fieldType: "number", isRequired: false },
-    { fieldLabel: "TRIM PATTERN NOT OK", fieldType: "number", isRequired: false },
-
-    // Mechanical/Functional
-    { fieldLabel: "RECLINER GAP", fieldType: "number", isRequired: false },
-    { fieldLabel: "RECLINER GUIDE PLUG MISSING", fieldType: "number", isRequired: false },
-    { fieldLabel: "RECLINER LEVER SPRING MISSING", fieldType: "number", isRequired: false },
-    { fieldLabel: "C-RING MISSING", fieldType: "number", isRequired: false },
-    { fieldLabel: "VELCRO OPEN", fieldType: "number", isRequired: false },
-    { fieldLabel: "SLIDER JAM", fieldType: "number", isRequired: false },
-    { fieldLabel: "ROLLING NOT OK", fieldType: "number", isRequired: false },
-    { fieldLabel: "AIRBAG NOT OK", fieldType: "number", isRequired: false },
-    { fieldLabel: "BELT BUCKLE LOOSE", fieldType: "number", isRequired: false },
-    { fieldLabel: "MEMORY SWITCH DAMAGE", fieldType: "number", isRequired: false },
-    { fieldLabel: "RUBBER DAMPING MISS", fieldType: "number", isRequired: false },
-    { fieldLabel: "CABLE NOT OK", fieldType: "number", isRequired: false },
-    { fieldLabel: "AMREST NOISE", fieldType: "number", isRequired: false },
-    { fieldLabel: "ARMEST GAP", fieldType: "number", isRequired: false },
-    { fieldLabel: "ARMEST LINE MARK", fieldType: "number", isRequired: false },
-
-    // Barcode/Label/Packing
-    { fieldLabel: "WRONG BARCODE", fieldType: "number", isRequired: false },
-    { fieldLabel: "END CAP MISSING", fieldType: "number", isRequired: false },
-    { fieldLabel: "END CAP DAMAGE", fieldType: "number", isRequired: false },
-    { fieldLabel: "ZIP DAMAGE", fieldType: "number", isRequired: false },
-    { fieldLabel: "PACKING ISSUE", fieldType: "number", isRequired: false },
-    { fieldLabel: "FOLD MARK", fieldType: "number", isRequired: false },
-    { fieldLabel: "STAIN MARK", fieldType: "number", isRequired: false },
-
-    // Misc/Special
-    { fieldLabel: "WAVINESS", fieldType: "number", isRequired: false },
-    { fieldLabel: "SHADE VARIATION", fieldType: "number", isRequired: false },
-    { fieldLabel: "HARD FOAM", fieldType: "number", isRequired: false },
-    { fieldLabel: "BAZZEL GAP", fieldType: "number", isRequired: false },
-    { fieldLabel: "HARD PART LINE", fieldType: "number", isRequired: false },
-    { fieldLabel: "TREAD LOOSE", fieldType: "number", isRequired: false },
-    { fieldLabel: "BLOW HOLE", fieldType: "number", isRequired: false },
-    { fieldLabel: "NUT ISSUE", fieldType: "number", isRequired: false },
-    { fieldLabel: "NIDDLE HOLE", fieldType: "number", isRequired: false },
-    { fieldLabel: "LINE MARK", fieldType: "number", isRequired: false },
-    { fieldLabel: "ISOFIX SHOULD NOT TILT", fieldType: "number", isRequired: false },
-    { fieldLabel: "ISOFIX AREA CUTOUT", fieldType: "number", isRequired: false },
-    { fieldLabel: "ISOFIX PRINT NOT OK", fieldType: "number", isRequired: false },
-    { fieldLabel: "TRACK POSITION CROSS", fieldType: "number", isRequired: false },
-    { fieldLabel: "GUIDE PLUG MISSING", fieldType: "number", isRequired: false },
-    { fieldLabel: "DUMPER MACHINE SPACER GARMENT MISSING", fieldType: "number", isRequired: false },
-    { fieldLabel: "FOOT LAMP MISS", fieldType: "number", isRequired: false },
-    { fieldLabel: "FOOT LAMP SCREW LOOSE", fieldType: "number", isRequired: false },
-    { fieldLabel: "PUNCH MARK", fieldType: "number", isRequired: false },
-    { fieldLabel: "SBR ODS", fieldType: "number", isRequired: false },
-    { fieldLabel: "OTHER", fieldType: "number", isRequired: false },
-
-    // Section 3: Summary Fields
-    { fieldLabel: "INSPECTOR NAME", fieldType: "text", isRequired: true },
-    { fieldLabel: "TOTAL", fieldType: "number", isRequired: false },
-    { fieldLabel: "DIFFERENCE", fieldType: "number", isRequired: false },
+const FIXED_FIELDS = [
+    { fieldLabel: "INSP. DATE", fieldType: "date", isRequired: true, category: "FIXED" },
+    { fieldLabel: "SHIFT", fieldType: "dropdown", options: "G, A, B, C", isRequired: true, category: "FIXED" },
+    { fieldLabel: "LOCATION", fieldType: "dropdown", options: "JIJAU, DUROSEAT", isRequired: true, category: "FIXED" },
+    { fieldLabel: "PART NAME", fieldType: "dropdown", options: "DRIVER SEAT, CARGO SEAT, NIGERIA SEAT, PF SEAT", isRequired: true, category: "FIXED" },
+    { fieldLabel: "PART NUMBER", fieldType: "text", isRequired: false, category: "FIXED" },
+    { fieldLabel: "INSPECTED QTY", fieldType: "number", isRequired: true, category: "FIXED", defaultValue: "0" },
+    { fieldLabel: "REWORK QTY", fieldType: "number", isRequired: true, category: "FIXED", defaultValue: "0" },
 ]
+
+const DEFAULT_DEFECTS = [
+    "WRINKLES", "BIDING MARK", "CRACKED ISSUE", "TORN STICH", "STICHING ISSUE",
+    "EMBOSSING SHIFT", "STICHES OPEN", "BEADING OPEN", "PINING ISSUE", "PINING OPEN",
+    "PIN GAP", "CRACK", "FOAM SLACK", "COVER ISSUE", "CHOPPED", "WELPRO OPEN",
+    "BEADING NOT IN LINE", "SCREEN PRINTING TILT", "ZIGZAG STICHING", "ZIGZAG PVC LINING",
+    "SCREW PROBLEM", "WIRE PROBLEM", "PACKING ISSUE", "SCRATCH MARK", "FITMENT NOT OK",
+    "SEAT COVER STITCHES OPEN", "SEAT COVER BURNED", "BASE ISSUE", "WAVINESS",
+    "TREAD LOOSE", "SHADE VARIATION", "FOLD MARK", "ROLLING NOT OK", "HARD PART LINE",
+    "TRIM DAMAGE", "FOAM DAMAGE", "STAIN MARK", "PUNCH MARK", "OTHER"
+]
+
+const AUTO_FIELDS = [
+    { fieldLabel: "TOTAL DEFECTS", fieldType: "number", isRequired: false, category: "AUTO", defaultValue: "0" },
+    { fieldLabel: "REJECTED QTY", fieldType: "number", isRequired: false, category: "AUTO", defaultValue: "0" },
+    { fieldLabel: "ACCEPTED QTY", fieldType: "number", isRequired: false, category: "AUTO", defaultValue: "0" },
+    { fieldLabel: "REWORK %", fieldType: "number", isRequired: false, category: "AUTO", defaultValue: "0" },
+    { fieldLabel: "REJECTED %", fieldType: "number", isRequired: false, category: "AUTO", defaultValue: "0" },
+    { fieldLabel: "REWORK PPM", fieldType: "number", isRequired: false, category: "AUTO", defaultValue: "0" },
+    { fieldLabel: "REJECTION PPM", fieldType: "number", isRequired: false, category: "AUTO", defaultValue: "0" },
+    { fieldLabel: "DIFFERENCE", fieldType: "number", isRequired: false, category: "AUTO", defaultValue: "0" },
+    { fieldLabel: "INSPECTOR NAME", fieldType: "text", isRequired: false, category: "AUTO" },
+]
+
 
 export async function POST(req: Request) {
     try {
@@ -137,31 +58,35 @@ export async function POST(req: Request) {
             where: { projectId }
         })
 
+        // Combine all fields
+        const allFields: any[] = [
+            ...FIXED_FIELDS,
+            ...DEFAULT_DEFECTS.map(d => ({ fieldLabel: d, fieldType: "number", isRequired: false, category: "DEFECT", defaultValue: "0" })),
+            ...AUTO_FIELDS
+        ]
+
         // Insert default fields
-        const formattedFields = DEFAULT_FIELDS.map((f, i) => {
-            let defValue: string | null = null;
-            // set default 0 to fields that are defects/numbers but not totally,difference
-            if (f.fieldType === "number" && f.fieldLabel !== "TOTAL" && f.fieldLabel !== "DIFFERENCE" && !f.fieldLabel.includes("QTY") && !f.fieldLabel.includes("%")) {
-                defValue = "0";
-            }
-            if (f.fieldLabel.includes("QTY") || f.fieldLabel.includes("%")) {
-                defValue = "0";
-            }
+        const formattedFields = allFields.map((f, i) => ({
+            projectId,
+            fieldLabel: f.fieldLabel,
+            fieldType: f.fieldType,
+            options: f.options || null,
+            defaultValue: f.defaultValue || null,
+            isRequired: f.isRequired,
+            category: f.category,
+            displayOrder: i
+        }))
 
-            return {
-                projectId,
-                fieldLabel: f.fieldLabel,
-                fieldType: f.fieldType,
-                options: f.options || null,
-                defaultValue: defValue,
-                isRequired: f.isRequired,
-                displayOrder: i
-            };
-        })
-
-        await prisma.formTemplate.createMany({
-            data: formattedFields,
-        })
+        // Use transaction to update project and create fields
+        await prisma.$transaction([
+            prisma.formTemplate.createMany({
+                data: formattedFields,
+            }),
+            prisma.project.update({
+                where: { id: projectId },
+                data: { defectColumns: DEFAULT_DEFECTS }
+            })
+        ])
 
         return NextResponse.json({ success: true, count: formattedFields.length })
     } catch (error) {

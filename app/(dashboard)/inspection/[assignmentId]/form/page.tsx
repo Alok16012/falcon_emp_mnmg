@@ -151,64 +151,72 @@ export default function InspectionFormPage() {
         return () => clearInterval(timer)
     }, [isDirty, inspection, responses])
 
-    // Auto-Calculation logic for QTY metrics
+    // Specialized Auto-Calculation logic
     useEffect(() => {
         if (inspection?.status !== "draft" || templates.length === 0) return
 
-        let inspectedId: string | null = null
-        let reworkQtyId: string | null = null
-        let rejectedQtyId: string | null = null
-        let acceptedQtyId: string | null = null
-        let reworkPctId: string | null = null
-        let rejectedPctId: string | null = null
+        const fieldMap: Record<string, string> = {}
+        const defectIds: string[] = []
 
         templates.forEach(t => {
             const label = t.fieldLabel.toUpperCase().trim()
-            if (label === "INSPECTED QTY" || label === "INSPECT QUANTITY") inspectedId = t.id
-            if (label === "REWORK QTY" || label === "REWORK QUANTITY") reworkQtyId = t.id
-            if (label === "REJECTED QTY" || label === "REJECT QUANTITY") rejectedQtyId = t.id
-            if (label === "ACCEPTED QTY" || label === "ACCEPT QUANTITY") acceptedQtyId = t.id
-            if (label === "REWORK %" || label === "REWORK PERCENTAGE") reworkPctId = t.id
-            if (label === "REJECTED %" || label === "REJECTED PERCENTAGE") rejectedPctId = t.id
+            fieldMap[label] = t.id
+            if (t.category === "DEFECT") defectIds.push(t.id)
         })
 
-        if (!inspectedId) return
+        const getVal = (label: string) => parseFloat(responses[fieldMap[label]] || "0") || 0
 
-        const inspectedVal = parseFloat(responses[inspectedId] || "0") || 0
-        const acceptedVal = parseFloat(acceptedQtyId ? responses[acceptedQtyId] || "0" : "0") || 0
-        const rejectedVal = parseFloat(rejectedQtyId ? responses[rejectedQtyId] || "0" : "0") || 0
+        // 1. Total Defects = Sum of all defect columns
+        const totalDefects = defectIds.reduce((sum, id) => sum + (parseFloat(responses[id] || "0") || 0), 0)
 
-        const calculatedRework = Math.max(0, inspectedVal - acceptedVal - rejectedVal)
-        let calcReworkPct = "0"
-        let calcRejectedPct = "0"
+        // 2. Form Values
+        const inspectedQty = getVal("INSPECTED QTY")
+        const reworkQty = getVal("REWORK QTY")
 
-        if (inspectedVal > 0) {
-            calcReworkPct = ((calculatedRework / inspectedVal) * 100).toFixed(2)
-            calcRejectedPct = ((rejectedVal / inspectedVal) * 100).toFixed(2)
+        // 3. Rejected Qty = Total Defects - Rework Qty
+        const rejectedQty = Math.max(0, totalDefects - reworkQty)
+
+        // 4. Accepted Qty = Inspected Qty - Rework Qty - Rejected Qty
+        const acceptedQty = Math.max(0, inspectedQty - reworkQty - rejectedQty)
+
+        // 5. Percentages & PPM
+        let reworkPct = 0, rejectedPct = 0, reworkPpm = 0, rejectionPpm = 0
+        if (inspectedQty > 0) {
+            reworkPct = (reworkQty / inspectedQty) * 100
+            rejectedPct = (rejectedQty / inspectedQty) * 100
+            reworkPpm = (reworkQty / inspectedQty) * 1000000
+            rejectionPpm = (rejectedQty / inspectedQty) * 1000000
         }
+
+        // 6. Difference = Total Defects - Rework Qty - Rejected Qty (Should be 0)
+        const difference = totalDefects - reworkQty - rejectedQty
 
         let updates: Record<string, string> = {}
-        if (reworkQtyId && responses[reworkQtyId] !== calculatedRework.toString()) {
-            if (inspectedVal > 0 || rejectedVal > 0 || acceptedVal > 0) {
-                updates[reworkQtyId] = calculatedRework.toString()
-            }
+        const setIfChanged = (label: string, value: string | number) => {
+            const id = fieldMap[label]
+            const valStr = value.toString()
+            if (id && responses[id] !== valStr) updates[id] = valStr
         }
-        if (reworkPctId && responses[reworkPctId] !== calcReworkPct) {
-            if (inspectedVal > 0 || rejectedVal > 0 || acceptedVal > 0) {
-                updates[reworkPctId] = calcReworkPct.toString()
-            }
-        }
-        if (rejectedPctId && responses[rejectedPctId] !== calcRejectedPct) {
-            if (inspectedVal > 0 || rejectedVal > 0 || acceptedVal > 0) {
-                updates[rejectedPctId] = calcRejectedPct.toString()
-            }
+
+        setIfChanged("TOTAL DEFECTS", totalDefects)
+        setIfChanged("REJECTED QTY", rejectedQty)
+        setIfChanged("ACCEPTED QTY", acceptedQty)
+        setIfChanged("REWORK %", reworkPct.toFixed(2))
+        setIfChanged("REJECTED %", rejectedPct.toFixed(2))
+        setIfChanged("REWORK PPM", Math.round(reworkPpm))
+        setIfChanged("REJECTION PPM", Math.round(rejectionPpm))
+        setIfChanged("DIFFERENCE", difference)
+
+        // Auto-fill Inspector Name
+        if (fieldMap["INSPECTOR NAME"] && !responses[fieldMap["INSPECTOR NAME"]] && session?.user?.name) {
+            updates[fieldMap["INSPECTOR NAME"]] = session.user.name
         }
 
         if (Object.keys(updates).length > 0) {
             setResponses(prev => ({ ...prev, ...updates }))
             setIsDirty(true)
         }
-    }, [responses, templates, inspection?.status])
+    }, [responses, templates, inspection?.status, session])
 
     const handleFieldChange = (fieldId: string, value: string) => {
         if (inspection?.status !== "draft") return
@@ -243,34 +251,36 @@ export default function InspectionFormPage() {
         return true
     }
 
-    const FIELDS_PER_STEP = 10;
-    const totalFieldSteps = templates.length > 0 ? Math.ceil(templates.length / FIELDS_PER_STEP) : 0;
+    const fixedFields = templates.filter(t => t.category === "FIXED")
+    const defectFields = templates.filter(t => t.category === "DEFECT")
+    const autoFields = templates.filter(t => t.category === "AUTO")
+
+    const totalSteps = 4 // 1: Fixed, 2: Defects, 3: Paper Form, 4: Review
 
     const validateCurrentStep = () => {
-        if (currentStep < totalFieldSteps) {
-            const currentFields = templates.slice(currentStep * FIELDS_PER_STEP, (currentStep + 1) * FIELDS_PER_STEP)
-            let hasError = false
-            const newErrors: Record<string, string> = {}
-            currentFields.forEach(t => {
-                if (t.isRequired && !responses[t.id]) {
-                    newErrors[t.id] = "This field is required"
-                    hasError = true
-                }
-            })
-            if (hasError) {
-                setErrors(prev => ({ ...prev, ...newErrors }))
-                const firstErrorId = currentFields.find(t => t.isRequired && !responses[t.id])?.id
-                if (firstErrorId) {
-                    const el = document.getElementById(`field-${firstErrorId}`)
-                    el?.scrollIntoView({ behavior: "smooth", block: "center" })
-                }
-                return false
+        let currentFields: any[] = []
+        if (currentStep === 0) currentFields = fixedFields
+        if (currentStep === 1) currentFields = defectFields
+
+        let hasError = false
+        const newErrors: Record<string, string> = {}
+        currentFields.forEach(t => {
+            if (t.isRequired && !responses[t.id]) {
+                newErrors[t.id] = "This field is required"
+                hasError = true
             }
+        })
+        if (hasError) {
+            setErrors(prev => ({ ...prev, ...newErrors }))
+            const firstErrorId = currentFields.find(t => t.isRequired && !responses[t.id])?.id
+            if (firstErrorId) {
+                const el = document.getElementById(`field-${firstErrorId}`)
+                el?.scrollIntoView({ behavior: "smooth", block: "center" })
+            }
+            return false
         }
         return true
     }
-
-    const totalSteps = templates.length > 0 ? totalFieldSteps + 2 : 1
 
     const handleNextStep = () => {
         if (validateCurrentStep()) {
@@ -360,18 +370,27 @@ export default function InspectionFormPage() {
 
     const renderField = (template: any) => {
         const value = responses[template.id] || ""
-        const readOnly = inspection?.status !== "draft"
+        const readOnly = inspection?.status !== "draft" || template.category === "AUTO"
         const error = errors[template.id]
 
+        const isAuto = template.category === "AUTO"
+        const isInspectorName = template.fieldLabel === "INSPECTOR NAME"
+
         return (
-            <div key={template.id} id={`field-${template.id}`} className="space-y-2 p-3 rounded-lg border bg-card transition-colors hover:border-primary/50 shadow-sm">
+            <div key={template.id} id={`field-${template.id}`} className={cn(
+                "space-y-2 p-3 rounded-lg border transition-colors shadow-sm",
+                isAuto ? "bg-gray-50 border-dashed border-gray-300" : "bg-card hover:border-primary/50"
+            )}>
                 <div className="flex justify-between items-start">
-                    <Label className="text-sm font-semibold">
+                    <Label className={cn("text-sm font-semibold", isAuto && "text-gray-500")}>
                         {template.fieldLabel}
                         {template.isRequired && <span className="text-destructive ml-1">*</span>}
                     </Label>
-                    <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider opacity-70">
-                        {template.fieldType}
+                    <Badge variant="outline" className={cn(
+                        "text-[10px] uppercase font-bold tracking-wider opacity-70",
+                        isAuto && "bg-green-50 text-green-700 border-green-200"
+                    )}>
+                        {isAuto ? "Auto" : template.fieldType}
                     </Badge>
                 </div>
 
@@ -620,9 +639,12 @@ export default function InspectionFormPage() {
                                 </span>
                                 <span className={cn(
                                     "font-bold",
-                                    currentStep === totalSteps - 1 ? "text-primary" : "text-muted-foreground"
+                                    currentStep === 3 ? "text-primary" : "text-muted-foreground"
                                 )}>
-                                    {currentStep === totalSteps - 1 ? "Review" : currentStep === totalFieldSteps ? "Attachments" : `Form Details (Part ${currentStep + 1})`}
+                                    {currentStep === 0 && "Basic Info"}
+                                    {currentStep === 1 && "Defects & Summary"}
+                                    {currentStep === 2 && "Attachments"}
+                                    {currentStep === 3 && "Review & Submit"}
                                 </span>
                             </div>
                             <Progress value={((currentStep + 1) / totalSteps) * 100} className="h-2" />
@@ -630,15 +652,55 @@ export default function InspectionFormPage() {
 
                         {/* Current Step Content */}
                         <div className="bg-card border rounded-xl shadow-sm overflow-hidden mb-6">
-                            {currentStep < totalFieldSteps && (
+                            {currentStep === 0 && (
                                 <div className="p-4 space-y-4">
-                                    {templates
-                                        .slice(currentStep * FIELDS_PER_STEP, (currentStep + 1) * FIELDS_PER_STEP)
-                                        .map((t) => renderField(t))}
+                                    <div className="pb-2 border-b">
+                                        <h3 className="text-xs font-bold text-muted-foreground uppercase">Basic Info</h3>
+                                    </div>
+                                    {fixedFields.map((t) => renderField(t))}
                                 </div>
                             )}
 
-                            {currentStep === totalFieldSteps && (
+                            {currentStep === 1 && (
+                                <div className="p-4 space-y-6">
+                                    <div className="space-y-4">
+                                        <div className="pb-2 border-b">
+                                            <h3 className="text-xs font-bold text-muted-foreground uppercase">Defect Entry (3-Col Grid)</h3>
+                                        </div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                            {defectFields.map((t) => (
+                                                <div key={t.id} id={`field-${t.id}`} className={cn(
+                                                    "p-2 border rounded-md bg-muted/20 transition-all",
+                                                    errors[t.id] ? "border-destructive ring-1 ring-destructive" : "hover:border-primary/30"
+                                                )}>
+                                                    <Label className="text-[10px] font-bold text-muted-foreground truncate block mb-1" title={t.fieldLabel}>
+                                                        {t.fieldLabel}
+                                                    </Label>
+                                                    <Input
+                                                        type="number"
+                                                        value={responses[t.id] || ""}
+                                                        onChange={(e) => handleFieldChange(t.id, e.target.value)}
+                                                        disabled={inspection?.status !== "draft"}
+                                                        placeholder="0"
+                                                        className="h-8 text-xs bg-white text-center font-bold"
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4 pt-4 border-t">
+                                        <div className="pb-2 border-b">
+                                            <h3 className="text-xs font-bold text-muted-foreground uppercase">Live Summary</h3>
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {autoFields.map((t) => renderField(t))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {currentStep === 2 && (
                                 <div className="p-5 space-y-5">
                                     <div className="text-center mb-6">
                                         <div className="mx-auto w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4">
@@ -720,7 +782,7 @@ export default function InspectionFormPage() {
                                 </div>
                             )}
 
-                            {currentStep === totalSteps - 1 && (
+                            {currentStep === 3 && (
                                 <div className="p-5 space-y-6">
                                     <div className="text-center border-b pb-4">
                                         <div className="mx-auto w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-3">
@@ -731,33 +793,49 @@ export default function InspectionFormPage() {
                                     </div>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
-                                        {templates.map(t => (
+                                        <div className="md:col-span-2 pb-2 border-b">
+                                            <h3 className="text-xs font-bold text-muted-foreground uppercase">Basic Info</h3>
+                                        </div>
+                                        {fixedFields.map(t => (
                                             <div key={t.id} className="space-y-1">
                                                 <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase text-[10px]">{t.fieldLabel}</p>
-                                                {t.fieldType === "file" && responses[t.id] ? (
-                                                    <div className="mt-2 h-20 w-32 border rounded overflow-hidden">
-                                                        {responses[t.id].match(/\.(jpg|jpeg|png|gif)$/i) ? (
-                                                            <img src={responses[t.id]} alt="Attachment" className="h-full w-full object-cover" />
-                                                        ) : (
-                                                            <div className="h-full w-full bg-muted flex items-center justify-center">File Attached</div>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-lg font-semibold border-b pb-1 min-h-[32px]">{responses[t.id] || <span className="text-muted-foreground opacity-50 italic font-normal text-sm">Not provided</span>}</p>
-                                                )}
+                                                <p className="text-lg font-semibold border-b pb-1 min-h-[32px]">{responses[t.id] || <span className="text-muted-foreground opacity-50 italic font-normal text-sm">Not provided</span>}</p>
                                             </div>
                                         ))}
 
-                                        <div className="space-y-1 md:col-span-2 mt-4 pt-4 border-t">
-                                            <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase text-[10px]">Paper Form Photo</p>
-                                            {responses["paperFormPhoto"] ? (
-                                                <div className="mt-2 h-32 w-48 border rounded-lg overflow-hidden shadow-sm">
-                                                    <img src={responses["paperFormPhoto"]} alt="Paper form" className="h-full w-full object-cover" />
-                                                </div>
-                                            ) : (
-                                                <p className="text-muted-foreground opacity-50 italic">None attached</p>
-                                            )}
+                                        <div className="md:col-span-2 pb-2 border-b mt-4">
+                                            <h3 className="text-xs font-bold text-muted-foreground uppercase">Defects</h3>
                                         </div>
+                                        {defectFields.filter(t => responses[t.id] && responses[t.id] !== "0").map(t => (
+                                            <div key={t.id} className="space-y-1">
+                                                <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase text-[10px]">{t.fieldLabel}</p>
+                                                <p className="text-lg font-semibold border-b pb-1 min-h-[32px]">{responses[t.id]}</p>
+                                            </div>
+                                        ))}
+                                        {defectFields.filter(t => responses[t.id] && responses[t.id] !== "0").length === 0 && (
+                                            <p className="text-sm text-muted-foreground italic md:col-span-2">No defects reported</p>
+                                        )}
+
+                                        <div className="md:col-span-2 pb-2 border-b mt-4">
+                                            <h3 className="text-xs font-bold text-muted-foreground uppercase">Summary</h3>
+                                        </div>
+                                        {autoFields.map(t => (
+                                            <div key={t.id} className="space-y-1">
+                                                <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase text-[10px]">{t.fieldLabel}</p>
+                                                <p className="text-lg font-semibold border-b pb-1 min-h-[32px]">{responses[t.id]}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="space-y-1 md:col-span-2 mt-4 pt-4 border-t">
+                                        <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase text-[10px]">Paper Form Photo</p>
+                                        {responses["paperFormPhoto"] ? (
+                                            <div className="mt-2 h-32 w-48 border rounded-lg overflow-hidden shadow-sm">
+                                                <img src={responses["paperFormPhoto"]} alt="Paper form" className="h-full w-full object-cover" />
+                                            </div>
+                                        ) : (
+                                            <p className="text-muted-foreground opacity-50 italic">None attached</p>
+                                        )}
                                     </div>
 
                                     {!isSubmitted && (
@@ -777,83 +855,89 @@ export default function InspectionFormPage() {
                                     )}
                                 </div>
                             )}
+                        </div>
 
-                            {/* Wizard Navigation Actions (Inside the Card) */}
-                            <div className="bg-muted/20 border-t p-4 flex items-center justify-between">
+                        {/* Wizard Navigation Actions (Inside the Card) */}
+                        <div className="bg-muted/20 border-t p-4 flex items-center justify-between">
+                            <Button
+                                variant="outline"
+                                onClick={handlePrevStep}
+                                disabled={currentStep === 0 || saving}
+                            >
+                                <ChevronLeft className="h-4 w-4 mr-2" /> Previous
+                            </Button>
+
+                            {currentStep < totalSteps - 1 ? (
                                 <Button
-                                    variant="outline"
-                                    onClick={handlePrevStep}
-                                    disabled={currentStep === 0 || saving}
+                                    onClick={handleNextStep}
+                                    disabled={saving}
                                 >
-                                    <ChevronLeft className="h-4 w-4 mr-2" /> Previous
+                                    Next <ChevronRight className="h-4 w-4 ml-2" />
                                 </Button>
-
-                                {currentStep < totalSteps - 1 ? (
-                                    <Button
-                                        onClick={handleNextStep}
-                                        disabled={saving}
-                                    >
-                                        Next <ChevronRight className="h-4 w-4 ml-2" />
-                                    </Button>
-                                ) : (
-                                    <div className="text-sm text-muted-foreground hidden sm:block italic">
-                                        Review completed
-                                    </div>
-                                )}
-                            </div>
+                            ) : (
+                                <div className="text-sm text-muted-foreground hidden sm:block italic">
+                                    Review completed
+                                </div>
+                            )}
                         </div>
                     </>
                 )}
             </main>
 
             {/* Bottom Action Bar */}
-            {!isSubmitted && (
-                <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
-                    <div className="container max-w-3xl flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            {lastSaved && (
-                                <>
-                                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                    <span>Last saved: {isNaN(lastSaved.getTime()) ? "—" : lastSaved.toLocaleTimeString()}</span>
-                                    {isDirty && <span className="italic ml-2">(Unsaved changes)</span>}
-                                </>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <Button
-                                variant="outline"
-                                onClick={() => saveForm("draft")}
-                                disabled={saving || !isDirty}
-                                className="hidden sm:flex"
-                            >
-                                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                                Force Save
-                            </Button>
-                            {currentStep === totalSteps - 1 && (
+            {
+                !isSubmitted && (
+                    <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
+                        <div className="container max-w-3xl flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                {lastSaved && (
+                                    <>
+                                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                        <span>Last saved: {lastSaved instanceof Date && !isNaN(lastSaved.getTime()) ? lastSaved.toLocaleTimeString() : "—"}</span>
+                                        {isDirty && <span className="italic ml-2">(Unsaved changes)</span>}
+                                    </>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-3">
                                 <Button
-                                    onClick={handleSubmit}
-                                    disabled={saving}
-                                    className="bg-primary hover:bg-primary/90 shadow-md"
+                                    variant="outline"
+                                    onClick={() => saveForm("draft")}
+                                    disabled={saving || !isDirty}
+                                    className="hidden sm:flex"
                                 >
-                                    {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-                                    Submit
+                                    {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                                    Force Save
                                 </Button>
-                            )}
+                                {currentStep === totalSteps - 1 && (
+                                    <Button
+                                        onClick={handleSubmit}
+                                        disabled={saving}
+                                        className="bg-primary hover:bg-primary/90 shadow-md"
+                                    >
+                                        {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                                        Submit
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Camera Capture Modal */}
-            {cameraFieldId && (
-                <CameraCapture
-                    onCapture={(file) => {
-                        handleFileUpload(cameraFieldId, file)
-                        setCameraFieldId(null)
-                    }}
-                    onClose={() => setCameraFieldId(null)}
-                />
-            )}
-        </div>
+            {
+                cameraFieldId && (
+                    <CameraCapture
+                        onCapture={(file) => {
+                            if (cameraFieldId) {
+                                handleFileUpload(cameraFieldId, file)
+                            }
+                            setCameraFieldId(null)
+                        }}
+                        onClose={() => setCameraFieldId(null)}
+                    />
+                )
+            }
+        </div >
     )
 }

@@ -40,6 +40,7 @@ type FormField = {
     options: string | null
     defaultValue: string | null
     isRequired: boolean
+    category: string
     displayOrder: number
 }
 
@@ -173,16 +174,40 @@ function SortableFieldRow({
     onDelete: () => void
     isDeleting: boolean
 }) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: field.id })
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+        id: field.id,
+        disabled: field.category === "AUTO"
+    })
     const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }
 
     const typeInfo = FIELD_TYPES.find(t => t.value === field.fieldType)
+    const isFixed = field.category === "FIXED"
+    const isAuto = field.category === "AUTO"
+    const isDefect = field.category === "DEFECT"
+
+    const getTooltip = (label: string) => {
+        const formulas: Record<string, string> = {
+            "TOTAL DEFECTS": "Sum of all defect columns",
+            "REJECTED QTY": "Total Defects − Rework Qty",
+            "ACCEPTED QTY": "Inspected − Rework − Rejected",
+            "REWORK %": "Rework / Inspected × 100",
+            "REJECTED %": "Rejected / Inspected × 100",
+            "REWORK PPM": "Rework / Inspected × 1,000,000",
+            "REJECTION PPM": "Rejected / Inspected × 1,000,000",
+            "DIFFERENCE": "Should always equal 0",
+            "INSPECTOR NAME": "Auto-filled from logged-in user"
+        }
+        return formulas[label.toUpperCase()]
+    }
 
     return (
-        <div ref={setNodeRef} style={style} className="flex items-center gap-[10px] p-[10px_12px] bg-white border border-[var(--border)] rounded-[9px] hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:border-[var(--border2)] transition-all group">
-            <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-[var(--text3)] opacity-50 hover:opacity-100 touch-none w-4 flex justify-center shrink-0">
-                <GripVertical className="h-[14px] w-[14px]" />
-            </button>
+        <div ref={setNodeRef} style={style} className="flex items-center gap-[10px] p-[10px_12px] bg-white border border-[var(--border)] rounded-[9px] hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:border-[var(--border2)] transition-all group" title={isAuto ? getTooltip(field.fieldLabel) : undefined}>
+            {!isAuto && (
+                <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-[var(--text3)] opacity-50 hover:opacity-100 touch-none w-4 flex justify-center shrink-0">
+                    <GripVertical className="h-[14px] w-[14px]" />
+                </button>
+            )}
+            {isAuto && <div className="w-4 shrink-0" />}
             <div className="flex-1 min-w-0">
                 <span className="text-[12.5px] font-medium text-[var(--text)]">{field.fieldLabel}</span>
                 {field.isRequired && <span className="text-[var(--red)] ml-1 text-[12px]">*</span>}
@@ -192,19 +217,21 @@ function SortableFieldRow({
                     {typeInfo?.icon && <span className="[&>svg]:w-[11px] [&>svg]:h-[11px]">{typeInfo.icon}</span>}
                     {typeInfo?.label}
                 </span>
-                {field.isRequired ? (
-                    <span className="text-[10.5px] font-medium rounded-full bg-[var(--red-light)] text-[var(--red)] px-[9px] py-[3px]">Required</span>
-                ) : (
-                    <span className="text-[10.5px] font-normal rounded-full bg-[var(--surface2)] border border-[var(--border)] text-[var(--text3)] px-[9px] py-[3px]">Optional</span>
-                )}
+                {isFixed && <span className="text-[10.5px] font-medium rounded-full bg-blue-100 text-blue-700 px-[9px] py-[3px]">Fixed</span>}
+                {isDefect && <span className="text-[10.5px] font-medium rounded-full bg-amber-100 text-amber-700 px-[9px] py-[3px]">Defect</span>}
+                {isAuto && <span className="text-[10.5px] font-medium rounded-full bg-green-100 text-green-700 px-[9px] py-[3px]">Auto</span>}
             </div>
             <div className="flex gap-1 shrink-0">
-                <button onClick={onEdit} className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-[var(--text3)] hover:bg-[var(--surface2)] hover:text-[var(--text)] transition-colors">
-                    <Pencil className="h-[13px] w-[13px]" />
-                </button>
-                <button onClick={onDelete} disabled={isDeleting} className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-[var(--text3)] hover:bg-[var(--red-light)] hover:text-[var(--red)] disabled:opacity-50 transition-colors">
-                    {isDeleting ? <Loader2 className="h-[13px] w-[13px] animate-spin" /> : <Trash2 className="h-[13px] w-[13px]" />}
-                </button>
+                {!isAuto && (
+                    <button onClick={onEdit} className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-[var(--text3)] hover:bg-[var(--surface2)] hover:text-[var(--text)] transition-colors">
+                        <Pencil className="h-[13px] w-[13px]" />
+                    </button>
+                )}
+                {!isFixed && !isAuto && (
+                    <button onClick={onDelete} disabled={isDeleting} className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-[var(--text3)] hover:bg-[var(--red-light)] hover:text-[var(--red)] disabled:opacity-50 transition-colors">
+                        {isDeleting ? <Loader2 className="h-[13px] w-[13px] animate-spin" /> : <Trash2 className="h-[13px] w-[13px]" />}
+                    </button>
+                )}
             </div>
         </div>
     )
@@ -352,6 +379,80 @@ export default function FormBuilderClient({
         finally { setLoadingDefault(false) }
     }
 
+    const renderSection = (category: string, title: string, badgeColor: string) => {
+        const sectionFields = fields.filter(f => f.category === category)
+        const isDefect = category === "DEFECT"
+
+        return (
+            <div className="mb-6">
+                <div className="flex items-center justify-between mb-3 px-1">
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-[13px] font-bold text-[var(--text)] uppercase tracking-wider">{title}</h3>
+                        <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 ${badgeColor}`}>
+                            {sectionFields.length}
+                        </span>
+                    </div>
+                    {isDefect && (
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="text"
+                                id="new-defect-input"
+                                placeholder="New defect name..."
+                                className="h-7 text-[11px] px-2 border border-[var(--border)] rounded-[6px] outline-none focus:border-[var(--accent)]"
+                                onKeyDown={async (e) => {
+                                    if (e.key === 'Enter') {
+                                        const val = (e.target as HTMLInputElement).value.trim()
+                                        if (val) {
+                                            await handleAddField({ fieldLabel: val, fieldType: "number", category: "DEFECT", isRequired: false, defaultValue: "0" })
+                                                ; (e.target as HTMLInputElement).value = ""
+                                        }
+                                    }
+                                }}
+                            />
+                            <button
+                                onClick={() => {
+                                    const input = document.getElementById('new-defect-input') as HTMLInputElement
+                                    const val = input.value.trim()
+                                    if (val) {
+                                        handleAddField({ fieldLabel: val, fieldType: "number", category: "DEFECT", isRequired: false, defaultValue: "0" })
+                                        input.value = ""
+                                    }
+                                }}
+                                className="h-7 px-2 bg-green-600 text-white rounded-[6px] text-[11px] font-medium hover:bg-green-700 flex items-center gap-1"
+                            >
+                                <Plus className="h-3 w-3" /> Add Defect
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                <SortableContext items={sectionFields.map(f => f.id)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-[7px]">
+                        {sectionFields.map(field => (
+                            <div key={field.id}>
+                                {editingId === field.id ? (
+                                    <FieldEditorForm
+                                        initialData={field}
+                                        onSave={(data) => handleEditField(field.id, { ...data, category: field.category })}
+                                        onCancel={() => setEditingId(null)}
+                                        saving={saving}
+                                    />
+                                ) : (
+                                    <SortableFieldRow
+                                        field={field}
+                                        onEdit={() => { setEditingId(field.id); setShowAddForm(false) }}
+                                        onDelete={() => handleDeleteField(field.id, field.fieldLabel)}
+                                        isDeleting={deletingId === field.id}
+                                    />
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </SortableContext>
+            </div>
+        )
+    }
+
     return (
         <div className="min-h-[calc(100vh-54px)] bg-[var(--bg)] p-[22px_26px]">
             <div className="flex items-start gap-4 mb-[16px]">
@@ -400,9 +501,9 @@ export default function FormBuilderClient({
                     </div>
                     <div className="flex-1 overflow-y-auto p-[12px]">
                         {showAddForm && (
-                            <div className="mb-[7px]">
+                            <div className="mb-[15px]">
                                 <FieldEditorForm
-                                    onSave={handleAddField}
+                                    onSave={(data) => handleAddField({ ...data, category: "FIXED" })}
                                     onCancel={() => setShowAddForm(false)}
                                     saving={saving}
                                 />
@@ -419,29 +520,9 @@ export default function FormBuilderClient({
                             </div>
                         ) : (
                             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                                <SortableContext items={fields.map(f => f.id)} strategy={verticalListSortingStrategy}>
-                                    <div className="space-y-[7px]">
-                                        {fields.map(field => (
-                                            <div key={field.id}>
-                                                {editingId === field.id ? (
-                                                    <FieldEditorForm
-                                                        initialData={field}
-                                                        onSave={(data) => handleEditField(field.id, data)}
-                                                        onCancel={() => setEditingId(null)}
-                                                        saving={saving}
-                                                    />
-                                                ) : (
-                                                    <SortableFieldRow
-                                                        field={field}
-                                                        onEdit={() => { setEditingId(field.id); setShowAddForm(false) }}
-                                                        onDelete={() => handleDeleteField(field.id, field.fieldLabel)}
-                                                        isDeleting={deletingId === field.id}
-                                                    />
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </SortableContext>
+                                {renderSection("FIXED", "Fixed Fields", "bg-blue-100 text-blue-700")}
+                                {renderSection("DEFECT", "Defect Columns", "bg-amber-100 text-amber-700")}
+                                {renderSection("AUTO", "Auto Calculated", "bg-green-100 text-green-700")}
                             </DndContext>
                         )}
                     </div>
@@ -462,9 +543,62 @@ export default function FormBuilderClient({
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {fields.map(field => (
-                                    <FieldPreview key={field.id} field={field} />
-                                ))}
+                                <div className="space-y-4">
+                                    <div className="pb-2 border-b border-[var(--border)]">
+                                        <h3 className="text-[11px] font-bold text-[var(--text3)] uppercase">Fixed Fields</h3>
+                                    </div>
+                                    {fields.filter(f => f.category === "FIXED").map(field => (
+                                        <FieldPreview key={field.id} field={field} />
+                                    ))}
+                                </div>
+
+                                <div className="space-y-4 pt-4">
+                                    <div className="pb-2 border-b border-[var(--border)]">
+                                        <h3 className="text-[11px] font-bold text-[var(--text3)] uppercase">Defect Columns (3-Col Grid)</h3>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        {fields.filter(f => f.category === "DEFECT").map(field => (
+                                            <div key={field.id} className="p-2 border border-[var(--border)] rounded-[6px] bg-[var(--surface1)]">
+                                                <label className="block text-[10px] font-medium text-[var(--text2)] truncate" title={field.fieldLabel}>
+                                                    {field.fieldLabel}
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    disabled
+                                                    placeholder="0"
+                                                    className="w-full mt-1 bg-white border border-[var(--border)] rounded-[4px] px-2 py-1 text-[12px] cursor-not-allowed"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 pt-4">
+                                    <div className="pb-2 border-b border-[var(--border)]">
+                                        <h3 className="text-[11px] font-bold text-[var(--text3)] uppercase">Auto Calculated</h3>
+                                    </div>
+                                    {fields.filter(f => f.category === "AUTO").map(field => (
+                                        <div key={field.id} className="mb-3">
+                                            <label className="block text-[12px] font-medium text-[var(--text)] mb-[5px]">
+                                                {field.fieldLabel}
+                                            </label>
+                                            <div className="relative group">
+                                                <input
+                                                    type="text"
+                                                    disabled
+                                                    className="w-full p-[9px_12px] bg-gray-50 border border-dashed border-gray-300 rounded-[8px] text-[13px] text-gray-500 cursor-not-allowed italic"
+                                                    placeholder={`Formula auto-calculated...`}
+                                                />
+                                                {field.fieldLabel === "INSPECTOR NAME" && (
+                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                                        <Loader2 className="h-3.5 w-3.5" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
                                 <div className="pt-4 border-t border-[var(--border)]">
                                     <button
                                         disabled

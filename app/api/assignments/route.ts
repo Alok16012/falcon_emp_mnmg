@@ -22,6 +22,7 @@ export async function GET(req: Request) {
 
     if (user.role === Role.INSPECTION_BOY) {
         where.inspectionBoyId = user.id
+        where.status = "active"
     } else if (user.role !== Role.ADMIN && user.role !== Role.MANAGER) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
