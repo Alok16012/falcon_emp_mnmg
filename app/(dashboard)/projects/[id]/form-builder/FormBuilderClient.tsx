@@ -1,8 +1,6 @@
-
 "use client"
 
 import Link from "next/link"
-
 import { useState, useEffect, useCallback } from "react"
 import {
     DndContext,
@@ -21,10 +19,6 @@ import {
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import {
     Plus, GripVertical, Pencil, Trash2, X, Save, Loader2,
     AlignLeft, Hash, Calendar, ChevronDown, CheckSquare, FileText, FileUp, Copy, ChevronLeft
@@ -45,13 +39,13 @@ type FormField = {
 }
 
 const FIELD_TYPES: { value: FieldType; label: string; icon: React.ReactNode }[] = [
-    { value: "text", label: "Text", icon: <AlignLeft className="h-3 w-3" /> },
-    { value: "number", label: "Number", icon: <Hash className="h-3 w-3" /> },
-    { value: "date", label: "Date", icon: <Calendar className="h-3 w-3" /> },
-    { value: "dropdown", label: "Dropdown", icon: <ChevronDown className="h-3 w-3" /> },
-    { value: "checkbox", label: "Checkbox", icon: <CheckSquare className="h-3 w-3" /> },
-    { value: "textarea", label: "Textarea", icon: <FileText className="h-3 w-3" /> },
-    { value: "file", label: "File Upload", icon: <FileUp className="h-3 w-3" /> },
+    { value: "text", label: "Text", icon: <AlignLeft className="h-[12px] w-[12px]" /> },
+    { value: "number", label: "Number", icon: <Hash className="h-[12px] w-[12px]" /> },
+    { value: "date", label: "Date", icon: <Calendar className="h-[12px] w-[12px]" /> },
+    { value: "dropdown", label: "Dropdown", icon: <ChevronDown className="h-[12px] w-[12px]" /> },
+    { value: "checkbox", label: "Checkbox", icon: <CheckSquare className="h-[12px] w-[12px]" /> },
+    { value: "textarea", label: "Textarea", icon: <FileText className="h-[12px] w-[12px]" /> },
+    { value: "file", label: "File Upload", icon: <FileUp className="h-[12px] w-[12px]" /> },
 ]
 
 type FieldEditorFormProps = {
@@ -74,23 +68,23 @@ function FieldEditorForm({ initialData, onSave, onCancel, saving }: FieldEditorF
     }
 
     return (
-        <form onSubmit={handleSubmit} className="border border-[var(--border)] bg-[var(--surface2)]/50 rounded-[9px] p-[16px] space-y-[12px] relative relative">
+        <form onSubmit={handleSubmit} className="border-b border-[#e8e6e1] bg-[#f9f8f5] p-[16px] space-y-[12px]">
             <div>
-                <label className="block text-[12px] font-medium text-[var(--text)] mb-[5px]">Field Label <span className="text-[var(--red)]">*</span></label>
+                <label className="block text-[12px] font-medium text-[#1a1a18] mb-[5px]">Field Label <span className="text-[#dc2626]">*</span></label>
                 <input
                     value={label}
                     onChange={e => setLabel(e.target.value)}
                     placeholder="e.g. Inspector Name"
                     required
-                    className="w-full p-[8px_12px] bg-white border border-[var(--border)] rounded-[8px] text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)] transition-colors"
+                    className="w-full p-[8px_12px] bg-white border border-[#e8e6e1] rounded-[8px] text-[13px] text-[#1a1a18] outline-none focus:border-[#1a9e6e] transition-colors"
                 />
             </div>
             <div>
-                <label className="block text-[12px] font-medium text-[var(--text)] mb-[5px]">Field Type</label>
+                <label className="block text-[12px] font-medium text-[#1a1a18] mb-[5px]">Field Type</label>
                 <select
                     value={type}
                     onChange={e => setType(e.target.value as FieldType)}
-                    className="w-full p-[8px_12px] bg-white border border-[var(--border)] rounded-[8px] text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)] transition-colors appearance-none"
+                    className="w-full p-[8px_12px] bg-white border border-[#e8e6e1] rounded-[8px] text-[13px] text-[#1a1a18] outline-none focus:border-[#1a9e6e] transition-colors appearance-none"
                 >
                     {FIELD_TYPES.map(t => (
                         <option key={t.value} value={t.value}>{t.label}</option>
@@ -99,22 +93,22 @@ function FieldEditorForm({ initialData, onSave, onCancel, saving }: FieldEditorF
             </div>
             {type === "dropdown" && (
                 <div>
-                    <label className="block text-[12px] font-medium text-[var(--text)] mb-[5px]">Options (comma separated)</label>
+                    <label className="block text-[12px] font-medium text-[#1a1a18] mb-[5px]">Options (comma separated)</label>
                     <input
                         value={options}
                         onChange={e => setOptions(e.target.value)}
                         placeholder="e.g. Good, Average, Poor"
-                        className="w-full p-[8px_12px] bg-white border border-[var(--border)] rounded-[8px] text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)] transition-colors"
+                        className="w-full p-[8px_12px] bg-white border border-[#e8e6e1] rounded-[8px] text-[13px] text-[#1a1a18] outline-none focus:border-[#1a9e6e] transition-colors"
                     />
                 </div>
             )}
             <div>
-                <label className="block text-[12px] font-medium text-[var(--text)] mb-[5px]">Default Value</label>
+                <label className="block text-[12px] font-medium text-[#1a1a18] mb-[5px]">Default Value</label>
                 {type === "dropdown" ? (
                     <select
                         value={defaultValue}
                         onChange={e => setDefaultValue(e.target.value)}
-                        className="w-full p-[8px_12px] bg-white border border-[var(--border)] rounded-[8px] text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)] transition-colors appearance-none"
+                        className="w-full p-[8px_12px] bg-white border border-[#e8e6e1] rounded-[8px] text-[13px] text-[#1a1a18] outline-none focus:border-[#1a9e6e] transition-colors appearance-none"
                     >
                         <option value="">No Default</option>
                         {options.split(",").map(o => o.trim()).filter(Boolean).map(o => (
@@ -126,110 +120,98 @@ function FieldEditorForm({ initialData, onSave, onCancel, saving }: FieldEditorF
                         value={defaultValue}
                         onChange={e => setDefaultValue(e.target.value)}
                         placeholder={type === "number" ? "e.g. 0" : "e.g. Sample"}
-                        className="w-full p-[8px_12px] bg-white border border-[var(--border)] rounded-[8px] text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)] transition-colors"
+                        className="w-full p-[8px_12px] bg-white border border-[#e8e6e1] rounded-[8px] text-[13px] text-[#1a1a18] outline-none focus:border-[#1a9e6e] transition-colors"
                     />
                 )}
             </div>
             <div className="flex items-center gap-2 pt-1">
-                <label className="flex items-center gap-2 cursor-pointer text-[13px] font-medium text-[var(--text)] select-none">
+                <label className="flex items-center gap-2 cursor-pointer text-[13px] font-medium text-[#1a1a18] select-none">
                     <div
                         onClick={() => setRequired(r => !r)}
-                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${required ? "bg-[var(--accent)]" : "bg-[var(--border2)]"}`}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${required ? "bg-[#1a9e6e]" : "bg-[#d4d1ca]"}`}
                     >
                         <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${required ? "translate-x-4" : "translate-x-1"}`} />
                     </div>
                     Required Field
                 </label>
             </div>
-            <div className="flex gap-2 pt-2 border-t border-[var(--border)] mt-4 items-center">
+            <div className="flex gap-[8px] pt-2 border-t border-[#e8e6e1] mt-4 items-center">
                 <button
                     type="submit"
                     disabled={saving || !label.trim()}
-                    className="inline-flex items-center justify-center bg-[var(--accent)] text-white rounded-[8px] text-[12.5px] font-medium h-[34px] px-4 hover:opacity-90 disabled:opacity-50 transition-opacity"
+                    className="inline-flex items-center justify-center bg-[#1a9e6e] text-white rounded-[8px] text-[12.5px] font-[500] h-[32px] px-[14px] hover:opacity-90 disabled:opacity-50 transition-opacity"
                 >
-                    {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
+                    {saving ? <Loader2 className="h-[14px] w-[14px] animate-spin mr-[6px]" /> : <Save className="h-[14px] w-[14px] mr-[6px]" />}
                     Save Field
                 </button>
                 <button
                     type="button"
                     onClick={onCancel}
-                    className="inline-flex items-center justify-center bg-white border border-[var(--border)] text-[var(--text2)] rounded-[8px] text-[12.5px] font-medium h-[34px] px-4 hover:bg-[var(--surface2)] hover:text-[var(--text)] transition-colors"
+                    className="inline-flex items-center justify-center bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[8px] text-[12.5px] font-[500] h-[32px] px-[14px] hover:bg-[#f9f8f5] hover:text-[#1a1a18] transition-colors"
                 >
-                    <X className="h-3.5 w-3.5 mr-1.5" /> Cancel
+                    <X className="h-[14px] w-[14px] mr-[6px]" /> Cancel
                 </button>
             </div>
         </form>
     )
 }
 
-// Sortable row
-function SortableFieldRow({
-    field,
-    onEdit,
-    onDelete,
-    isDeleting,
-}: {
-    field: FormField
-    onEdit: () => void
-    onDelete: () => void
-    isDeleting: boolean
-}) {
+function SortableFieldRow({ field, onEdit, onDelete, isDeleting }: { field: FormField, onEdit: () => void, onDelete: () => void, isDeleting: boolean }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: field.id,
         disabled: field.category === "AUTO"
     })
     const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }
 
-    const typeInfo = FIELD_TYPES.find(t => t.value === field.fieldType)
     const isFixed = field.category === "FIXED"
     const isAuto = field.category === "AUTO"
     const isDefect = field.category === "DEFECT"
 
-    const getTooltip = (label: string) => {
-        const formulas: Record<string, string> = {
-            "TOTAL DEFECTS": "Sum of all defect columns",
-            "REJECTED QTY": "Total Defects − Rework Qty",
-            "ACCEPTED QTY": "Inspected − Rework − Rejected",
-            "REWORK %": "Rework / Inspected × 100",
-            "REJECTED %": "Rejected / Inspected × 100",
-            "REWORK PPM": "Rework / Inspected × 1,000,000",
-            "REJECTION PPM": "Rejected / Inspected × 1,000,000",
-            "DIFFERENCE": "Should always equal 0",
-            "INSPECTOR NAME": "Auto-filled from logged-in user"
-        }
-        return formulas[label.toUpperCase()]
-    }
+    let pillClass = ""
+    let pillText = field.fieldType.toUpperCase()
+    if (field.fieldType === "date") pillClass = "bg-[#eff6ff] text-[#3b82f6]"
+    else if (field.fieldType === "dropdown") pillClass = "bg-[#f5f3ff] text-[#7c3aed]"
+    else if (field.fieldType === "number") pillClass = "bg-[#fef3c7] text-[#d97706]"
+    else pillClass = "bg-[#f9f8f5] border border-[#e8e6e1] text-[#9e9b95]"
+
+    let catBadge = ""
+    if (isFixed) catBadge = "bg-[#eff6ff] text-[#3b82f6]"
+    else if (isDefect) catBadge = "bg-[#fef3c7] text-[#d97706]"
+    else if (isAuto) catBadge = "bg-[#e8f7f1] text-[#0d6b4a]"
 
     return (
-        <div ref={setNodeRef} style={style} className="flex items-center gap-[10px] p-[10px_12px] bg-white border border-[var(--border)] rounded-[9px] hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:border-[var(--border2)] transition-all group" title={isAuto ? getTooltip(field.fieldLabel) : undefined}>
-            {!isAuto && (
-                <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-[var(--text3)] opacity-50 hover:opacity-100 touch-none w-4 flex justify-center shrink-0">
+        <div ref={setNodeRef} style={style} className="flex items-center gap-[10px] p-[10px_14px] bg-white border-b border-[#e8e6e1] hover:bg-[#f9f8f5] transition-colors">
+            {!isAuto ? (
+                <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-[#9e9b95] opacity-50 hover:opacity-100 touch-none shrink-0 w-[16px] flex justify-center">
                     <GripVertical className="h-[14px] w-[14px]" />
                 </button>
+            ) : (
+                <div className="w-[16px] shrink-0" />
             )}
-            {isAuto && <div className="w-4 shrink-0" />}
-            <div className="flex-1 min-w-0">
-                <span className="text-[12.5px] font-medium text-[var(--text)]">{field.fieldLabel}</span>
-                {field.isRequired && <span className="text-[var(--red)] ml-1 text-[12px]">*</span>}
+
+            <div className="flex-1 min-w-0 flex items-center pr-[10px]">
+                <span className="text-[12.5px] font-[500] text-[#1a1a18] truncate">{field.fieldLabel}</span>
+                {field.isRequired && <span className="text-[#dc2626] ml-[4px] text-[12px]">*</span>}
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-                <span className="flex items-center gap-1 text-[11.5px] text-[var(--text3)] bg-[var(--surface2)] border border-[var(--border)] rounded-full px-[9px] py-[3px]">
-                    {typeInfo?.icon && <span className="[&>svg]:w-[11px] [&>svg]:h-[11px]">{typeInfo.icon}</span>}
-                    {typeInfo?.label}
+
+            <div className="flex items-center gap-[6px] shrink-0">
+                <span className={`text-[11px] font-[500] rounded-[20px] px-[9px] py-[2px] ${pillClass}`}>
+                    {pillText}
                 </span>
-                {isFixed && <span className="text-[10.5px] font-medium rounded-full bg-blue-100 text-blue-700 px-[9px] py-[3px]">Fixed</span>}
-                {isDefect && <span className="text-[10.5px] font-medium rounded-full bg-amber-100 text-amber-700 px-[9px] py-[3px]">Defect</span>}
-                {isAuto && <span className="text-[10.5px] font-medium rounded-full bg-green-100 text-green-700 px-[9px] py-[3px]">Auto</span>}
+                <span className={`text-[10.5px] font-[600] rounded-[20px] px-[9px] py-[2px] ${catBadge}`}>
+                    {isFixed ? "FIXED" : isDefect ? "DEFECT" : "AUTO"}
+                </span>
             </div>
-            <div className="flex gap-1 shrink-0">
+
+            <div className="flex gap-[2px] shrink-0 ml-[4px]">
                 {!isAuto && (
-                    <button onClick={onEdit} className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-[var(--text3)] hover:bg-[var(--surface2)] hover:text-[var(--text)] transition-colors">
-                        <Pencil className="h-[13px] w-[13px]" />
+                    <button onClick={onEdit} className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-[#9e9b95] hover:bg-[#f9f8f5] hover:text-[#1a1a18] transition-colors">
+                        <Pencil className="h-[14px] w-[14px]" />
                     </button>
                 )}
-                {!isFixed && !isAuto && (
-                    <button onClick={onDelete} disabled={isDeleting} className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-[var(--text3)] hover:bg-[var(--red-light)] hover:text-[var(--red)] disabled:opacity-50 transition-colors">
-                        {isDeleting ? <Loader2 className="h-[13px] w-[13px] animate-spin" /> : <Trash2 className="h-[13px] w-[13px]" />}
+                {isDefect && (
+                    <button onClick={onDelete} disabled={isDeleting} className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-[#9e9b95] hover:bg-[#fef2f2] hover:text-[#dc2626] disabled:opacity-50 transition-colors">
+                        {isDeleting ? <Loader2 className="h-[14px] w-[14px] animate-spin" /> : <Trash2 className="h-[14px] w-[14px]" />}
                     </button>
                 )}
             </div>
@@ -237,32 +219,36 @@ function SortableFieldRow({
     )
 }
 
-// Live Preview of a single field
 function FieldPreview({ field }: { field: FormField }) {
-    const optionList = field.options ? field.options.split(",").map((o) => o.trim()) : []
+    let pillClass = ""
+    let pillText = field.fieldType.toUpperCase()
+    if (field.fieldType === "date") pillClass = "bg-[#eff6ff] text-[#3b82f6]"
+    else if (field.fieldType === "dropdown") pillClass = "bg-[#f5f3ff] text-[#7c3aed]"
+    else if (field.fieldType === "number") pillClass = "bg-[#fef3c7] text-[#d97706]"
+    else pillClass = "bg-[#f9f8f5] border border-[#e8e6e1] text-[#9e9b95]"
+
+    const dropdownBg = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239e9b95' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E")`
+
     return (
-        <div className="mb-[16px]">
-            <label className="block text-[12px] font-medium text-[var(--text)] mb-[5px]">
-                {field.fieldLabel}
-                {field.isRequired && <span className="text-[var(--red)] ml-0.5">*</span>}
-            </label>
-            {field.fieldType === "text" && <input type="text" disabled defaultValue={field.defaultValue || ""} placeholder={`Enter ${field.fieldLabel.toLowerCase()}`} className="w-full p-[9px_12px] bg-[var(--surface2)] border border-[var(--border)] rounded-[8px] text-[13px] text-[var(--text3)] cursor-not-allowed box-border outline-none focus:border-[var(--accent)] focus:bg-white focus:text-[var(--text)]" />}
-            {field.fieldType === "number" && <input type="number" disabled defaultValue={field.defaultValue || ""} placeholder="0" className="w-full p-[9px_12px] bg-[var(--surface2)] border border-[var(--border)] rounded-[8px] text-[13px] text-[var(--text3)] cursor-not-allowed box-border outline-none focus:border-[var(--accent)] focus:bg-white focus:text-[var(--text)]" />}
-            {field.fieldType === "date" && <input type="date" disabled defaultValue={field.defaultValue || ""} className="w-full p-[9px_12px] bg-[var(--surface2)] border border-[var(--border)] rounded-[8px] text-[13px] text-[var(--text3)] cursor-not-allowed box-border outline-none focus:border-[var(--accent)] focus:bg-white focus:text-[var(--text)]" />}
-            {field.fieldType === "dropdown" && (
-                <select disabled defaultValue={field.defaultValue || ""} className="w-full p-[9px_12px] bg-[var(--surface2)] border border-[var(--border)] rounded-[8px] text-[13px] text-[var(--text3)] cursor-not-allowed box-border outline-none focus:border-[var(--accent)] focus:bg-white focus:text-[var(--text)] appearance-none">
-                    <option value="">Select an option</option>
-                    {optionList.map(o => <option key={o}>{o}</option>)}
-                </select>
-            )}
-            {field.fieldType === "checkbox" && (
-                <div className="flex items-center gap-2 mt-1">
-                    <input type="checkbox" disabled defaultChecked={field.defaultValue === "true"} className="h-4 w-4 cursor-not-allowed rounded accent-[var(--accent)]" />
-                    <span className="text-[13px] text-[var(--text3)]">{field.fieldLabel}</span>
+        <div className="bg-white border border-[#e8e6e1] rounded-[10px] mb-[8px] opacity-70 cursor-not-allowed">
+            <div className="p-[10px_14px_0] flex justify-between items-center">
+                <div className="text-[11px] font-[600] text-[#6b6860] uppercase tracking-[0.4px]">
+                    {field.fieldLabel}
+                    {field.isRequired && <span className="text-[#dc2626] ml-1">*</span>}
                 </div>
-            )}
-            {field.fieldType === "textarea" && <textarea disabled placeholder={field.defaultValue || `Enter ${field.fieldLabel.toLowerCase()}`} rows={3} className="w-full p-[9px_12px] bg-[var(--surface2)] border border-[var(--border)] rounded-[8px] text-[13px] text-[var(--text3)] cursor-not-allowed box-border outline-none focus:border-[var(--accent)] focus:bg-white focus:text-[var(--text)] resize-none" />}
-            {field.fieldType === "file" && <input type="file" disabled className="w-full p-[6px_10px] bg-[var(--surface2)] border border-[var(--border)] rounded-[8px] text-[13px] text-[var(--text3)] cursor-not-allowed box-border file:mr-3 file:py-1 file:px-2 file:rounded-[4px] file:border-0 file:text-[11px] file:font-semibold file:bg-[var(--bg)] file:text-[var(--text2)]" />}
+                <div className={`text-[10px] font-[500] px-[8px] py-[2px] rounded-[20px] ${pillClass}`}>
+                    {pillText}
+                </div>
+            </div>
+            <div className="p-[4px_12px_10px]">
+                {field.fieldType === "dropdown" ? (
+                    <select disabled className="w-full bg-transparent border-none outline-none text-[14px] font-[500] text-[#1a1a18] font-[Inter] appearance-none" style={{ backgroundImage: dropdownBg, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0px center' }}>
+                        <option value="">Select option...</option>
+                    </select>
+                ) : (
+                    <input disabled type={field.fieldType} placeholder={field.fieldType === 'number' ? '0' : `Enter ${field.fieldLabel.toLowerCase()}...`} className="w-full bg-transparent border-none outline-none text-[14px] font-[500] text-[#1a1a18] font-[Inter] placeholder:text-[#9e9b95]" />
+                )}
+            </div>
         </div>
     )
 }
@@ -352,7 +338,6 @@ export default function FormBuilderClient({
         const newIndex = fields.findIndex(f => f.id === over.id)
         const reordered = arrayMove(fields, oldIndex, newIndex)
         setFields(reordered)
-        // Update displayOrder for all affected fields
         await Promise.all(
             reordered.map((field, index) =>
                 fetch(`/api/form-templates/${field.id}`, {
@@ -379,26 +364,22 @@ export default function FormBuilderClient({
         finally { setLoadingDefault(false) }
     }
 
-    const renderSection = (category: string, title: string, badgeColor: string) => {
+    const renderSection = (category: string, title: string) => {
         const sectionFields = fields.filter(f => f.category === category)
         const isDefect = category === "DEFECT"
 
         return (
-            <div className="mb-6">
-                <div className="flex items-center justify-between mb-3 px-1">
-                    <div className="flex items-center gap-2">
-                        <h3 className="text-[13px] font-bold text-[var(--text)] uppercase tracking-wider">{title}</h3>
-                        <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 ${badgeColor}`}>
-                            {sectionFields.length}
-                        </span>
-                    </div>
+            <div className="mb-0">
+                <div className="bg-[#f9f8f5] border-y border-[#e8e6e1] p-[10px_14px_6px] flex items-center justify-between mt-[-1px]">
+                    <div className="text-[10.5px] font-[600] text-[#9e9b95] uppercase tracking-[0.8px]">{title}</div>
+
                     {isDefect && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-[8px]">
                             <input
                                 type="text"
                                 id="new-defect-input"
                                 placeholder="New defect name..."
-                                className="h-7 text-[11px] px-2 border border-[var(--border)] rounded-[6px] outline-none focus:border-[var(--accent)]"
+                                className="h-[26px] bg-[#f9f8f5] border border-[#e8e6e1] rounded-[8px] px-[10px] text-[12.5px] outline-none focus:border-[#1a9e6e] focus:bg-white"
                                 onKeyDown={async (e) => {
                                     if (e.key === 'Enter') {
                                         const val = (e.target as HTMLInputElement).value.trim()
@@ -418,16 +399,21 @@ export default function FormBuilderClient({
                                         input.value = ""
                                     }
                                 }}
-                                className="h-7 px-2 bg-green-600 text-white rounded-[6px] text-[11px] font-medium hover:bg-green-700 flex items-center gap-1"
+                                className="h-[26px] px-[10px] bg-[#1a9e6e] text-white rounded-[8px] text-[12px] font-[500] hover:bg-[#158a5e] flex items-center gap-1 transition-colors"
                             >
-                                <Plus className="h-3 w-3" /> Add Defect
+                                <Plus className="h-[14px] w-[14px]" /> Add Defect
                             </button>
                         </div>
                     )}
                 </div>
 
                 <SortableContext items={sectionFields.map(f => f.id)} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-[7px]">
+                    <div className="flex flex-col">
+                        {sectionFields.length === 0 && !isDefect && (
+                            <div className="p-[16px] text-center text-[12px] text-[#9e9b95] border-b border-[#e8e6e1] bg-white">
+                                {title} will appear here.
+                            </div>
+                        )}
                         {sectionFields.map(field => (
                             <div key={field.id}>
                                 {editingId === field.id ? (
@@ -454,159 +440,143 @@ export default function FormBuilderClient({
     }
 
     return (
-        <div className="min-h-[calc(100vh-54px)] bg-[var(--bg)] p-[22px_26px]">
-            <div className="flex items-start gap-4 mb-[16px]">
+        <div className="min-h-[calc(100vh-54px)] bg-[#f5f4f0] p-[24px] font-[Inter]">
+            <div className="flex items-start gap-[14px] mb-[20px]">
                 <Link
                     href={`/companies/${companyId}`}
-                    className="w-8 h-8 bg-white border border-[var(--border)] rounded-[8px] flex items-center justify-center text-[var(--text2)] hover:bg-[var(--surface2)] transition-colors shrink-0 mt-1"
+                    className="w-[30px] h-[30px] bg-white border border-[#e8e6e1] rounded-[8px] flex items-center justify-center text-[#6b6860] hover:bg-[#f9f8f5] transition-colors shrink-0 mt-1"
                 >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft size={16} />
                 </Link>
                 <div>
-                    <h1 className="text-[20px] font-semibold tracking-[-0.3px] text-[var(--text)] leading-tight">Form Builder</h1>
-                    <p className="text-[12px] text-[var(--text2)] mt-0.5">
-                        {projectName} <span className="mx-1">•</span> {companyName}
+                    <h1 className="text-[20px] font-[600] text-[#1a1a18] leading-tight">Form Builder</h1>
+                    <p className="text-[12px] text-[#6b6860] mt-[2px]">
+                        {projectName} <span className="mx-1 text-[#9e9b95]">•</span> {companyName}
                     </p>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-[16px] h-[auto] min-h-[calc(100vh-160px)]">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-[16px] items-start">
+
                 {/* LEFT PANEL — Field Editor */}
-                <div className="bg-white border border-[var(--border)] rounded-[14px] overflow-hidden flex flex-col shadow-sm">
-                    <div className="p-[14px_18px] border-b border-[var(--border)] flex items-center justify-between shrink-0">
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-[13.5px] font-semibold text-[var(--text)]">Field Editor</h2>
-                            <span className="bg-[var(--accent-light)] text-[var(--accent-text)] rounded-full text-[11px] font-medium px-2 py-0.5">
+                <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden flex flex-col shadow-sm">
+                    <div className="p-[14px_18px] border-b border-[#e8e6e1] flex items-center justify-between shrink-0 bg-white">
+                        <div className="flex items-center gap-[8px]">
+                            <h2 className="text-[13.5px] font-[600] text-[#1a1a18]">Field Editor</h2>
+                            <span className="bg-[#e8f7f1] text-[#0d6b4a] rounded-[20px] text-[11px] font-[500] px-[8px] py-[2px]">
                                 {fields.length}
                             </span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-[8px]">
                             <button
                                 onClick={handleLoadDefaultForm}
                                 disabled={loadingDefault}
-                                className="inline-flex items-center justify-center bg-white border border-[var(--border)] rounded-[8px] text-[12px] font-medium text-[var(--text2)] px-3 h-8 hover:bg-[var(--surface2)] transition-colors"
+                                className="inline-flex items-center justify-center bg-white border border-[#e8e6e1] rounded-[8px] text-[12px] font-[500] text-[#1a1a18] px-[12px] h-[30px] hover:bg-[#f9f8f5] transition-colors"
                             >
-                                {loadingDefault ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
+                                {loadingDefault ? <Loader2 className="h-[14px] w-[14px] mr-[6px] animate-spin" /> : <Copy className="h-[14px] w-[14px] mr-[6px]" />}
                                 Load Default Form
                             </button>
                             {!showAddForm && (
                                 <button
                                     onClick={() => { setShowAddForm(true); setEditingId(null) }}
-                                    className="inline-flex items-center justify-center bg-[var(--accent)] text-white rounded-[8px] text-[12px] font-medium px-3 h-8 hover:opacity-90 transition-opacity"
+                                    className="inline-flex items-center justify-center bg-[#1a9e6e] text-white rounded-[8px] text-[12px] font-[500] px-[12px] h-[30px] hover:bg-[#158a5e] transition-colors"
                                 >
-                                    <Plus className="h-3.5 w-3.5 mr-1.5" /> Add Field
+                                    <Plus className="h-[14px] w-[14px] mr-[4px]" /> Add Field
                                 </button>
                             )}
                         </div>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-[12px]">
+                    <div className="flex-1 overflow-y-auto max-h-[calc(100vh-200px)]">
                         {showAddForm && (
-                            <div className="mb-[15px]">
-                                <FieldEditorForm
-                                    onSave={(data) => handleAddField({ ...data, category: "FIXED" })}
-                                    onCancel={() => setShowAddForm(false)}
-                                    saving={saving}
-                                />
-                            </div>
+                            <FieldEditorForm
+                                onSave={(data) => handleAddField({ ...data, category: "FIXED" })}
+                                onCancel={() => setShowAddForm(false)}
+                                saving={saving}
+                            />
                         )}
 
                         {loading ? (
-                            <div className="flex items-center justify-center py-8">
-                                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                            </div>
-                        ) : fields.length === 0 && !showAddForm ? (
-                            <div className="text-center py-8 text-[12px] text-[var(--text3)]">
-                                No fields yet. Click "+ Add Field" to get started.
+                            <div className="flex items-center justify-center py-[40px]">
+                                <Loader2 className="h-6 w-6 animate-spin text-[#9e9b95]" />
                             </div>
                         ) : (
                             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                                {renderSection("FIXED", "Fixed Fields", "bg-blue-100 text-blue-700")}
-                                {renderSection("DEFECT", "Defect Columns", "bg-amber-100 text-amber-700")}
-                                {renderSection("AUTO", "Auto Calculated", "bg-green-100 text-green-700")}
+                                {renderSection("FIXED", "Fixed Fields")}
+                                {renderSection("DEFECT", "Defect Columns")}
+                                {renderSection("AUTO", "Auto Calculated")}
                             </DndContext>
                         )}
                     </div>
                 </div>
 
-                {/* RIGHT PANEL — Live Preview */}
-                <div className="bg-white border border-[var(--border)] rounded-[14px] overflow-hidden flex flex-col shadow-sm">
-                    <div className="p-[14px_18px] border-b border-[var(--border)] flex items-center justify-between shrink-0">
-                        <div>
-                            <h2 className="text-[13.5px] font-semibold text-[var(--text)]">Form Preview</h2>
-                            <p className="text-[11.5px] text-[var(--text3)] mt-0.5">This is how inspectors will see the form</p>
-                        </div>
+                {/* RIGHT PANEL — Form Preview */}
+                <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden flex flex-col shadow-sm">
+                    <div className="p-[14px_18px] border-b border-[#e8e6e1] shrink-0 bg-white">
+                        <h2 className="text-[13.5px] font-[600] text-[#1a1a18]">Form Preview</h2>
+                        <p className="text-[11.5px] text-[#9e9b95] mt-[2px]">This is how inspectors will see the form</p>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-[16px_18px]">
+
+                    <div className="flex-1 overflow-y-auto p-[16px_18px] max-h-[calc(100vh-200px)] bg-white">
                         {fields.length === 0 ? (
-                            <div className="text-center py-12 text-[12px] text-[var(--text3)] border border-dashed border-[var(--border2)] rounded-[8px]">
+                            <div className="text-center py-[40px] text-[12px] text-[#9e9b95] border border-dashed border-[#d4d1ca] rounded-[8px] bg-[#f9f8f5]">
                                 No fields yet. Add fields from the left panel.
                             </div>
                         ) : (
-                            <div className="space-y-4">
-                                <div className="space-y-4">
-                                    <div className="pb-2 border-b border-[var(--border)]">
-                                        <h3 className="text-[11px] font-bold text-[var(--text3)] uppercase">Fixed Fields</h3>
-                                    </div>
-                                    {fields.filter(f => f.category === "FIXED").map(field => (
-                                        <FieldPreview key={field.id} field={field} />
-                                    ))}
+                            <div className="w-full">
+                                <div className="text-[10.5px] font-[600] text-[#9e9b95] uppercase tracking-[1px] border-b-[1.5px] border-[#e8e6e1] pb-[8px] mb-[14px]">
+                                    Basic Info
                                 </div>
+                                {fields.filter(f => f.category === "FIXED").map(field => (
+                                    <FieldPreview key={field.id} field={field} />
+                                ))}
 
-                                <div className="space-y-4 pt-4">
-                                    <div className="pb-2 border-b border-[var(--border)]">
-                                        <h3 className="text-[11px] font-bold text-[var(--text3)] uppercase">Defect Columns (3-Col Grid)</h3>
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-3">
-                                        {fields.filter(f => f.category === "DEFECT").map(field => (
-                                            <div key={field.id} className="p-2 border border-[var(--border)] rounded-[6px] bg-[var(--surface1)]">
-                                                <label className="block text-[10px] font-medium text-[var(--text2)] truncate" title={field.fieldLabel}>
-                                                    {field.fieldLabel}
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    disabled
-                                                    placeholder="0"
-                                                    className="w-full mt-1 bg-white border border-[var(--border)] rounded-[4px] px-2 py-1 text-[12px] cursor-not-allowed"
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4 pt-4">
-                                    <div className="pb-2 border-b border-[var(--border)]">
-                                        <h3 className="text-[11px] font-bold text-[var(--text3)] uppercase">Auto Calculated</h3>
-                                    </div>
-                                    {fields.filter(f => f.category === "AUTO").map(field => (
-                                        <div key={field.id} className="mb-3">
-                                            <label className="block text-[12px] font-medium text-[var(--text)] mb-[5px]">
-                                                {field.fieldLabel}
-                                            </label>
-                                            <div className="relative group">
-                                                <input
-                                                    type="text"
-                                                    disabled
-                                                    className="w-full p-[9px_12px] bg-gray-50 border border-dashed border-gray-300 rounded-[8px] text-[13px] text-gray-500 cursor-not-allowed italic"
-                                                    placeholder={`Formula auto-calculated...`}
-                                                />
-                                                {field.fieldLabel === "INSPECTOR NAME" && (
-                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                                        <Loader2 className="h-3.5 w-3.5" />
-                                                    </div>
-                                                )}
-                                            </div>
+                                {fields.filter(f => f.category === "DEFECT").length > 0 && (
+                                    <>
+                                        <div className="text-[10.5px] font-[600] text-[#9e9b95] uppercase tracking-[1px] border-b-[1.5px] border-[#e8e6e1] pb-[8px] mb-[14px] mt-[24px]">
+                                            Defect Entry
                                         </div>
-                                    ))}
-                                </div>
+                                        <div className="grid grid-cols-3 gap-[8px]">
+                                            {fields.filter(f => f.category === "DEFECT").map(field => (
+                                                <div key={field.id} className="bg-white border border-[#e8e6e1] rounded-[9px] p-[9px_10px] opacity-70 cursor-not-allowed">
+                                                    <div className="text-[10px] font-[500] text-[#9e9b95] uppercase leading-[1.3] mb-[5px] truncate" title={field.fieldLabel}>
+                                                        {field.fieldLabel}
+                                                    </div>
+                                                    <div className="w-full bg-[#f9f8f5] border border-[#e8e6e1] rounded-[6px] p-[7px] text-[15px] font-[700] font-mono text-center text-[#9e9b95]">
+                                                        0
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
 
-                                <div className="pt-4 border-t border-[var(--border)]">
-                                    <button
-                                        disabled
-                                        className="w-full h-[38px] rounded-[8px] bg-[var(--surface2)] border border-[var(--border)] text-[var(--text3)] text-[13px] font-medium opacity-50 cursor-not-allowed"
-                                    >
-                                        Submit Inspection
-                                    </button>
-                                </div>
+                                {fields.filter(f => f.category === "AUTO").length > 0 && (
+                                    <>
+                                        <div className="text-[10.5px] font-[600] text-[#9e9b95] uppercase tracking-[1px] border-b-[1.5px] border-[#e8e6e1] pb-[8px] mb-[14px] mt-[24px]">
+                                            Calculated (Auto)
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-[8px]">
+                                            {fields.filter(f => f.category === "AUTO").map(field => {
+                                                if (field.fieldLabel.toUpperCase() === "INSPECTOR NAME") {
+                                                    return (
+                                                        <div key={field.id} className="col-span-2 bg-[#f0fdf4] border border-[rgba(26,158,110,0.2)] rounded-[9px] p-[11px_13px] flex items-center gap-[10px] opacity-70">
+                                                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" className="text-[#1a9e6e]"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                                            <span className="text-[13px] font-[600] text-[#0d6b4a]">Inspector Name Auto-fill</span>
+                                                        </div>
+                                                    )
+                                                }
+                                                return (
+                                                    <div key={field.id} className="bg-[#f9f8f5] border-[1.5px] border-dashed border-[#d4d1ca] rounded-[9px] p-[11px_13px] opacity-70">
+                                                        <div className="text-[10px] font-[500] text-[#9e9b95] uppercase">{field.fieldLabel}</div>
+                                                        <div className="text-[20px] font-[700] font-mono tracking-[-0.5px] text-[#1a1a18]">
+                                                            0
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         )}
                     </div>
