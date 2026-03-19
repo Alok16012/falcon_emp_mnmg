@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Loader2, Trash2, Zap } from "lucide-react"
+import { Loader2, Trash2, Zap, ChevronDown } from "lucide-react"
 
 export default function AssignmentsPage() {
     const { data: session, status } = useSession()
@@ -461,18 +461,20 @@ export default function AssignmentsPage() {
                 <div className="bg-white border border-[var(--border)] rounded-[14px] overflow-hidden sticky top-[24px]">
                     <div className="p-[14px_18px] border-b border-[var(--border)] flex justify-between items-center bg-white z-20">
                         <h2 className="text-[13.5px] font-semibold text-[var(--text)]">Assignments</h2>
-                        <select
-                            className={`${inputClasses} py-[6px] text-[12px] min-w-[120px] w-auto cursor-pointer`}
-                            style={{ ...dropdownBg, paddingRight: "30px", backgroundPosition: "right 10px center" }}
-                            value={filterStatus}
-                            onChange={(e) => setFilterStatus(e.target.value)}
-                        >
-                            <option value="all">All Status</option>
-                            <option value="active">Active</option>
-                            <option value="manager_only">Manager</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
+                        <div className="relative">
+                            <select
+                                className="w-[140px] appearance-none bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] p-[8px_14px] text-[12.5px] text-[#1a1a18] font-[500] outline-none transition-all hover:bg-white focus:border-[#1a9e6e] focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,158,110,0.08)] cursor-pointer"
+                                value={filterStatus}
+                                onChange={(e) => setFilterStatus(e.target.value)}
+                            >
+                                <option value="all">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="manager_only">Manager</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                            <ChevronDown className="absolute right-[12px] top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-[#9e9b95] pointer-events-none" />
+                        </div>
                     </div>
 
                     <div className="overflow-x-auto max-h-[calc(100vh-140px)] overflow-y-auto">
