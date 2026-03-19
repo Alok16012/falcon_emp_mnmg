@@ -19,6 +19,10 @@ export default async function CompaniesPage() {
         redirect("/client")
     }
 
+    if (session.user.role === "INSPECTION_BOY") {
+        redirect("/inspection")
+    }
+
     let companies = []
     try {
         companies = await prisma.company.findMany({
