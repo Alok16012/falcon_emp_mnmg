@@ -370,576 +370,337 @@ export default function InspectionFormPage() {
         }
     }
 
-    const renderField = (template: any) => {
+    const renderBasicField = (template: any) => {
         const value = responses[template.id] || ""
-        const isAuto = template.category === "AUTO"
-        const isInspectorName = template.fieldLabel.toUpperCase() === "INSPECTOR NAME"
-        const readOnly = inspection?.status !== "draft" || isAuto || isInspectorName
         const error = errors[template.id]
+        const readOnly = inspection?.status !== "draft"
+
+        let pillClass = ""
+        let pillText = template.fieldType.toUpperCase()
+        if (template.fieldType === "date") pillClass = "bg-[#eff6ff] text-[#3b82f6]"
+        else if (template.fieldType === "dropdown") pillClass = "bg-[#f5f3ff] text-[#7c3aed]"
+        else if (template.fieldType === "number") pillClass = "bg-[#fef3c7] text-[#d97706]"
+        else pillClass = "bg-[#f9f8f5] text-[#9e9b95] border border-[#e8e6e1]"
+
+        const dropdownBg = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239e9b95' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`
 
         return (
-            <div key={template.id} id={`field-${template.id}`} className={cn(
-                "space-y-2 p-3 rounded-lg border transition-colors shadow-sm",
-                isAuto ? "bg-gray-50 border-dashed border-gray-300" : "bg-card hover:border-primary/50",
-                error && "border-destructive ring-1 ring-destructive"
-            )}>
-                <div className="flex justify-between items-start">
-                    <Label className={cn("text-sm font-semibold", isAuto && "text-gray-500")}>
+            <div key={template.id} id={`field-${template.id}`} className={`bg-white border ${error ? 'border-[#dc2626]' : 'border-[#e8e6e1]'} rounded-[12px] overflow-hidden transition-colors focus-within:border-[#1a9e6e] mb-[10px]`}>
+                <div className="flex justify-between items-center px-[14px] pt-[10px]">
+                    <div className="text-[11px] font-[600] text-[#6b6860] uppercase tracking-[0.5px]">
                         {template.fieldLabel}
-                        {template.isRequired && <span className="text-destructive ml-1">*</span>}
-                    </Label>
-                    <Badge variant="outline" className={cn(
-                        "text-[10px] uppercase font-bold tracking-wider opacity-70",
-                        isAuto && "bg-green-50 text-green-700 border-green-200"
-                    )}>
-                        {isAuto ? "Auto" : template.fieldType}
-                    </Badge>
+                        {template.isRequired && <span className="text-[#dc2626] ml-1">*</span>}
+                    </div>
+                    <div className={`text-[10px] font-medium px-[8px] py-[2px] rounded-full ${pillClass}`}>
+                        {pillText}
+                    </div>
                 </div>
-
-                {template.fieldType === "text" && (
-                    <Input
-                        value={value}
-                        onChange={(e) => handleFieldChange(template.id, e.target.value)}
-                        disabled={readOnly}
-                        placeholder={`Enter ${template.fieldLabel}...`}
-                    />
-                )}
-
-                {template.fieldType === "number" && (
-                    <Input
-                        type="number"
-                        value={value}
-                        onChange={(e) => handleFieldChange(template.id, e.target.value)}
-                        disabled={readOnly}
-                        placeholder="0"
-                    />
-                )}
-
-                {template.fieldType === "date" && (
-                    <Input
-                        type="date"
-                        value={value}
-                        onChange={(e) => handleFieldChange(template.id, e.target.value)}
-                        disabled={readOnly}
-                    />
-                )}
-
-                {template.fieldType === "textarea" && (
-                    <Textarea
-                        value={value}
-                        onChange={(e) => handleFieldChange(template.id, e.target.value)}
-                        disabled={readOnly}
-                        rows={4}
-                        placeholder={`Provide details for ${template.fieldLabel}...`}
-                    />
-                )}
-
-                {template.fieldType === "dropdown" && (
-                    <Select
-                        value={value}
-                        onValueChange={(val) => handleFieldChange(template.id, val)}
-                        disabled={readOnly}
-                    >
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select an option" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {template.options?.split(",").map((opt: string) => (
-                                <SelectItem key={opt.trim()} value={opt.trim()}>
-                                    {opt.trim()}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                )}
-
-                {template.fieldType === "checkbox" && (
-                    <div className="flex items-center space-x-2">
-                        <Switch
-                            checked={value === "true"}
-                            onCheckedChange={(checked) => handleFieldChange(template.id, checked ? "true" : "false")}
+                <div className="px-[12px] pb-[12px] pt-[6px]">
+                    {template.fieldType === "dropdown" ? (
+                        <select
+                            value={value}
+                            onChange={(e) => handleFieldChange(template.id, e.target.value)}
                             disabled={readOnly}
+                            className="w-full px-[10px] py-[8px] bg-transparent border-none outline-none text-[15px] font-medium text-[#1a1a18] appearance-none"
+                            style={{ backgroundImage: dropdownBg, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
+                        >
+                            <option value="" disabled className="text-[#9e9b95]">Select option...</option>
+                            {template.options?.split(",").map((opt: string) => (
+                                <option key={opt.trim()} value={opt.trim()}>{opt.trim()}</option>
+                            ))}
+                        </select>
+                    ) : template.fieldType === "textarea" ? (
+                        <textarea
+                            value={value}
+                            onChange={(e) => handleFieldChange(template.id, e.target.value)}
+                            disabled={readOnly}
+                            rows={3}
+                            placeholder={`Enter ${template.fieldLabel.toLowerCase()}...`}
+                            className="w-full px-[10px] py-[8px] bg-transparent border-none outline-none text-[15px] font-medium text-[#1a1a18] placeholder:text-[#9e9b95] resize-y"
                         />
-                        <span className="text-sm text-muted-foreground">
-                            {value === "true" ? "Yes" : "No"}
-                        </span>
-                    </div>
-                )}
-
-                {template.fieldType === "file" && (
-                    <div className="space-y-4">
-                        {value ? (
-                            <div className="flex items-center gap-4 p-3 rounded-md bg-muted/50 border">
-                                {value.match(/\.(jpg|jpeg|png|gif)$/i) ? (
-                                    <div className="relative h-20 w-20 rounded border overflow-hidden bg-white">
-                                        <img src={value} alt="upload" className="h-full w-full object-cover" />
-                                    </div>
-                                ) : (
-                                    <div className="h-20 w-20 flex items-center justify-center rounded border bg-white">
-                                        <FileText className="h-10 w-10 text-muted-foreground" />
-                                    </div>
-                                )}
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium truncate">{value.split("-").pop()}</p>
-                                    <div className="flex gap-2 mt-2">
-                                        <Button size="sm" variant="outline" asChild>
-                                            <a href={value} target="_blank" rel="noopener noreferrer">
-                                                <ExternalLink className="h-3 w-3 mr-1" /> View
-                                            </a>
-                                        </Button>
-                                        {!readOnly && (
-                                            <Button size="sm" variant="ghost" onClick={() => handleFieldChange(template.id, "")}>
-                                                Replace File
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            !readOnly && (
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-center w-full">
-                                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/5 hover:bg-muted/10 transition-colors">
-                                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                                <Upload className="w-8 h-8 mb-3 text-muted-foreground" />
-                                                <p className="mb-2 text-sm text-muted-foreground">
-                                                    <span className="font-semibold">Click to upload</span> or drag and drop
-                                                </p>
-                                            </div>
-                                            <input
-                                                type="file"
-                                                className="hidden"
-                                                onChange={(e) => {
-                                                    const file = e.target.files?.[0]
-                                                    if (file) handleFileUpload(template.id, file)
-                                                }}
-                                            />
-                                        </label>
-                                    </div>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="w-full"
-                                        onClick={() => setCameraFieldId(template.id)}
-                                    >
-                                        <Camera className="h-4 w-4 mr-2" />
-                                        Use Camera
-                                    </Button>
-                                </div>
-                            )
-                        )}
-                        {!value && readOnly && <p className="text-sm text-muted-foreground italic">No file uploaded</p>}
-                    </div>
-                )}
-
-                {error && <p className="text-xs font-medium text-destructive mt-1 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {error}</p>}
+                    ) : (
+                        <input
+                            type={template.fieldType}
+                            value={value}
+                            onChange={(e) => handleFieldChange(template.id, e.target.value)}
+                            disabled={readOnly}
+                            placeholder={template.fieldType === 'number' ? '0' : `Enter ${template.fieldLabel.toLowerCase()}...`}
+                            className="w-full px-[10px] py-[8px] bg-transparent border-none outline-none text-[15px] font-medium text-[#1a1a18] placeholder:text-[#9e9b95]"
+                            style={{ fontFamily: template.fieldType === "date" ? "Inter" : "inherit" }}
+                        />
+                    )}
+                    {error && <p className="text-[11px] font-medium text-[#dc2626] px-[10px] mt-1">{error}</p>}
+                </div>
             </div>
         )
     }
 
     if (loading || authStatus === "loading") {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="text-muted-foreground font-medium">Initialising inspection form...</p>
+            <div className="flex flex-col items-center justify-center min-h-[100vh] bg-[#f5f4f0] space-y-4">
+                <Loader2 className="h-10 w-10 animate-spin text-[#9e9b95]" />
             </div>
         )
     }
 
     const isSubmitted = inspection?.status !== "draft"
 
-    return (
-        <div className="flex flex-col min-h-[100dvh] pb-16">
-            {/* Top Bar */}
-            <div className="sticky top-0 z-10 w-full bg-background/80 backdrop-blur-md border-b">
-                <div className="container max-w-3xl py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="icon" asChild>
-                            <Link href="/inspection">
-                                <ChevronLeft className="h-6 w-6" />
-                            </Link>
-                        </Button>
-                        <div className="flex flex-col">
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <span>{assignment?.project?.company?.name}</span>
-                                <span>/</span>
-                                <span className="font-medium text-foreground">{assignment?.project?.name}</span>
-                            </div>
-                            <h1 className="text-xl font-bold">Inspection Form</h1>
-                        </div>
-                    </div>
-                    <Badge
-                        className={cn(
-                            "px-4 py-1 text-sm capitalize",
-                            inspection?.status === "draft" && "bg-blue-100 text-blue-800 hover:bg-blue-100",
-                            inspection?.status === "pending" && "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
-                            inspection?.status === "approved" && "bg-green-100 text-green-800 hover:bg-green-100",
-                            inspection?.status === "rejected" && "bg-red-100 text-red-800 hover:bg-red-100"
-                        )}
-                    >
-                        {inspection?.status}
-                    </Badge>
+    const getAutoColor = (label: string, value: number) => {
+        if (label === "ACCEPTED QTY") return "text-[#1a9e6e]"
+        if (label === "TOTAL DEFECTS") return "text-[#1a1a18]"
+        if (label === "REJECTED QTY" || label === "REJECTED %" || label === "REJECTION PPM") return "text-[#dc2626]"
+        if (label === "REWORK %" || label === "REWORK PPM") return "text-[#d97706]"
+        if (label === "DIFFERENCE") return value === 0 ? "text-[#1a9e6e]" : "text-[#dc2626]"
+        return "text-[#1a1a18]"
+    }
+
+    const renderAutoSection = () => {
+        const inspectorField = autoFields.find(t => t.fieldLabel.toUpperCase() === "INSPECTOR NAME")
+        const otherAutoFields = autoFields.filter(t => t.fieldLabel.toUpperCase() !== "INSPECTOR NAME")
+
+        return (
+            <>
+                <div className="text-[11px] font-[600] text-[#9e9b95] tracking-[1.2px] uppercase pb-[10px] border-b-[2px] border-[#e8e6e1] mb-[14px] mt-[28px] flex justify-between items-center">
+                    <span>Calculated (Auto)</span>
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="text-[#1a9e6e]"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                 </div>
+                <div className="grid grid-cols-2 gap-[8px]">
+                    {otherAutoFields.map(t => {
+                        const valNum = parseFloat(responses[t.id] || "0")
+                        return (
+                            <div key={t.id} className="bg-[#fafaf9] border-[1.5px] border-dashed border-[#d4d1ca] rounded-[10px] p-[12px_14px] cursor-not-allowed">
+                                <div className="text-[10px] font-[600] text-[#9e9b95] uppercase tracking-[0.5px] mb-[4px]">{t.fieldLabel}</div>
+                                <div className={`text-[22px] font-[700] font-mono tracking-[-0.5px] ${getAutoColor(t.fieldLabel.toUpperCase(), valNum)}`}>
+                                    {responses[t.id] || "0"}
+                                </div>
+                                {t.fieldLabel.toUpperCase().includes('%') && <div className="text-[10px] text-[#b8b5af] mt-[2px]">Percentage</div>}
+                                {t.fieldLabel.toUpperCase().includes('PPM') && <div className="text-[10px] text-[#b8b5af] mt-[2px]">Parts Per Million</div>}
+                            </div>
+                        )
+                    })}
+                    {inspectorField && (
+                        <div className="col-span-2 bg-[#f0fdf4] border border-[rgba(26,158,110,0.25)] rounded-[10px] p-[12px_14px] flex items-center gap-[10px] mt-[4px]">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" className="text-[#1a9e6e]"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <div>
+                                <span className="text-[10px] font-[600] text-[#9e9b95] uppercase block mb-[2px]">Inspector Name</span>
+                                <span className="text-[14px] font-[600] text-[#0d6b4a]">{responses[inspectorField.id] || session?.user?.name || "Pending Inspector"}</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </>
+        )
+    }
+
+    return (
+        <div className="flex flex-col min-h-[100vh] bg-[#f5f4f0] p-0 font-[Inter]">
+
+            <div className="bg-white border-b border-[#e8e6e1] px-[24px] py-[14px] flex items-center justify-between sticky top-0 z-40">
+                <div className="flex items-center">
+                    <button
+                        onClick={() => router.push("/inspection")}
+                        className="w-[30px] h-[30px] border border-[#e8e6e1] rounded-[8px] flex items-center justify-center text-[#6b6860] hover:bg-[#f9f8f5] transition-colors"
+                    >
+                        <ChevronLeft size={18} />
+                    </button>
+                    <span className="text-[15px] font-[600] text-[#1a1a18] ml-[12px]">{assignment?.project?.name}</span>
+                    <span className="text-[12.5px] text-[#9e9b95] ml-[8px]">
+                        • {assignment?.project?.company?.name}
+                    </span>
+                </div>
+
+                {!isSubmitted && (
+                    <div className="flex items-center gap-[8px]">
+                        {saving ? (
+                            <>
+                                <span className="relative flex h-[8px] w-[8px]">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3b82f6] opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-[8px] w-[8px] bg-[#3b82f6]"></span>
+                                </span>
+                                <span className="text-[12.5px] text-[#6b6860] hidden sm:inline">Saving...</span>
+                            </>
+                        ) : isDirty ? (
+                            <>
+                                <div className="h-[8px] w-[8px] rounded-full bg-[#d97706]"></div>
+                                <span className="text-[12.5px] text-[#d97706] hidden sm:inline">Unsaved changes</span>
+                            </>
+                        ) : (
+                            <>
+                                <div className="h-[8px] w-[8px] rounded-full bg-[#1a9e6e]"></div>
+                                <span className="text-[12.5px] text-[#6b6860] hidden sm:inline">
+                                    {lastSaved && !isNaN(lastSaved.getTime()) ? `Saved ${lastSaved.toLocaleTimeString([], { hour12: false })}` : 'Saved'}
+                                </span>
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
 
-            {/* Banner for submitted forms */}
-            {isSubmitted && (
-                <div className="container max-w-3xl mt-4">
-                    <div className="bg-muted p-3 rounded-lg flex items-center gap-3 border shadow-inner">
-                        <AlertCircle className="h-5 w-5 text-muted-foreground" />
-                        <p className="text-sm font-medium text-muted-foreground flex-1">
+            <div className="w-full max-w-[680px] mx-auto px-[20px] pt-[24px] pb-[120px]">
+
+                {isSubmitted && (
+                    <div className="bg-[#f0fdf4] border border-[rgba(26,158,110,0.25)] rounded-[12px] p-[14px_18px] flex items-center gap-[12px] mb-[24px]">
+                        <CheckCircle2 className="h-[20px] w-[20px] text-[#1a9e6e] shrink-0" />
+                        <span className="text-[13px] font-[500] text-[#0d6b4a] flex-1">
                             This form has been submitted and is pending approval.
-                        </p>
-                        {inspection?.status === "pending" && (
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={async () => {
-                                    try {
-                                        const res = await fetch(`/api/inspections/${inspection.id}`, {
-                                            method: "PATCH",
-                                            headers: { "Content-Type": "application/json" },
-                                            body: JSON.stringify({ status: "draft" })
-                                        })
-                                        if (res.ok) {
-                                            window.location.reload()
-                                        } else {
-                                            alert("Failed to request edit")
-                                        }
-                                    } catch (error) {
-                                        alert("Failed to request edit")
-                                    }
-                                }}
+                        </span>
+                    </div>
+                )}
+
+                <div className="text-[11px] font-[600] text-[#9e9b95] tracking-[1.2px] uppercase pb-[10px] border-b-[2px] border-[#e8e6e1] mb-[14px] mt-0">
+                    Basic Info
+                </div>
+                {fixedFields.map(t => renderBasicField(t))}
+
+                {defectFields.length > 0 && (
+                    <>
+                        <div className="text-[11px] font-[600] text-[#9e9b95] tracking-[1.2px] uppercase pb-[10px] border-b-[2px] border-[#e8e6e1] mb-[14px] mt-[28px] flex justify-between items-center">
+                            <span>Defect Entry</span>
+                            <div className="bg-[#fef3c7] text-[#d97706] text-[10px] font-bold px-[8px] py-[2px] rounded-full">
+                                {defectFields.filter(t => responses[t.id] && responses[t.id] !== "0").length} FILED
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-[8px]">
+                            {defectFields.map(t => (
+                                <div key={t.id} id={`field-${t.id}`} className="bg-white border border-[#e8e6e1] rounded-[10px] p-[10px_10px_8px] focus-within:border-[#d97706] focus-within:shadow-[0_0_0_3px_rgba(217,119,6,0.06)] transition-all">
+                                    <div className="text-[10px] font-[600] text-[#6b6860] uppercase tracking-[0.3px] leading-[1.3] mb-[6px] truncate" title={t.fieldLabel}>
+                                        {t.fieldLabel}
+                                    </div>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={responses[t.id] || ""}
+                                        onChange={(e) => handleFieldChange(t.id, e.target.value)}
+                                        disabled={inspection?.status !== "draft"}
+                                        placeholder="0"
+                                        className="w-full px-[8px] py-[6px] bg-[#f9f8f5] border border-[#e8e6e1] rounded-[6px] text-[16px] font-[700] text-[#1a1a18] text-center font-mono focus:border-[#d97706] focus:bg-white outline-none transition-colors"
+                                    />
+                                    {errors[t.id] && <div className="text-[10px] text-[#dc2626] text-center mt-1">Required</div>}
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
+
+                {autoFields.length > 0 && renderAutoSection()}
+
+                <div className="text-[11px] font-[600] text-[#9e9b95] tracking-[1.2px] uppercase pb-[10px] border-b-[2px] border-[#e8e6e1] mb-[14px] mt-[28px]">
+                    Attachments & Paper Form
+                </div>
+                <div className="bg-white border border-[#e8e6e1] rounded-[12px] p-[16px]">
+                    {responses["paperFormPhoto"] ? (
+                        <div className="flex flex-col sm:flex-row items-center gap-[14px]">
+                            <div className="relative h-[120px] w-full sm:w-[120px] rounded-[8px] border border-[#e8e6e1] overflow-hidden bg-[#f9f8f5]">
+                                <img src={responses["paperFormPhoto"]} alt="Paper form" className="h-[120px] w-full sm:w-[120px] object-cover" />
+                            </div>
+                            <div className="flex-1 text-center sm:text-left">
+                                <p className="text-[13px] font-[600] text-[#1a1a18] mb-[4px]">Paper form uploaded</p>
+                                <div className="flex gap-[8px] justify-center sm:justify-start mt-[10px]">
+                                    <a href={responses["paperFormPhoto"]} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[6px] text-[11px] font-medium px-[12px] py-[6px] hover:bg-[#f9f8f5]">
+                                        <ExternalLink size={12} className="mr-[6px]" /> View Image
+                                    </a>
+                                    {!isSubmitted && (
+                                        <button type="button" onClick={() => handleFieldChange("paperFormPhoto", "")} className="inline-flex items-center justify-center bg-white border border-[#e8e6e1] text-[#dc2626] rounded-[6px] text-[11px] font-medium px-[12px] py-[6px] hover:bg-[#fef2f2]">
+                                            Remove
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ) : !isSubmitted ? (
+                        <div className="space-y-[12px]">
+                            <label className="flex flex-col items-center justify-center w-full h-[100px] border-[1.5px] border-dashed border-[#d4d1ca] rounded-[8px] cursor-pointer bg-[#fafaf9] hover:bg-[#f5f4f0] transition-colors">
+                                <div className="flex flex-col items-center justify-center">
+                                    <Upload className="w-[20px] h-[20px] mb-[8px] text-[#9e9b95]" />
+                                    <p className="text-[12px] font-[500] text-[#6b6860]">Click or drag to upload photo</p>
+                                </div>
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0]
+                                        if (file) handleFileUpload("paperFormPhoto", file)
+                                    }}
+                                />
+                            </label>
+                            <button
+                                type="button"
+                                className="w-full inline-flex items-center justify-center bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[8px] text-[12px] font-medium px-[16px] py-[10px] hover:bg-[#f9f8f5]"
+                                onClick={() => setCameraFieldId("paperFormPhoto")}
                             >
-                                <Pencil className="h-3 w-3 mr-1" />
-                                Request Edit
-                            </Button>
+                                <Camera className="h-[14px] w-[14px] mr-[8px]" />
+                                Use Camera Instead
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="h-[80px] flex items-center justify-center text-[12px] text-[#9e9b95] italic bg-[#fafaf9] rounded-[8px] border border-dashed border-[#e8e6e1]">
+                            No paper form attached
+                        </div>
+                    )}
+                </div>
+
+            </div>
+
+            {!isSubmitted && (
+                <div className="fixed bottom-0 md:left-[230px] left-0 right-0 bg-white border-t border-[#e8e6e1] px-[24px] py-[14px] flex justify-between items-center z-50 shadow-[0_-2px_12px_rgba(0,0,0,0.04)]">
+                    <div className="flex items-center gap-[8px] flex-shrink-0">
+                        {saving ? (
+                            <>
+                                <span className="relative flex h-[8px] w-[8px]">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3b82f6] opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-[8px] w-[8px] bg-[#3b82f6]"></span>
+                                </span>
+                                <span className="text-[13px] text-[#6b6860] hidden sm:inline">Saving...</span>
+                            </>
+                        ) : isDirty ? (
+                            <>
+                                <div className="h-[8px] w-[8px] rounded-full bg-[#d97706]"></div>
+                                <span className="text-[13px] text-[#6b6860] hidden sm:inline">Unsaved changes</span>
+                            </>
+                        ) : (
+                            <>
+                                <div className="h-[8px] w-[8px] rounded-full bg-[#1a9e6e]"></div>
+                                <span className="text-[13px] text-[#6b6860] hidden sm:inline">Saved</span>
+                            </>
                         )}
+                    </div>
+
+                    <div className="flex items-center gap-[10px]">
+                        <button
+                            type="button"
+                            onClick={() => saveForm("draft")}
+                            disabled={saving || !isDirty}
+                            className="bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[9px] text-[13px] font-[500] px-[16px] sm:px-[18px] py-[9px] hover:bg-[#f9f8f5] disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                        >
+                            <Save size={14} className="sm:mr-[6px] mr-0" />
+                            <span className="hidden sm:inline">Force Save</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleSubmit}
+                            disabled={saving}
+                            className="bg-[#1a9e6e] text-white border-none rounded-[9px] text-[13px] font-[500] px-[16px] sm:px-[20px] py-[9px] hover:bg-[#158a5e] disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-colors shadow-sm"
+                        >
+                            <Send size={14} className="sm:mr-[6px] mr-0" />
+                            <span className="hidden sm:inline">Submit for Approval</span>
+                            <span className="sm:hidden inline">Submit</span>
+                        </button>
                     </div>
                 </div>
             )}
 
-            {/* Form Area - Wizard Step View */}
-            <main className="container max-w-3xl flex-1 flex flex-col py-4 space-y-4">
-                {templates.length === 0 ? (
-                    <Card>
-                        <CardHeader className="text-center py-12">
-                            <FileText className="h-12 w-12 mx-auto text-muted-foreground opacity-20" />
-                            <CardTitle className="mt-4">No fields defined</CardTitle>
-                            <CardDescription>
-                                This project doesn't have any form fields configured yet.
-                            </CardDescription>
-                        </CardHeader>
-                    </Card>
-                ) : (
-                    <>
-                        {/* Progress Bar */}
-                        <div className="space-y-2 mb-6">
-                            <div className="flex justify-between items-center text-sm font-medium">
-                                <span className="text-muted-foreground uppercase tracking-wider text-[11px] font-bold">
-                                    Step {currentStep + 1} of {totalSteps}
-                                </span>
-                                <span className={cn(
-                                    "font-bold",
-                                    currentStep === 3 ? "text-primary" : "text-muted-foreground"
-                                )}>
-                                    {currentStep === 0 && "Basic Info"}
-                                    {currentStep === 1 && "Defects & Summary"}
-                                    {currentStep === 2 && "Attachments"}
-                                    {currentStep === 3 && "Review & Submit"}
-                                </span>
-                            </div>
-                            <Progress value={((currentStep + 1) / totalSteps) * 100} className="h-2" />
-                        </div>
-
-                        {/* Current Step Content */}
-                        <div className="bg-card border rounded-xl shadow-sm overflow-hidden mb-6">
-                            {currentStep === 0 && (
-                                <div className="p-4 space-y-4">
-                                    <div className="pb-2 border-b">
-                                        <h3 className="text-xs font-bold text-muted-foreground uppercase">Basic Info</h3>
-                                    </div>
-                                    {fixedFields.map((t) => renderField(t))}
-                                </div>
-                            )}
-
-                            {currentStep === 1 && (
-                                <div className="p-4 space-y-6">
-                                    <div className="space-y-4">
-                                        <div className="pb-2 border-b">
-                                            <h3 className="text-xs font-bold text-muted-foreground uppercase">Defect Entry (3-Col Grid)</h3>
-                                        </div>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                            {defectFields.map((t) => (
-                                                <div key={t.id} id={`field-${t.id}`} className={cn(
-                                                    "p-2 border rounded-md bg-muted/20 transition-all",
-                                                    errors[t.id] ? "border-destructive ring-1 ring-destructive" : "hover:border-primary/30"
-                                                )}>
-                                                    <Label className="text-[10px] font-bold text-muted-foreground truncate block mb-1" title={t.fieldLabel}>
-                                                        {t.fieldLabel}
-                                                    </Label>
-                                                    <Input
-                                                        type="number"
-                                                        value={responses[t.id] || ""}
-                                                        onChange={(e) => handleFieldChange(t.id, e.target.value)}
-                                                        disabled={inspection?.status !== "draft"}
-                                                        placeholder="0"
-                                                        className="h-8 text-xs bg-white text-center font-bold"
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4 pt-4 border-t">
-                                        <div className="pb-2 border-b">
-                                            <h3 className="text-xs font-bold text-muted-foreground uppercase">Live Summary</h3>
-                                        </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            {autoFields.map((t) => renderField(t))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {currentStep === 2 && (
-                                <div className="p-5 space-y-5">
-                                    <div className="text-center mb-6">
-                                        <div className="mx-auto w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4">
-                                            <FileText className="h-6 w-6" />
-                                        </div>
-                                        <h2 className="text-2xl font-bold">Paper Form Photo</h2>
-                                        <p className="text-muted-foreground mt-2">If you have an offline paper form, attach its photo here</p>
-                                    </div>
-                                    <div className="max-w-xl mx-auto">
-                                        {responses["paperFormPhoto"] ? (
-                                            <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-xl bg-muted/30 border">
-                                                <div className="relative h-40 w-full sm:w-40 rounded-lg border overflow-hidden bg-white shadow-sm">
-                                                    <img src={responses["paperFormPhoto"]} alt="Paper form" className="h-full w-full object-cover" />
-                                                </div>
-                                                <div className="flex-1 text-center sm:text-left">
-                                                    <p className="font-semibold text-lg mb-1">Paper form uploaded</p>
-                                                    <p className="text-sm text-muted-foreground mb-4">Image successfully attached to this inspection</p>
-                                                    <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-                                                        <Button size="sm" variant="outline" asChild>
-                                                            <a href={responses["paperFormPhoto"]} target="_blank" rel="noopener noreferrer">
-                                                                <ExternalLink className="h-4 w-4 mr-2" /> View Full Image
-                                                            </a>
-                                                        </Button>
-                                                        {!isSubmitted && (
-                                                            <Button size="sm" variant="secondary" onClick={() => handleFieldChange("paperFormPhoto", "")}>
-                                                                Replace Image
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ) : !isSubmitted ? (
-                                            <div className="space-y-4">
-                                                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-xl cursor-pointer bg-card hover:bg-muted/30 transition-colors group">
-                                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                                        <div className="p-3 bg-muted rounded-full mb-4 group-hover:scale-110 transition-transform">
-                                                            <Upload className="w-6 h-6 text-foreground" />
-                                                        </div>
-                                                        <p className="text-lg font-semibold mb-1">Upload Photo</p>
-                                                        <p className="text-sm text-muted-foreground">
-                                                            Click to browse or drag and drop
-                                                        </p>
-                                                    </div>
-                                                    <input
-                                                        type="file"
-                                                        className="hidden"
-                                                        accept="image/*"
-                                                        onChange={(e) => {
-                                                            const file = e.target.files?.[0]
-                                                            if (file) handleFileUpload("paperFormPhoto", file)
-                                                        }}
-                                                    />
-                                                </label>
-                                                <div className="relative flex items-center py-2">
-                                                    <div className="flex-grow border-t"></div>
-                                                    <span className="flex-shrink-0 mx-4 text-muted-foreground text-sm font-medium">OR</span>
-                                                    <div className="flex-grow border-t"></div>
-                                                </div>
-                                                <Button
-                                                    type="button"
-                                                    size="lg"
-                                                    variant="outline"
-                                                    className="w-full border-primary/20 hover:bg-primary/5 text-primary hover:text-primary"
-                                                    onClick={() => setCameraFieldId("paperFormPhoto")}
-                                                >
-                                                    <Camera className="h-5 w-5 mr-3" />
-                                                    Use Camera
-                                                </Button>
-                                            </div>
-                                        ) : (
-                                            <Card className="border-dashed h-[200px] flex flex-col items-center justify-center text-center p-8 bg-muted/5">
-                                                <div className="p-3 rounded-full bg-muted mb-4 opacity-50">
-                                                    <FileText className="h-8 w-8 text-muted-foreground" />
-                                                </div>
-                                                <h3 className="font-medium text-muted-foreground">No paper form attached</h3>
-                                            </Card>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {currentStep === 3 && (
-                                <div className="p-5 space-y-6">
-                                    <div className="text-center border-b pb-4">
-                                        <div className="mx-auto w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-3">
-                                            <ClipboardCheck className="h-6 w-6" />
-                                        </div>
-                                        <h2 className="text-2xl font-bold tracking-tight">Review Inspection</h2>
-                                        <p className="text-muted-foreground mt-1 text-sm max-w-md mx-auto">Please review all the information below. Once submitted, you cannot edit this form without requesting permission.</p>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
-                                        <div className="md:col-span-2 pb-2 border-b">
-                                            <h3 className="text-xs font-bold text-muted-foreground uppercase">Basic Info</h3>
-                                        </div>
-                                        {fixedFields.map(t => (
-                                            <div key={t.id} className="space-y-1">
-                                                <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase text-[10px]">{t.fieldLabel}</p>
-                                                <p className="text-lg font-semibold border-b pb-1 min-h-[32px]">{responses[t.id] || <span className="text-muted-foreground opacity-50 italic font-normal text-sm">Not provided</span>}</p>
-                                            </div>
-                                        ))}
-
-                                        <div className="md:col-span-2 pb-2 border-b mt-4">
-                                            <h3 className="text-xs font-bold text-muted-foreground uppercase">Defects</h3>
-                                        </div>
-                                        {defectFields.filter(t => responses[t.id] && responses[t.id] !== "0").map(t => (
-                                            <div key={t.id} className="space-y-1">
-                                                <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase text-[10px]">{t.fieldLabel}</p>
-                                                <p className="text-lg font-semibold border-b pb-1 min-h-[32px]">{responses[t.id]}</p>
-                                            </div>
-                                        ))}
-                                        {defectFields.filter(t => responses[t.id] && responses[t.id] !== "0").length === 0 && (
-                                            <p className="text-sm text-muted-foreground italic md:col-span-2">No defects reported</p>
-                                        )}
-
-                                        <div className="md:col-span-2 pb-2 border-b mt-4">
-                                            <h3 className="text-xs font-bold text-muted-foreground uppercase">Summary</h3>
-                                        </div>
-                                        {autoFields.map(t => (
-                                            <div key={t.id} className="space-y-1">
-                                                <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase text-[10px]">{t.fieldLabel}</p>
-                                                <p className="text-lg font-semibold border-b pb-1 min-h-[32px]">{responses[t.id]}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <div className="space-y-1 md:col-span-2 mt-4 pt-4 border-t">
-                                        <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase text-[10px]">Paper Form Photo</p>
-                                        {responses["paperFormPhoto"] ? (
-                                            <div className="mt-2 h-32 w-48 border rounded-lg overflow-hidden shadow-sm">
-                                                <img src={responses["paperFormPhoto"]} alt="Paper form" className="h-full w-full object-cover" />
-                                            </div>
-                                        ) : (
-                                            <p className="text-muted-foreground opacity-50 italic">None attached</p>
-                                        )}
-                                    </div>
-
-                                    {!isSubmitted && (
-                                        <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 text-center max-w-2xl mx-auto mt-8">
-                                            <h3 className="font-bold text-lg mb-2">Ready to submit?</h3>
-                                            <p className="text-muted-foreground text-sm mb-6">Ensure all fields are accurate. This inspection will be sent to the manager for review.</p>
-                                            <Button
-                                                size="lg"
-                                                onClick={handleSubmit}
-                                                disabled={saving}
-                                                className="w-full sm:w-auto font-bold shadow-md hover:shadow-lg transition-all"
-                                            >
-                                                {saving ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Send className="h-5 w-5 mr-2" />}
-                                                Confirm and Submit Inspection
-                                            </Button>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Wizard Navigation Actions (Inside the Card) */}
-                        <div className="bg-muted/20 border-t p-4 flex items-center justify-between">
-                            <Button
-                                variant="outline"
-                                onClick={handlePrevStep}
-                                disabled={currentStep === 0 || saving}
-                            >
-                                <ChevronLeft className="h-4 w-4 mr-2" /> Previous
-                            </Button>
-
-                            {currentStep < totalSteps - 1 ? (
-                                <Button
-                                    onClick={handleNextStep}
-                                    disabled={saving}
-                                >
-                                    Next <ChevronRight className="h-4 w-4 ml-2" />
-                                </Button>
-                            ) : (
-                                <div className="text-sm text-muted-foreground hidden sm:block italic">
-                                    Review completed
-                                </div>
-                            )}
-                        </div>
-                    </>
-                )}
-            </main>
-
-            {/* Bottom Action Bar */}
-            {
-                !isSubmitted && (
-                    <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
-                        <div className="container max-w-3xl flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                {lastSaved && (
-                                    <>
-                                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                        <span>Last saved: {lastSaved instanceof Date && !isNaN(lastSaved.getTime()) ? lastSaved.toLocaleTimeString() : "—"}</span>
-                                        {isDirty && <span className="italic ml-2">(Unsaved changes)</span>}
-                                    </>
-                                )}
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Button
-                                    variant="outline"
-                                    onClick={() => saveForm("draft")}
-                                    disabled={saving || !isDirty}
-                                    className="hidden sm:flex"
-                                >
-                                    {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                                    Force Save
-                                </Button>
-                                {currentStep === totalSteps - 1 && (
-                                    <Button
-                                        onClick={handleSubmit}
-                                        disabled={saving}
-                                        className="bg-primary hover:bg-primary/90 shadow-md"
-                                    >
-                                        {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-                                        Submit
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
-
-            {/* Camera Capture Modal */}
-            {
-                cameraFieldId && (
-                    <CameraCapture
-                        onCapture={(file) => {
-                            if (cameraFieldId) {
-                                handleFileUpload(cameraFieldId, file)
-                            }
-                            setCameraFieldId(null)
-                        }}
-                        onClose={() => setCameraFieldId(null)}
-                    />
-                )
-            }
-        </div >
+            {cameraFieldId && (
+                <CameraCapture
+                    onCapture={(file) => {
+                        if (cameraFieldId) {
+                            handleFileUpload(cameraFieldId, file)
+                        }
+                        setCameraFieldId(null)
+                    }}
+                    onClose={() => setCameraFieldId(null)}
+                />
+            )}
+        </div>
     )
 }

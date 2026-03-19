@@ -78,7 +78,7 @@ export async function GET(req: Request) {
         // Fetch all relevant inspections with full relations
         const inspections = await prisma.inspection.findMany({
             where: {
-                status: { in: ["approved", "pending"] },
+                status: "approved",
                 submittedAt: {
                     gte: startDate,
                     lte: endDate,

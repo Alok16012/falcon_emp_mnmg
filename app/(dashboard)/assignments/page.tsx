@@ -10,13 +10,15 @@ export default function AssignmentsPage() {
     const { data: session, status } = useSession()
     const router = useRouter()
 
+    const isManagerOrAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "MANAGER"
+
     useEffect(() => {
         if (status === "unauthenticated") {
             router.push("/login")
-        } else if (status === "authenticated" && session?.user?.role !== "ADMIN" && session?.user?.role !== "MANAGER") {
+        } else if (status === "authenticated" && !isManagerOrAdmin && session?.user?.role !== "INSPECTION_BOY") {
             router.push("/client")
         }
-    }, [status, session, router])
+    }, [status, session, router, isManagerOrAdmin])
 
     const [companies, setCompanies] = useState<any[]>([])
     const [projects, setProjects] = useState<any[]>([])
@@ -247,7 +249,7 @@ export default function AssignmentsPage() {
         )
     }
 
-    if (session?.user?.role !== "ADMIN" && session?.user?.role !== "MANAGER") {
+    if (!isManagerOrAdmin && session?.user?.role !== "INSPECTION_BOY") {
         return null // Will redirect in useEffect
     }
 
@@ -256,206 +258,210 @@ export default function AssignmentsPage() {
 
     return (
         <div className="min-h-[calc(100vh-54px)] bg-[var(--bg)] p-[24px_28px] w-full">
-            
+
             {/* PAGE TITLE ROW */}
             <div className="flex justify-between items-center mb-[20px]">
                 <h1 className="text-[22px] font-semibold tracking-[-0.4px] text-[var(--text)]">
                     Assignments
                 </h1>
-                <button
-                    onClick={() => {
-                        const el = document.getElementById("new-assignment-form")
-                        el?.scrollIntoView({ behavior: 'smooth' })
-                        el?.querySelector("select")?.focus()
-                    }}
-                    className="inline-flex items-center justify-center bg-[var(--accent)] text-white px-[20px] py-[9px] rounded-[9px] text-[13px] font-medium hover:bg-[#158a5e] transition-colors"
-                >
-                    Create Assignment
-                </button>
+                {isManagerOrAdmin && (
+                    <button
+                        onClick={() => {
+                            const el = document.getElementById("new-assignment-form")
+                            el?.scrollIntoView({ behavior: 'smooth' })
+                            el?.querySelector("select")?.focus()
+                        }}
+                        className="inline-flex items-center justify-center bg-[var(--accent)] text-white px-[20px] py-[9px] rounded-[9px] text-[13px] font-medium hover:bg-[#158a5e] transition-colors"
+                    >
+                        Create Assignment
+                    </button>
+                )}
             </div>
 
             {/* MAIN GRID */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-[20px] items-start">
-                
+            <div className={isManagerOrAdmin ? "grid grid-cols-1 lg:grid-cols-2 gap-[20px] items-start" : "max-w-4xl mx-auto"}>
+
                 {/* LEFT COLUMN: ASSIGNMENT FORM */}
-                <div>
-                    {/* CARD 1: QUICK SELECT */}
-                    {groups.length > 0 && (
-                        <div className="bg-white border border-[var(--border)] rounded-[14px] p-[18px_20px] mb-[14px]">
-                            <div className="flex items-center gap-[8px] mb-[6px]">
-                                <Zap className="h-[16px] w-[16px] text-[var(--amber)]" />
-                                <h2 className="text-[13.5px] font-semibold text-[var(--text)]">Quick Select Existing Group</h2>
-                            </div>
-                            <p className="text-[12.5px] text-[var(--text2)] mb-[12px]">
-                                Select an existing group to auto-fill Company and Project below
-                            </p>
-                            <select
-                                className={`${inputClasses} cursor-pointer`}
-                                style={dropdownBg}
-                                defaultValue=""
-                                onChange={(e) => handleGroupSelect(e.target.value)}
-                            >
-                                <option value="">— Select a group to auto-fill —</option>
-                                {groups.map((company: any) =>
-                                    company.projects?.map((project: any) => (
-                                        <option key={project.id} value={project.id}>
-                                            {company.name} → {project.name} ({project.inspectors?.length ?? 0} inspectors)
-                                        </option>
-                                    ))
-                                )}
-                            </select>
-                        </div>
-                    )}
-
-                    {/* CARD 2: NEW ASSIGNMENT FORM */}
-                    <div id="new-assignment-form" className="bg-white border border-[var(--border)] rounded-[14px] p-[22px]">
-                        <div className="mb-[18px]">
-                            <h2 className="text-[15px] font-semibold text-[var(--text)] mb-[4px]">New Assignment</h2>
-                            <p className="text-[13px] text-[var(--text2)]">Assign members to a specific project.</p>
-                        </div>
-                        
-                        <form onSubmit={handleAssign}>
-                            {/* Company + Project */}
-                            <div className="grid grid-cols-2 gap-[12px] mb-[18px]">
-                                <div>
-                                    <label htmlFor="company" className="block text-[12.5px] font-medium text-[var(--text)] mb-[6px]">
-                                        Select Company <span className="text-[var(--red)] ml-[2px]">*</span>
-                                    </label>
-                                    <select
-                                        id="company"
-                                        className={`${inputClasses} cursor-pointer`}
-                                        style={dropdownBg}
-                                        value={selectedCompanyId}
-                                        onChange={(e) => setSelectedCompanyId(e.target.value)}
-                                        required
-                                    >
-                                        <option value="">Select Company</option>
-                                        {companies.map((c: any) => (
-                                            <option key={c.id} value={c.id}>{c.name}</option>
-                                        ))}
-                                    </select>
+                {isManagerOrAdmin && (
+                    <div>
+                        {/* CARD 1: QUICK SELECT */}
+                        {groups.length > 0 && (
+                            <div className="bg-white border border-[var(--border)] rounded-[14px] p-[18px_20px] mb-[14px]">
+                                <div className="flex items-center gap-[8px] mb-[6px]">
+                                    <Zap className="h-[16px] w-[16px] text-[var(--amber)]" />
+                                    <h2 className="text-[13.5px] font-semibold text-[var(--text)]">Quick Select Existing Group</h2>
                                 </div>
-                                <div>
-                                    <label htmlFor="project" className="block text-[12.5px] font-medium text-[var(--text)] mb-[6px]">
-                                        Select Project <span className="text-[var(--red)] ml-[2px]">*</span>
-                                    </label>
-                                    <select
-                                        id="project"
-                                        className={`${inputClasses} cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[var(--bg)]`}
-                                        style={dropdownBg}
-                                        value={selectedProjectId}
-                                        onChange={(e) => setSelectedProjectId(e.target.value)}
-                                        disabled={!selectedCompanyId}
-                                        required
-                                    >
-                                        <option value="">Select Project</option>
-                                        {projects.map((p: any) => (
-                                            <option key={p.id} value={p.id}>{p.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            {/* SELECT INSPECTORS */}
-                            <div className="mb-[16px]">
-                                <label className="block text-[12.5px] font-medium text-[var(--text)] mb-[8px]">
-                                    Select Inspectors
-                                </label>
-                                <div className="bg-[var(--surface2)] border border-[var(--border)] rounded-[10px] py-[4px] max-h-[200px] overflow-y-auto">
-                                    {inspectors.length === 0 ? (
-                                        <p className="text-[13px] text-[var(--text3)] p-[9px_14px]">No inspectors available</p>
-                                    ) : (
-                                        inspectors.map((i: any) => {
-                                            const isChecked = selectedInspectorIds.includes(i.id)
-                                            return (
-                                                <label key={i.id} className="flex items-center gap-[10px] p-[9px_14px] border-b border-[var(--border)] last:border-b-0 cursor-pointer transition-colors hover:bg-[var(--accent-light)]">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isChecked}
-                                                        onChange={(e) => {
-                                                            if (e.target.checked) setSelectedInspectorIds([...selectedInspectorIds, i.id])
-                                                            else setSelectedInspectorIds(selectedInspectorIds.filter(id => id !== i.id))
-                                                        }}
-                                                        className="sr-only"
-                                                    />
-                                                    <div className={`w-[16px] h-[16px] border-[1.5px] rounded-[4px] flex items-center justify-center transition-colors shrink-0 ${isChecked ? "bg-[var(--accent)] border-[var(--accent)]" : "bg-white border-[#d4d1ca]"}`}>
-                                                        {isChecked && <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polyline points="20 6 9 17 4 12"></polyline></svg>}
-                                                    </div>
-                                                    <span className="text-[13px] font-medium text-[var(--text)]">{i.name}</span>
-                                                    <span className="text-[12px] text-[var(--text3)] ml-[4px]">({i.email})</span>
-                                                </label>
-                                            )
-                                        })
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* ASSIGN MANAGERS */}
-                            <div className="mt-[16px]">
-                                <label className="block text-[12.5px] font-medium text-[var(--text)] mb-[8px]">
-                                    Assign Managers <span className="text-[var(--text3)] font-normal ml-1">(Optional)</span>
-                                </label>
-                                <div className="bg-[var(--surface2)] border border-[var(--border)] rounded-[10px] py-[4px] max-h-[150px] overflow-y-auto">
-                                    {managers.length === 0 ? (
-                                        <p className="text-[13px] text-[var(--text3)] p-[9px_14px]">No managers available</p>
-                                    ) : (
-                                        managers.map((m: any) => {
-                                            const isChecked = selectedManagerIds.includes(m.id)
-                                            return (
-                                                <label key={m.id} className="flex items-center gap-[10px] p-[9px_14px] border-b border-[var(--border)] last:border-b-0 cursor-pointer transition-colors hover:bg-[var(--accent-light)]">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isChecked}
-                                                        onChange={(e) => {
-                                                            if (e.target.checked) setSelectedManagerIds([...selectedManagerIds, m.id])
-                                                            else setSelectedManagerIds(selectedManagerIds.filter(id => id !== m.id))
-                                                        }}
-                                                        className="sr-only"
-                                                    />
-                                                    <div className={`w-[16px] h-[16px] border-[1.5px] rounded-[4px] flex items-center justify-center transition-colors shrink-0 ${isChecked ? "bg-[var(--accent)] border-[var(--accent)]" : "bg-white border-[#d4d1ca]"}`}>
-                                                        {isChecked && <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polyline points="20 6 9 17 4 12"></polyline></svg>}
-                                                    </div>
-                                                    <span className="text-[13px] font-medium text-[var(--text)]">{m.name}</span>
-                                                    <span className="text-[12px] text-[var(--text3)] ml-[4px]">({m.email})</span>
-                                                </label>
-                                            )
-                                        })
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* FORM ACTIONS */}
-                            <div className="mt-[18px] flex justify-end gap-[10px]">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setSelectedInspectorIds([])
-                                        setSelectedManagerIds([])
-                                        setSelectedProjectId("")
-                                        setSelectedCompanyId("")
-                                    }}
-                                    className="inline-flex items-center justify-center bg-white border border-[var(--border)] text-[var(--text2)] px-[20px] py-[9px] rounded-[9px] text-[13px] font-medium cursor-pointer hover:bg-[var(--surface2)] hover:text-[var(--text)] transition-colors"
+                                <p className="text-[12.5px] text-[var(--text2)] mb-[12px]">
+                                    Select an existing group to auto-fill Company and Project below
+                                </p>
+                                <select
+                                    className={`${inputClasses} cursor-pointer`}
+                                    style={dropdownBg}
+                                    defaultValue=""
+                                    onChange={(e) => handleGroupSelect(e.target.value)}
                                 >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={loading || !selectedProjectId || (selectedInspectorIds.length === 0 && selectedManagerIds.length === 0)}
-                                    className="inline-flex items-center justify-center bg-[var(--accent)] text-white border-0 px-[20px] py-[9px] rounded-[9px] text-[13px] font-medium cursor-pointer hover:bg-[#158a5e] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Create Assignment
-                                </button>
+                                    <option value="">— Select a group to auto-fill —</option>
+                                    {groups.map((company: any) =>
+                                        company.projects?.map((project: any) => (
+                                            <option key={project.id} value={project.id}>
+                                                {company.name} → {project.name} ({project.inspectors?.length ?? 0} inspectors)
+                                            </option>
+                                        ))
+                                    )}
+                                </select>
                             </div>
-                        </form>
+                        )}
+
+                        {/* CARD 2: NEW ASSIGNMENT FORM */}
+                        <div id="new-assignment-form" className="bg-white border border-[var(--border)] rounded-[14px] p-[22px]">
+                            <div className="mb-[18px]">
+                                <h2 className="text-[15px] font-semibold text-[var(--text)] mb-[4px]">New Assignment</h2>
+                                <p className="text-[13px] text-[var(--text2)]">Assign members to a specific project.</p>
+                            </div>
+
+                            <form onSubmit={handleAssign}>
+                                {/* Company + Project */}
+                                <div className="grid grid-cols-2 gap-[12px] mb-[18px]">
+                                    <div>
+                                        <label htmlFor="company" className="block text-[12.5px] font-medium text-[var(--text)] mb-[6px]">
+                                            Select Company <span className="text-[var(--red)] ml-[2px]">*</span>
+                                        </label>
+                                        <select
+                                            id="company"
+                                            className={`${inputClasses} cursor-pointer`}
+                                            style={dropdownBg}
+                                            value={selectedCompanyId}
+                                            onChange={(e) => setSelectedCompanyId(e.target.value)}
+                                            required
+                                        >
+                                            <option value="">Select Company</option>
+                                            {companies.map((c: any) => (
+                                                <option key={c.id} value={c.id}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label htmlFor="project" className="block text-[12.5px] font-medium text-[var(--text)] mb-[6px]">
+                                            Select Project <span className="text-[var(--red)] ml-[2px]">*</span>
+                                        </label>
+                                        <select
+                                            id="project"
+                                            className={`${inputClasses} cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[var(--bg)]`}
+                                            style={dropdownBg}
+                                            value={selectedProjectId}
+                                            onChange={(e) => setSelectedProjectId(e.target.value)}
+                                            disabled={!selectedCompanyId}
+                                            required
+                                        >
+                                            <option value="">Select Project</option>
+                                            {projects.map((p: any) => (
+                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* SELECT INSPECTORS */}
+                                <div className="mb-[16px]">
+                                    <label className="block text-[12.5px] font-medium text-[var(--text)] mb-[8px]">
+                                        Select Inspectors
+                                    </label>
+                                    <div className="bg-[var(--surface2)] border border-[var(--border)] rounded-[10px] py-[4px] max-h-[200px] overflow-y-auto">
+                                        {inspectors.length === 0 ? (
+                                            <p className="text-[13px] text-[var(--text3)] p-[9px_14px]">No inspectors available</p>
+                                        ) : (
+                                            inspectors.map((i: any) => {
+                                                const isChecked = selectedInspectorIds.includes(i.id)
+                                                return (
+                                                    <label key={i.id} className="flex items-center gap-[10px] p-[9px_14px] border-b border-[var(--border)] last:border-b-0 cursor-pointer transition-colors hover:bg-[var(--accent-light)]">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isChecked}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) setSelectedInspectorIds([...selectedInspectorIds, i.id])
+                                                                else setSelectedInspectorIds(selectedInspectorIds.filter(id => id !== i.id))
+                                                            }}
+                                                            className="sr-only"
+                                                        />
+                                                        <div className={`w-[16px] h-[16px] border-[1.5px] rounded-[4px] flex items-center justify-center transition-colors shrink-0 ${isChecked ? "bg-[var(--accent)] border-[var(--accent)]" : "bg-white border-[#d4d1ca]"}`}>
+                                                            {isChecked && <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                                                        </div>
+                                                        <span className="text-[13px] font-medium text-[var(--text)]">{i.name}</span>
+                                                        <span className="text-[12px] text-[var(--text3)] ml-[4px]">({i.email})</span>
+                                                    </label>
+                                                )
+                                            })
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* ASSIGN MANAGERS */}
+                                <div className="mt-[16px]">
+                                    <label className="block text-[12.5px] font-medium text-[var(--text)] mb-[8px]">
+                                        Assign Managers <span className="text-[var(--text3)] font-normal ml-1">(Optional)</span>
+                                    </label>
+                                    <div className="bg-[var(--surface2)] border border-[var(--border)] rounded-[10px] py-[4px] max-h-[150px] overflow-y-auto">
+                                        {managers.length === 0 ? (
+                                            <p className="text-[13px] text-[var(--text3)] p-[9px_14px]">No managers available</p>
+                                        ) : (
+                                            managers.map((m: any) => {
+                                                const isChecked = selectedManagerIds.includes(m.id)
+                                                return (
+                                                    <label key={m.id} className="flex items-center gap-[10px] p-[9px_14px] border-b border-[var(--border)] last:border-b-0 cursor-pointer transition-colors hover:bg-[var(--accent-light)]">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isChecked}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) setSelectedManagerIds([...selectedManagerIds, m.id])
+                                                                else setSelectedManagerIds(selectedManagerIds.filter(id => id !== m.id))
+                                                            }}
+                                                            className="sr-only"
+                                                        />
+                                                        <div className={`w-[16px] h-[16px] border-[1.5px] rounded-[4px] flex items-center justify-center transition-colors shrink-0 ${isChecked ? "bg-[var(--accent)] border-[var(--accent)]" : "bg-white border-[#d4d1ca]"}`}>
+                                                            {isChecked && <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                                                        </div>
+                                                        <span className="text-[13px] font-medium text-[var(--text)]">{m.name}</span>
+                                                        <span className="text-[12px] text-[var(--text3)] ml-[4px]">({m.email})</span>
+                                                    </label>
+                                                )
+                                            })
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* FORM ACTIONS */}
+                                <div className="mt-[18px] flex justify-end gap-[10px]">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedInspectorIds([])
+                                            setSelectedManagerIds([])
+                                            setSelectedProjectId("")
+                                            setSelectedCompanyId("")
+                                        }}
+                                        className="inline-flex items-center justify-center bg-white border border-[var(--border)] text-[var(--text2)] px-[20px] py-[9px] rounded-[9px] text-[13px] font-medium cursor-pointer hover:bg-[var(--surface2)] hover:text-[var(--text)] transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={loading || !selectedProjectId || (selectedInspectorIds.length === 0 && selectedManagerIds.length === 0)}
+                                        className="inline-flex items-center justify-center bg-[var(--accent)] text-white border-0 px-[20px] py-[9px] rounded-[9px] text-[13px] font-medium cursor-pointer hover:bg-[#158a5e] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Create Assignment
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* RIGHT COLUMN: ASSIGNMENTS TABLE */}
                 <div className="bg-white border border-[var(--border)] rounded-[14px] overflow-hidden sticky top-[24px]">
                     <div className="p-[14px_18px] border-b border-[var(--border)] flex justify-between items-center bg-white z-20">
                         <h2 className="text-[13.5px] font-semibold text-[var(--text)]">Assignments</h2>
-                        <select 
+                        <select
                             className={`${inputClasses} py-[6px] text-[12px] min-w-[120px] w-auto cursor-pointer`}
                             style={{ ...dropdownBg, paddingRight: "30px", backgroundPosition: "right 10px center" }}
                             value={filterStatus}
@@ -468,7 +474,7 @@ export default function AssignmentsPage() {
                             <option value="cancelled">Cancelled</option>
                         </select>
                     </div>
-                    
+
                     <div className="overflow-x-auto max-h-[calc(100vh-140px)] overflow-y-auto">
                         {filteredAssignments.length === 0 ? (
                             <div className="p-[24px] text-center text-[13px] text-[var(--text3)]">
@@ -512,14 +518,24 @@ export default function AssignmentsPage() {
                                                     <span className="inline-flex items-center px-[10px] py-[3px] rounded-[20px] text-[11.5px] font-medium bg-[var(--surface2)] border border-[var(--border)] text-[var(--text3)]">Inactive</span>
                                                 )}
                                             </td>
-                                            <td className="p-[12px_16px] text-right space-x-[8px]">
-                                                <button
-                                                    onClick={() => handleDelete(a.id)}
-                                                    className="w-[28px] h-[28px] inline-flex items-center justify-center rounded-[7px] text-[var(--text3)] hover:bg-[var(--red-light)] hover:text-[var(--red)] transition-colors"
-                                                    title="Delete Assignment"
-                                                >
-                                                    <Trash2 className="h-[14px] w-[14px]" />
-                                                </button>
+                                            <td className="p-[12px_16px] text-right space-x-[8px] whitespace-nowrap">
+                                                {isManagerOrAdmin && (
+                                                    <button
+                                                        onClick={() => handleDelete(a.id)}
+                                                        className="w-[28px] h-[28px] inline-flex items-center justify-center rounded-[7px] text-[var(--text3)] hover:bg-[var(--red-light)] hover:text-[var(--red)] transition-colors"
+                                                        title="Delete Assignment"
+                                                    >
+                                                        <Trash2 className="h-[14px] w-[14px]" />
+                                                    </button>
+                                                )}
+                                                {!isManagerOrAdmin && session?.user?.role === "INSPECTION_BOY" && (
+                                                    <button
+                                                        onClick={() => router.push(`/inspection/${a.id}/form`)}
+                                                        className="inline-flex items-center justify-center bg-[var(--accent)] text-white px-[14px] py-[7px] rounded-[6px] text-[11.5px] font-semibold hover:bg-[#158a5e] transition-colors"
+                                                    >
+                                                        {a.status === "active" ? "Start Inspection" : "View Details"}
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
