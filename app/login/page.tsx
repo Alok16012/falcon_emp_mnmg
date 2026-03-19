@@ -110,7 +110,7 @@ export default function LoginPage() {
                             {error}
                         </div>
                     )}
-                    
+
                     <div className="space-y-4">
                         <div className="space-y-1.5">
                             <Label htmlFor="email" className="text-[13px] font-medium text-[#1a1a18]">Email</Label>
@@ -201,6 +201,10 @@ export default function LoginPage() {
                         </button>
                     </div>
                 </form>
+            </div>
+
+            <div className="absolute bottom-6 text-center text-[13px] text-[#9e9b95]">
+                Developed by <a href="https://blinks-ai.com" target="_blank" rel="noopener noreferrer" className="text-[#1a9e6e] hover:underline font-medium">Blinks AI</a>
             </div>
         </div>
     )

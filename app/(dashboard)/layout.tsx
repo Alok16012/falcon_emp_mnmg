@@ -39,10 +39,13 @@ export default function DashboardLayout({
 
             <div className="flex flex-col w-full min-w-0">
                 <TopNav onMenuClick={() => setIsSidebarOpen(true)} />
-                <main className="flex-1 overflow-y-auto">
-                    <div className="mx-auto flex flex-col gap-4 p-4 lg:gap-8 lg:p-8 max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <main className="flex-1 overflow-y-auto flex flex-col">
+                    <div className="flex-1 mx-auto w-full flex flex-col gap-4 p-4 lg:gap-8 lg:p-8 max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-500">
                         {children}
                     </div>
+                    <footer className="py-4 text-center text-[13px] text-muted-foreground/80 mt-auto">
+                        Developed by <a href="https://blinks-ai.com" target="_blank" rel="noopener noreferrer" className="text-[#1a9e6e] hover:underline font-medium">Blinks AI</a>
+                    </footer>
                 </main>
             </div>
         </div>
