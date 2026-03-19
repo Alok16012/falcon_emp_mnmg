@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     if (!assignmentId) {
         // Support ?recent=N for inspectors to fetch their recent submissions
         const recent = searchParams.get("recent")
-        if (recent && session.user.role === Role.INSPECTION_BOY) {
+        if (recent && (session.user.role === Role.INSPECTION_BOY || session.user.role.toString() === "INSPECTION_BOY")) {
             const limit = Math.min(20, Math.max(1, parseInt(recent) || 5))
             const recentInspections = await prisma.inspection.findMany({
                 where: { submittedBy: session.user.id },

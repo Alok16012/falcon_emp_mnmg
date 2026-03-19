@@ -5,6 +5,60 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { Role } from "@prisma/client"
 
+export async function GET(
+    req: Request,
+    { params }: { params: { id: string } }
+) {
+    const session = await getServerSession(authOptions)
+
+    if (!session) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    try {
+        const assignment = await prisma.assignment.findUnique({
+            where: { id: params.id },
+            include: {
+                project: {
+                    include: {
+                        company: true,
+                        projectManagers: {
+                            include: { manager: { select: { id: true, name: true, email: true } } }
+                        }
+                    }
+                },
+                inspectionBoy: { select: { id: true, name: true, email: true } },
+                assigner: { select: { name: true } }
+            }
+        })
+
+        if (!assignment) {
+            return NextResponse.json({ error: "Assignment not found" }, { status: 404 })
+        }
+
+        // Access control: only assigned inspector or admin/manager can see it
+        if (session.user.role === Role.INSPECTION_BOY && assignment.inspectionBoyId !== session.user.id) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+        }
+
+        const result = {
+            ...assignment,
+            project: {
+                id: assignment.project.id,
+                name: assignment.project.name,
+                company: assignment.project.company,
+                projectId: assignment.project.id, // For compatibility
+                managers: assignment.project.projectManagers.map(pm => pm.manager)
+            }
+        }
+
+        return NextResponse.json(result)
+    } catch (error) {
+        console.error("GET_ASSIGNMENT_ERROR", error)
+        return NextResponse.json({ error: "Internal Error" }, { status: 500 })
+    }
+}
+
 export async function PATCH(
     req: Request,
     { params }: { params: { id: string } }

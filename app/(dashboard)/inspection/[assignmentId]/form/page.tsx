@@ -69,28 +69,30 @@ export default function InspectionFormPage() {
     const fetchPageData = useCallback(async () => {
         setLoading(true)
         try {
-            // 1. Fetch assignment details
-            const assRes = await fetch(`/api/assignments`)
-            const assignments = await assRes.json()
-            const currentAss = Array.isArray(assignments) ? assignments.find(a => a.id === assignmentId) : null
-
-            if (!currentAss) {
+            // 1. Fetch specific assignment details
+            const assRes = await fetch(`/api/assignments/${assignmentId}`)
+            if (!assRes.ok) {
+                console.error("Assignment fetch failed")
                 router.push("/inspection")
                 return
             }
+            const currentAss = await assRes.json()
             setAssignment(currentAss)
 
-            // 2. Fetch form templates for this project
-            const tempRes = await fetch(`/api/form-templates?projectId=${currentAss.projectId}`)
-            const tempData = await tempRes.json()
-            setTemplates(Array.isArray(tempData) ? tempData.sort((a, b) => a.displayOrder - b.displayOrder) : [])
+            // 2. Fetch form templates and existing inspection in parallel
+            const targetProjectId = currentAss.projectId || currentAss.project?.id
+            const [tempRes, inspRes] = await Promise.all([
+                fetch(`/api/form-templates?projectId=${targetProjectId}`),
+                fetch(`/api/inspections?assignmentId=${assignmentId}`)
+            ])
 
-            // 3. Fetch existing inspection
-            const inspRes = await fetch(`/api/inspections?assignmentId=${assignmentId}`)
+            const tempData = await tempRes.json()
+            setTemplates(Array.isArray(tempData) ? tempData.sort((a: any, b: any) => a.displayOrder - b.displayOrder) : [])
+
             let inspData = await inspRes.json()
 
-            // 4. If no inspection, create one
-            if (!inspData || inspData.error) {
+            // 3. If no inspection, create one
+            if (!inspData || inspData.error || (Array.isArray(inspData) && inspData.length === 0)) {
                 const createRes = await fetch("/api/inspections", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },

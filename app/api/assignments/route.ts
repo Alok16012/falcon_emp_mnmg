@@ -17,17 +17,19 @@ export async function GET(req: Request) {
     const { user } = session
     const { searchParams } = new URL(req.url)
     const status = searchParams.get("status")
-
     const where: any = {}
 
-    if (user.role === Role.INSPECTION_BOY) {
+    if (user.role === Role.INSPECTION_BOY || user.role.toString() === "INSPECTION_BOY") {
         where.inspectionBoyId = user.id
-        where.status = "active"
+        // Only default to active if no status is specified
+        if (!status) {
+            where.status = "active"
+        }
     } else if (user.role !== Role.ADMIN && user.role !== Role.MANAGER) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    if (status && status !== "all") {
+    if (status && status !== "all" && status !== "manager_only") {
         where.status = status
     }
 
