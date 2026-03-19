@@ -1,10 +1,9 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Loader2, Trash2, Zap, ChevronDown } from "lucide-react"
+import { Loader2, Zap, Check, ChevronDown, Search, Trash2 } from "lucide-react"
 
 export default function AssignmentsPage() {
     const { data: session, status } = useSession()
@@ -31,10 +30,10 @@ export default function AssignmentsPage() {
     const [selectedProjectId, setSelectedProjectId] = useState("")
     const [selectedInspectorIds, setSelectedInspectorIds] = useState<string[]>([])
     const [selectedManagerIds, setSelectedManagerIds] = useState<string[]>([])
+    const [selectedGroupId, setSelectedGroupId] = useState("")
 
     const [loading, setLoading] = useState(false)
     const [fetching, setFetching] = useState(true)
-    const [searchTerm, setSearchTerm] = useState("")
     const [filterStatus, setFilterStatus] = useState("all")
 
     useEffect(() => {
@@ -61,13 +60,12 @@ export default function AssignmentsPage() {
     }
 
     const handleGroupSelect = async (groupProjectId: string) => {
+        setSelectedGroupId(groupProjectId)
         if (!groupProjectId) return
-        // Find company by searching groups
         for (const company of groups) {
             const project = company.projects?.find((p: any) => p.id === groupProjectId)
             if (project) {
                 setSelectedCompanyId(company.id)
-                // fetch projects for that company first
                 try {
                     const res = await fetch(`/api/projects?companyId=${company.id}`)
                     if (res.ok) {
@@ -77,14 +75,8 @@ export default function AssignmentsPage() {
                 } catch { }
                 setSelectedProjectId(groupProjectId)
 
-                // Pre-select group's managers and inspectors
-                if (project.managers) {
-                    setSelectedManagerIds(project.managers.map((m: any) => m.id))
-                }
-                if (project.inspectors) {
-                    setSelectedInspectorIds(project.inspectors.map((i: any) => i.id))
-                }
-
+                if (project.managers) setSelectedManagerIds(project.managers.map((m: any) => m.id))
+                if (project.inspectors) setSelectedInspectorIds(project.inspectors.map((i: any) => i.id))
                 break
             }
         }
@@ -120,11 +112,7 @@ export default function AssignmentsPage() {
             const res = await fetch(`/api/projects?companyId=${companyId}`)
             if (res.ok) {
                 const data = await res.json()
-                if (Array.isArray(data)) {
-                    setProjects(data)
-                } else {
-                    setProjects([])
-                }
+                setProjects(Array.isArray(data) ? data : [])
             } else {
                 setProjects([])
             }
@@ -134,8 +122,7 @@ export default function AssignmentsPage() {
         }
     }
 
-    const handleAssign = async (e: React.FormEvent) => {
-        e.preventDefault()
+    const handleAssign = async () => {
         if (!selectedProjectId || (selectedInspectorIds.length === 0 && selectedManagerIds.length === 0)) return
 
         setLoading(true)
@@ -152,32 +139,19 @@ export default function AssignmentsPage() {
 
             if (res.ok) {
                 const result = await res.json()
-
-                // Refresh list and groups
                 const assRes = await fetch(`/api/assignments?t=${Date.now()}`)
                 const assData = await assRes.json()
                 setAssignments(Array.isArray(assData) ? assData : [])
-                fetchGroups() // Also update the group dropdown data
+                fetchGroups()
 
-                // Reset form
                 setSelectedInspectorIds([])
                 setSelectedManagerIds([])
                 setSelectedProjectId("")
                 setSelectedCompanyId("")
-
-                // Show results
-                const createdCount = result.created?.length || 0
-                const failedCount = result.failed?.length || 0
-                const managerAssigned = selectedManagerIds.length > 0
-
-                if (failedCount > 0) {
-                    alert(`${createdCount} inspector(s) assigned. ${failedCount} failed (duplicates). ${managerAssigned ? 'Managers also assigned.' : ''}`)
-                } else if (createdCount > 0 || managerAssigned) {
-                    alert(`${createdCount > 0 ? createdCount + ' inspector(s)' : ''} ${managerAssigned ? (createdCount > 0 ? 'and ' : '') + selectedManagerIds.length + ' manager(s)' : ''} assigned successfully!`)
-                }
+                setSelectedGroupId("")
             } else {
                 const error = await res.json()
-                alert(error.error + (error.details ? ": " + error.details : "") || "Failed to assign")
+                alert(error.error || "Failed to assign")
             }
         } catch (error) {
             alert("An error occurred")
@@ -186,32 +160,10 @@ export default function AssignmentsPage() {
         }
     }
 
-    const handleCancel = async (id: string) => {
-        if (!confirm("Are you sure you want to cancel this assignment?")) return
-
-        try {
-            const res = await fetch(`/api/assignments/${id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: "cancelled" })
-            })
-
-            if (res.ok) {
-                setAssignments(assignments.map(a => a.id === id ? { ...a, status: "cancelled" } : a))
-            }
-        } catch (error) {
-            alert("Failed to cancel assignment")
-        }
-    }
-
     const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to permanently delete this assignment and all its inspections? This cannot be undone.")) return
-
+        if (!confirm("Are you sure you want to delete this assignment permanently?")) return
         try {
-            const res = await fetch(`/api/assignments/${id}`, {
-                method: "DELETE",
-            })
-
+            const res = await fetch(`/api/assignments/${id}`, { method: "DELETE" })
             if (res.ok) {
                 setAssignments(assignments.filter(a => a.id !== id))
             } else {
@@ -223,324 +175,304 @@ export default function AssignmentsPage() {
     }
 
     const filteredAssignments = Array.isArray(assignments) ? assignments.filter(a => {
-        const matchesSearch =
-            a.project?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            a.inspectionBoy?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-
-        const matchesStatus = filterStatus === "all" || a.status === filterStatus
-
-        return matchesSearch && matchesStatus
+        if (filterStatus !== "all" && a.status !== filterStatus) return false
+        return true
     }) : []
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case "active": return "bg-green-100 text-green-800 border-green-200"
-            case "completed": return "bg-gray-100 text-gray-800 border-gray-200"
-            case "cancelled": return "bg-red-100 text-red-800 border-red-200"
-            default: return "bg-blue-100 text-blue-800 border-blue-200"
-        }
+    const resetForm = () => {
+        setSelectedInspectorIds([])
+        setSelectedManagerIds([])
+        setSelectedProjectId("")
+        setSelectedCompanyId("")
+        setSelectedGroupId("")
     }
 
     if (status === "loading" || fetching) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <Loader2 className="h-8 w-8 animate-spin text-[#1a9e6e]" />
             </div>
         )
     }
 
-    if (!isManagerOrAdmin && session?.user?.role !== "INSPECTION_BOY") {
-        return null // Will redirect in useEffect
-    }
-
-    const inputClasses = "w-full p-[10px_14px] bg-[var(--surface2)] border border-[var(--border)] rounded-[9px] text-[13px] text-[var(--text)] outline-none transition-all placeholder:text-[var(--text3)] focus:border-[var(--accent)] focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,158,110,0.08)] appearance-none"
-    const dropdownBg = { backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239e9b95' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center", paddingRight: "36px" }
+    if (!isManagerOrAdmin) return null
 
     return (
-        <div className="min-h-[calc(100vh-54px)] bg-[var(--bg)] p-[24px_28px] w-full">
-
-            {/* PAGE TITLE ROW */}
+        <div className="min-h-screen bg-[#f5f4f0] p-[24px_28px]">
             <div className="flex justify-between items-center mb-[20px]">
-                <h1 className="text-[22px] font-semibold tracking-[-0.4px] text-[var(--text)]">
-                    Assignments
-                </h1>
-                {isManagerOrAdmin && (
-                    <button
-                        onClick={() => {
-                            const el = document.getElementById("new-assignment-form")
-                            el?.scrollIntoView({ behavior: 'smooth' })
-                            el?.querySelector("select")?.focus()
-                        }}
-                        className="inline-flex items-center justify-center bg-[var(--accent)] text-white px-[20px] py-[9px] rounded-[9px] text-[13px] font-medium hover:bg-[#158a5e] transition-colors"
-                    >
-                        Create Assignment
-                    </button>
-                )}
+                <h1 className="text-[22px] font-[600] tracking-[-0.4px] text-[#1a1a18]">Assignments</h1>
             </div>
 
-            {/* MAIN GRID */}
-            <div className={isManagerOrAdmin ? "grid grid-cols-1 lg:grid-cols-2 gap-[20px] items-start" : "max-w-4xl mx-auto"}>
+            <div className="grid grid-cols-2 gap-[20px] items-start">
 
-                {/* LEFT COLUMN: ASSIGNMENT FORM */}
-                {isManagerOrAdmin && (
-                    <div>
-                        {/* CARD 1: QUICK SELECT */}
-                        {groups.length > 0 && (
-                            <div className="bg-white border border-[var(--border)] rounded-[14px] p-[18px_20px] mb-[14px]">
-                                <div className="flex items-center gap-[8px] mb-[6px]">
-                                    <Zap className="h-[16px] w-[16px] text-[var(--amber)]" />
-                                    <h2 className="text-[13.5px] font-semibold text-[var(--text)]">Quick Select Existing Group</h2>
-                                </div>
-                                <p className="text-[12.5px] text-[var(--text2)] mb-[12px]">
-                                    Select an existing group to auto-fill Company and Project below
-                                </p>
-                                <select
-                                    className={`${inputClasses} cursor-pointer`}
-                                    style={dropdownBg}
-                                    defaultValue=""
-                                    onChange={(e) => handleGroupSelect(e.target.value)}
-                                >
-                                    <option value="">— Select a group to auto-fill —</option>
-                                    {groups.map((company: any) =>
-                                        company.projects?.map((project: any) => (
-                                            <option key={project.id} value={project.id}>
-                                                {company.name} → {project.name} ({project.inspectors?.length ?? 0} inspectors)
-                                            </option>
-                                        ))
-                                    )}
-                                </select>
-                            </div>
-                        )}
-
-                        {/* CARD 2: NEW ASSIGNMENT FORM */}
-                        <div id="new-assignment-form" className="bg-white border border-[var(--border)] rounded-[14px] p-[22px]">
-                            <div className="mb-[18px]">
-                                <h2 className="text-[15px] font-semibold text-[var(--text)] mb-[4px]">New Assignment</h2>
-                                <p className="text-[13px] text-[var(--text2)]">Assign members to a specific project.</p>
-                            </div>
-
-                            <form onSubmit={handleAssign}>
-                                {/* Company + Project */}
-                                <div className="grid grid-cols-2 gap-[12px] mb-[18px]">
-                                    <div>
-                                        <label htmlFor="company" className="block text-[12.5px] font-medium text-[var(--text)] mb-[6px]">
-                                            Select Company <span className="text-[var(--red)] ml-[2px]">*</span>
-                                        </label>
-                                        <select
-                                            id="company"
-                                            className={`${inputClasses} cursor-pointer`}
-                                            style={dropdownBg}
-                                            value={selectedCompanyId}
-                                            onChange={(e) => setSelectedCompanyId(e.target.value)}
-                                            required
-                                        >
-                                            <option value="">Select Company</option>
-                                            {companies.map((c: any) => (
-                                                <option key={c.id} value={c.id}>{c.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="project" className="block text-[12.5px] font-medium text-[var(--text)] mb-[6px]">
-                                            Select Project <span className="text-[var(--red)] ml-[2px]">*</span>
-                                        </label>
-                                        <select
-                                            id="project"
-                                            className={`${inputClasses} cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[var(--bg)]`}
-                                            style={dropdownBg}
-                                            value={selectedProjectId}
-                                            onChange={(e) => setSelectedProjectId(e.target.value)}
-                                            disabled={!selectedCompanyId}
-                                            required
-                                        >
-                                            <option value="">Select Project</option>
-                                            {projects.map((p: any) => (
-                                                <option key={p.id} value={p.id}>{p.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {/* SELECT INSPECTORS */}
-                                <div className="mb-[16px]">
-                                    <label className="block text-[12.5px] font-medium text-[var(--text)] mb-[8px]">
-                                        Select Inspectors
-                                    </label>
-                                    <div className="bg-[var(--surface2)] border border-[var(--border)] rounded-[10px] py-[4px] max-h-[200px] overflow-y-auto">
-                                        {inspectors.length === 0 ? (
-                                            <p className="text-[13px] text-[var(--text3)] p-[9px_14px]">No inspectors available</p>
-                                        ) : (
-                                            inspectors.map((i: any) => {
-                                                const isChecked = selectedInspectorIds.includes(i.id)
-                                                return (
-                                                    <label key={i.id} className="flex items-center gap-[10px] p-[9px_14px] border-b border-[var(--border)] last:border-b-0 cursor-pointer transition-colors hover:bg-[var(--accent-light)]">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={isChecked}
-                                                            onChange={(e) => {
-                                                                if (e.target.checked) setSelectedInspectorIds([...selectedInspectorIds, i.id])
-                                                                else setSelectedInspectorIds(selectedInspectorIds.filter(id => id !== i.id))
-                                                            }}
-                                                            className="sr-only"
-                                                        />
-                                                        <div className={`w-[16px] h-[16px] border-[1.5px] rounded-[4px] flex items-center justify-center transition-colors shrink-0 ${isChecked ? "bg-[var(--accent)] border-[var(--accent)]" : "bg-white border-[#d4d1ca]"}`}>
-                                                            {isChecked && <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polyline points="20 6 9 17 4 12"></polyline></svg>}
-                                                        </div>
-                                                        <span className="text-[13px] font-medium text-[var(--text)]">{i.name}</span>
-                                                        <span className="text-[12px] text-[var(--text3)] ml-[4px]">({i.email})</span>
-                                                    </label>
-                                                )
-                                            })
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* ASSIGN MANAGERS */}
-                                <div className="mt-[16px]">
-                                    <label className="block text-[12.5px] font-medium text-[var(--text)] mb-[8px]">
-                                        Assign Managers <span className="text-[var(--text3)] font-normal ml-1">(Optional)</span>
-                                    </label>
-                                    <div className="bg-[var(--surface2)] border border-[var(--border)] rounded-[10px] py-[4px] max-h-[150px] overflow-y-auto">
-                                        {managers.length === 0 ? (
-                                            <p className="text-[13px] text-[var(--text3)] p-[9px_14px]">No managers available</p>
-                                        ) : (
-                                            managers.map((m: any) => {
-                                                const isChecked = selectedManagerIds.includes(m.id)
-                                                return (
-                                                    <label key={m.id} className="flex items-center gap-[10px] p-[9px_14px] border-b border-[var(--border)] last:border-b-0 cursor-pointer transition-colors hover:bg-[var(--accent-light)]">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={isChecked}
-                                                            onChange={(e) => {
-                                                                if (e.target.checked) setSelectedManagerIds([...selectedManagerIds, m.id])
-                                                                else setSelectedManagerIds(selectedManagerIds.filter(id => id !== m.id))
-                                                            }}
-                                                            className="sr-only"
-                                                        />
-                                                        <div className={`w-[16px] h-[16px] border-[1.5px] rounded-[4px] flex items-center justify-center transition-colors shrink-0 ${isChecked ? "bg-[var(--accent)] border-[var(--accent)]" : "bg-white border-[#d4d1ca]"}`}>
-                                                            {isChecked && <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polyline points="20 6 9 17 4 12"></polyline></svg>}
-                                                        </div>
-                                                        <span className="text-[13px] font-medium text-[var(--text)]">{m.name}</span>
-                                                        <span className="text-[12px] text-[var(--text3)] ml-[4px]">({m.email})</span>
-                                                    </label>
-                                                )
-                                            })
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* FORM ACTIONS */}
-                                <div className="mt-[18px] flex justify-end gap-[10px]">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setSelectedInspectorIds([])
-                                            setSelectedManagerIds([])
-                                            setSelectedProjectId("")
-                                            setSelectedCompanyId("")
-                                        }}
-                                        className="inline-flex items-center justify-center bg-white border border-[var(--border)] text-[var(--text2)] px-[20px] py-[9px] rounded-[9px] text-[13px] font-medium cursor-pointer hover:bg-[var(--surface2)] hover:text-[var(--text)] transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={loading || !selectedProjectId || (selectedInspectorIds.length === 0 && selectedManagerIds.length === 0)}
-                                        className="inline-flex items-center justify-center bg-[var(--accent)] text-white border-0 px-[20px] py-[9px] rounded-[9px] text-[13px] font-medium cursor-pointer hover:bg-[#158a5e] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        Create Assignment
-                                    </button>
-                                </div>
-                            </form>
+                {/* LEFT COLUMN: FORM */}
+                <div>
+                    {/* CARD 1: QUICK SELECT */}
+                    <div className="bg-white border border-[#e8e6e1] bg-white rounded-[14px] p-[18px_20px] mb-[14px]">
+                        <div className="flex items-center gap-[8px] mb-[6px]">
+                            <Zap className="h-[14px] w-[14px] text-[#d97706]" />
+                            <h2 className="text-[13.5px] font-[600] text-[#1a1a18]">Quick Select Existing Group</h2>
+                            <span className="bg-[#f9f8f5] border border-[#d4d1ca] text-[#9e9b95] text-[10px] font-[500] px-[8px] py-[2px] rounded-[20px]">Optional</span>
                         </div>
-                    </div>
-                )}
+                        <p className="text-[12.5px] text-[#6b6860] mb-[12px]">Select an existing group to auto-fill Company and Project below</p>
 
-                {/* RIGHT COLUMN: ASSIGNMENTS TABLE */}
-                <div className="bg-white border border-[var(--border)] rounded-[14px] overflow-hidden sticky top-[24px]">
-                    <div className="p-[14px_18px] border-b border-[var(--border)] flex justify-between items-center bg-white z-20">
-                        <h2 className="text-[13.5px] font-semibold text-[var(--text)]">Assignments</h2>
                         <div className="relative">
                             <select
-                                className="w-[140px] appearance-none bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] p-[8px_14px] text-[12.5px] text-[#1a1a18] font-[500] outline-none transition-all hover:bg-white focus:border-[#1a9e6e] focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,158,110,0.08)] cursor-pointer"
+                                className="w-full appearance-none bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] p-[10px_14px] text-[13px] text-[#1a1a18] font-[500] outline-none transition-all hover:bg-white focus:border-[#1a9e6e] focus:bg-white cursor-pointer"
+                                value={selectedGroupId}
+                                onChange={(e) => handleGroupSelect(e.target.value)}
+                            >
+                                <option value="">— Select a group to auto-fill —</option>
+                                {groups.map((company: any) =>
+                                    company.projects?.map((project: any) => (
+                                        <option key={project.id} value={project.id}>
+                                            {company.name} - {project.name}
+                                        </option>
+                                    ))
+                                )}
+                            </select>
+                            <ChevronDown className="absolute right-[14px] top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-[#9e9b95] pointer-events-none" />
+                        </div>
+                    </div>
+
+                    <div className="text-center relative my-[14px]">
+                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#e8e6e1]"></div></div>
+                        <span className="relative bg-[#f5f4f0] px-[12px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">OR</span>
+                    </div>
+
+                    {/* CARD 2: NEW ASSIGNMENT */}
+                    <div className="bg-white border border-[#e8e6e1] rounded-[14px] p-[22px]">
+                        <h2 className="text-[15px] font-[600] text-[#1a1a18] mb-[4px]">New Assignment</h2>
+                        <p className="text-[13px] text-[#6b6860] mb-[18px]">Assign members to a specific project.</p>
+
+                        {/* STEP 1 */}
+                        <div className="grid grid-cols-2 gap-[12px] mb-[18px]">
+                            <div>
+                                <label className="block text-[12.5px] font-[500] text-[#1a1a18] mb-[6px]">
+                                    Select Company <span className="text-[#dc2626]">*</span>
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        className="w-full appearance-none bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] p-[10px_14px] text-[13px] text-[#1a1a18] font-[500] outline-none transition-all hover:bg-white focus:border-[#1a9e6e] focus:bg-white cursor-pointer"
+                                        value={selectedCompanyId}
+                                        onChange={(e) => setSelectedCompanyId(e.target.value)}
+                                    >
+                                        <option value="">Select Company</option>
+                                        {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                    <ChevronDown className="absolute right-[14px] top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-[#9e9b95] pointer-events-none" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[12.5px] font-[500] text-[#1a1a18] mb-[6px]">
+                                    Select Project <span className="text-[#dc2626]">*</span>
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        disabled={!selectedCompanyId}
+                                        className="w-full appearance-none bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] p-[10px_14px] text-[13px] text-[#1a1a18] font-[500] outline-none transition-all hover:bg-white focus:border-[#1a9e6e] focus:bg-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                        value={selectedProjectId}
+                                        onChange={(e) => setSelectedProjectId(e.target.value)}
+                                    >
+                                        <option value="">{selectedCompanyId ? "Select Project..." : "Select company first"}</option>
+                                        {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                    </select>
+                                    <ChevronDown className="absolute right-[14px] top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-[#9e9b95] pointer-events-none" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* STEP 2: INSPECTORS */}
+                        <div className="mb-[18px]">
+                            <div className="flex justify-between items-center mb-[8px]">
+                                <label className="text-[12.5px] font-[500] text-[#1a1a18]">Select Inspectors</label>
+                                {selectedInspectorIds.length > 0 && (
+                                    <span className="bg-[#e8f7f1] text-[#0d6b4a] px-[8px] py-[2px] rounded-[20px] text-[11px] font-[500]">
+                                        {selectedInspectorIds.length} selected
+                                    </span>
+                                )}
+                            </div>
+                            <div className="bg-[#f9f8f5] border border-[#e8e6e1] rounded-[10px] max-h-[220px] overflow-y-auto">
+                                {inspectors.length === 0 ? (
+                                    <div className="p-4 text-center text-[12px] text-[#9e9b95]">No inspectors found.</div>
+                                ) : (
+                                    inspectors.map(inspector => {
+                                        const isChecked = selectedInspectorIds.includes(inspector.id)
+                                        return (
+                                            <label key={inspector.id} className={`flex items-center gap-[10px] p-[10px_14px] border-b border-[#e8e6e1] last:border-0 cursor-pointer transition-colors ${isChecked ? 'bg-[#f0fdf4] border-l-[3px] border-l-[#1a9e6e]' : 'hover:bg-[#e8f7f1] border-l-[3px] border-l-transparent'}`}>
+                                                <div className={`flex items-center justify-center w-[16px] h-[16px] rounded-[4px] border-[1.5px] transition-colors ${isChecked ? 'bg-[#1a9e6e] border-[#1a9e6e]' : 'border-[#d4d1ca] bg-white'}`}>
+                                                    {isChecked && <Check className="h-[10px] w-[10px] text-white" strokeWidth={3} />}
+                                                </div>
+                                                <input
+                                                    type="checkbox"
+                                                    className="hidden"
+                                                    checked={isChecked}
+                                                    onChange={() => {
+                                                        setSelectedInspectorIds(prev =>
+                                                            prev.includes(inspector.id) ? prev.filter(id => id !== inspector.id) : [...prev, inspector.id]
+                                                        )
+                                                    }}
+                                                />
+                                                <div className="flex items-center justify-center w-[28px] h-[28px] rounded-full bg-[#fef3c7] text-[#92400e] text-[11px] font-[600]">
+                                                    {inspector.name?.substring(0, 2).toUpperCase() || "IN"}
+                                                </div>
+                                                <div className="flex items-center gap-[4px]">
+                                                    <span className="text-[13px] font-[500] text-[#1a1a18]">{inspector.name}</span>
+                                                    <span className="text-[12px] text-[#9e9b95]">({inspector.email})</span>
+                                                </div>
+                                            </label>
+                                        )
+                                    })
+                                )}
+                            </div>
+                        </div>
+
+                        {/* STEP 3: MANAGERS */}
+                        <div>
+                            <div className="flex justify-between items-center mb-[8px]">
+                                <label className="text-[12.5px] font-[500] text-[#1a1a18]">Assign Managers <span className="text-[12.5px] font-[400] text-[#9e9b95]">(Optional)</span></label>
+                                {selectedManagerIds.length > 0 && (
+                                    <span className="bg-[#eff6ff] text-[#1d4ed8] px-[8px] py-[2px] rounded-[20px] text-[11px] font-[500]">
+                                        {selectedManagerIds.length} selected
+                                    </span>
+                                )}
+                            </div>
+                            <div className="bg-[#f9f8f5] border border-[#e8e6e1] rounded-[10px] max-h-[160px] overflow-y-auto">
+                                {managers.length === 0 ? (
+                                    <div className="p-4 text-center text-[12px] text-[#9e9b95]">No managers found.</div>
+                                ) : (
+                                    managers.map(manager => {
+                                        const isChecked = selectedManagerIds.includes(manager.id)
+                                        return (
+                                            <label key={manager.id} className={`flex items-center gap-[10px] p-[10px_14px] border-b border-[#e8e6e1] last:border-0 cursor-pointer transition-colors ${isChecked ? 'bg-[#eff6ff] border-l-[3px] border-l-[#3b82f6]' : 'hover:bg-[#eff6ff] border-l-[3px] border-l-transparent'}`}>
+                                                <div className={`flex items-center justify-center w-[16px] h-[16px] rounded-[4px] border-[1.5px] transition-colors ${isChecked ? 'bg-[#3b82f6] border-[#3b82f6]' : 'border-[#d4d1ca] bg-white'}`}>
+                                                    {isChecked && <Check className="h-[10px] w-[10px] text-white" strokeWidth={3} />}
+                                                </div>
+                                                <input
+                                                    type="checkbox"
+                                                    className="hidden"
+                                                    checked={isChecked}
+                                                    onChange={() => {
+                                                        setSelectedManagerIds(prev =>
+                                                            prev.includes(manager.id) ? prev.filter(id => id !== manager.id) : [...prev, manager.id]
+                                                        )
+                                                    }}
+                                                />
+                                                <div className="flex items-center justify-center w-[28px] h-[28px] rounded-full bg-[#eff6ff] text-[#1d4ed8] text-[11px] font-[600]">
+                                                    {manager.name?.substring(0, 2).toUpperCase() || "MA"}
+                                                </div>
+                                                <div className="flex items-center gap-[4px]">
+                                                    <span className="text-[13px] font-[500] text-[#1a1a18]">{manager.name}</span>
+                                                    <span className="text-[12px] text-[#9e9b95]">({manager.email})</span>
+                                                </div>
+                                            </label>
+                                        )
+                                    })
+                                )}
+                            </div>
+                        </div>
+
+                        {/* ACTIONS */}
+                        <div className="flex justify-end gap-[10px] mt-[18px] pt-[14px] border-t border-[#e8e6e1]">
+                            <button
+                                onClick={resetForm}
+                                className="bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[9px] text-[13px] font-[500] px-[16px] py-[8px] hover:bg-[#f9f8f5] transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleAssign}
+                                disabled={loading || !selectedCompanyId || !selectedProjectId || (selectedInspectorIds.length === 0 && selectedManagerIds.length === 0)}
+                                className="bg-[#1a9e6e] text-white rounded-[9px] text-[13px] font-[500] px-[16px] py-[8px] hover:bg-[#158a5e] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
+                            >
+                                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                                Create Assignment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* RIGHT COLUMN: TABLE */}
+                <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden sticky top-[24px]">
+                    <div className="p-[14px_18px] border-b border-[#e8e6e1] flex justify-between items-center bg-white z-20">
+                        <h2 className="text-[13.5px] font-[600] text-[#1a1a18]">Assignments</h2>
+                        <div className="relative">
+                            <select
+                                className="w-[120px] appearance-none bg-[#f9f8f5] border border-[#e8e6e1] rounded-[8px] p-[6px_12px] text-[12px] text-[#1a1a18] font-[500] outline-none transition-all hover:bg-white focus:border-[#1a9e6e] cursor-pointer"
                                 value={filterStatus}
                                 onChange={(e) => setFilterStatus(e.target.value)}
                             >
                                 <option value="all">All Status</option>
                                 <option value="active">Active</option>
-                                <option value="manager_only">Manager</option>
-                                <option value="completed">Completed</option>
-                                <option value="cancelled">Cancelled</option>
+                                <option value="pending">Pending</option>
+                                <option value="manager_only">Manager Only</option>
                             </select>
-                            <ChevronDown className="absolute right-[12px] top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-[#9e9b95] pointer-events-none" />
+                            <ChevronDown className="absolute right-[10px] top-1/2 -translate-y-1/2 h-[12px] w-[12px] text-[#9e9b95] pointer-events-none" />
                         </div>
                     </div>
 
                     <div className="overflow-x-auto max-h-[calc(100vh-140px)] overflow-y-auto">
                         {filteredAssignments.length === 0 ? (
-                            <div className="p-[24px] text-center text-[13px] text-[var(--text3)]">
+                            <div className="p-[30px] text-center text-[13px] text-[#9e9b95]">
                                 No assignments found.
                             </div>
                         ) : (
                             <table className="w-full text-left border-collapse">
-                                <thead className="sticky top-0 z-10 bg-[var(--surface2)]">
-                                    <tr className="border-b border-[var(--border)]">
-                                        <th className="p-[10px_16px] text-[11px] font-medium text-[var(--text3)] uppercase tracking-[0.5px]">Inspector</th>
-                                        <th className="p-[10px_16px] text-[11px] font-medium text-[var(--text3)] uppercase tracking-[0.5px]">Project</th>
-                                        <th className="p-[10px_16px] text-[11px] font-medium text-[var(--text3)] uppercase tracking-[0.5px]">Company</th>
-                                        <th className="p-[10px_16px] text-[11px] font-medium text-[var(--text3)] uppercase tracking-[0.5px]">Status</th>
-                                        <th className="p-[10px_16px] text-right text-[11px] font-medium text-[var(--text3)] uppercase tracking-[0.5px]">Actions</th>
+                                <thead className="sticky top-0 z-10 bg-[#f9f8f5]">
+                                    <tr className="border-b border-[#e8e6e1]">
+                                        <th className="p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Inspector</th>
+                                        <th className="p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Project</th>
+                                        <th className="p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Company</th>
+                                        <th className="p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Status</th>
+                                        <th className="p-[10px_16px] text-right text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredAssignments.map((a: any) => (
-                                        <tr key={a.id} className="border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--surface2)] transition-colors">
-                                            <td className="p-[12px_16px]">
-                                                <div className="text-[13px] font-medium text-[var(--text)] mb-[1px]">
-                                                    {a.inspectionBoy?.name || "Pending Inspector"}
-                                                </div>
-                                                <div className="text-[11.5px] text-[var(--text3)] mt-[1px]">
-                                                    {a.inspectionBoy?.email || a.assigner?.name || "No email"}
-                                                </div>
-                                            </td>
-                                            <td className="p-[12px_16px]">
-                                                <div className="text-[13px] text-[var(--text2)]">{a.project.name}</div>
-                                            </td>
-                                            <td className="p-[12px_16px]">
-                                                <div className="text-[13px] text-[var(--text2)]">{a.project.company.name}</div>
-                                            </td>
-                                            <td className="p-[12px_16px]">
-                                                {a.status === "active" && <span className="inline-flex items-center px-[10px] py-[3px] rounded-[20px] text-[11.5px] font-medium bg-[var(--accent-light)] text-[var(--accent-text)]">Active</span>}
-                                                {a.status === "manager_only" && <span className="inline-flex items-center px-[10px] py-[3px] rounded-[20px] text-[11.5px] font-medium bg-[var(--surface2)] border border-[var(--border)] text-[var(--text3)]">Manager Only</span>}
-                                                {a.status === "completed" && <span className="inline-flex items-center px-[10px] py-[3px] rounded-[20px] text-[11.5px] font-medium bg-[#f3f4f6] text-[#374151]">Completed</span>}
-                                                {a.status === "cancelled" && <span className="inline-flex items-center px-[10px] py-[3px] rounded-[20px] text-[11.5px] font-medium bg-[var(--red-light)] text-[var(--red)]">Cancelled</span>}
-                                                {/* If nothing matches, basic inactive badge */}
-                                                {!["active", "manager_only", "completed", "cancelled"].includes(a.status) && (
-                                                    <span className="inline-flex items-center px-[10px] py-[3px] rounded-[20px] text-[11.5px] font-medium bg-[var(--surface2)] border border-[var(--border)] text-[var(--text3)]">Inactive</span>
-                                                )}
-                                            </td>
-                                            <td className="p-[12px_16px] text-right space-x-[8px] whitespace-nowrap">
-                                                {isManagerOrAdmin && (
+                                    {filteredAssignments.map((a: any) => {
+                                        let statusBadge = { label: "Inactive", classes: "bg-[#f9f8f5] border border-[#e8e6e1] text-[#9e9b95]" }
+                                        let displayStatus = a.status || ""
+
+                                        if (displayStatus === "active") {
+                                            statusBadge = { label: "Active", classes: "bg-[#e8f7f1] text-[#0d6b4a]" }
+                                        } else if (displayStatus === "pending") {
+                                            statusBadge = { label: "Pending", classes: "bg-[#fef3c7] text-[#d97706]" }
+                                        } else if (displayStatus === "manager_only") {
+                                            statusBadge = { label: "Manager Only", classes: "bg-[#eff6ff] text-[#1d4ed8]" }
+                                        }
+
+                                        return (
+                                            <tr key={a.id} className="border-b border-[#e8e6e1] last:border-b-0 hover:bg-[#f9f8f5] transition-colors">
+                                                <td className="p-[12px_16px]">
+                                                    <div className="text-[13px] font-[500] text-[#1a1a18] mb-[1px]">
+                                                        {a.inspectionBoy?.name || "System"}
+                                                    </div>
+                                                    <div className="text-[11.5px] text-[#9e9b95]">
+                                                        {a.manager ? "Manager" : "Inspector Role"}
+                                                    </div>
+                                                </td>
+                                                <td className="p-[12px_16px] text-[13px] text-[#6b6860] font-[500]">
+                                                    {a.project?.name || "Unknown"}
+                                                </td>
+                                                <td className="p-[12px_16px] text-[13px] text-[#6b6860]">
+                                                    {a.company?.name || "Unknown"}
+                                                </td>
+                                                <td className="p-[12px_16px]">
+                                                    <span className={`inline-flex items-center px-[12px] py-[3px] rounded-[20px] text-[11.5px] font-[500] ${statusBadge.classes}`}>
+                                                        {statusBadge.label}
+                                                    </span>
+                                                </td>
+                                                <td className="p-[12px_16px] text-right">
                                                     <button
                                                         onClick={() => handleDelete(a.id)}
-                                                        className="w-[28px] h-[28px] inline-flex items-center justify-center rounded-[7px] text-[var(--text3)] hover:bg-[var(--red-light)] hover:text-[var(--red)] transition-colors"
                                                         title="Delete Assignment"
+                                                        className="w-[28px] h-[28px] inline-flex items-center justify-center rounded-[7px] text-[#9e9b95] hover:bg-[#fef2f2] hover:text-[#dc2626] transition-colors"
                                                     >
                                                         <Trash2 className="h-[14px] w-[14px]" />
                                                     </button>
-                                                )}
-                                                {!isManagerOrAdmin && session?.user?.role === "INSPECTION_BOY" && (
-                                                    <button
-                                                        onClick={() => router.push(`/inspection/${a.id}/form`)}
-                                                        className="inline-flex items-center justify-center bg-[var(--accent)] text-white px-[14px] py-[7px] rounded-[6px] text-[11.5px] font-semibold hover:bg-[#158a5e] transition-colors"
-                                                    >
-                                                        {a.status === "active" ? "Start Inspection" : "View Details"}
-                                                    </button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
                                 </tbody>
                             </table>
                         )}
