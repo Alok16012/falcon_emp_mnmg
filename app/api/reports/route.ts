@@ -59,8 +59,8 @@ export async function GET(req: Request) {
             companyId = user?.companyId ?? null
         }
 
-        // Show aggregate company data, not filtered by inspector
-        inspectorId = null
+        // Show only their own aggregated data
+        inspectorId = session.user.id
     } else if (role === "ADMIN" || role === "MANAGER") {
         companyId = searchParams.get("companyId") || null
         inspectorId = searchParams.get("inspectorId") || null

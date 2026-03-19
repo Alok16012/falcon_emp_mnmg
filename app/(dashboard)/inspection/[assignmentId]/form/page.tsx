@@ -370,16 +370,16 @@ export default function InspectionFormPage() {
 
     const renderField = (template: any) => {
         const value = responses[template.id] || ""
-        const readOnly = inspection?.status !== "draft" || template.category === "AUTO"
-        const error = errors[template.id]
-
         const isAuto = template.category === "AUTO"
-        const isInspectorName = template.fieldLabel === "INSPECTOR NAME"
+        const isInspectorName = template.fieldLabel.toUpperCase() === "INSPECTOR NAME"
+        const readOnly = inspection?.status !== "draft" || isAuto || isInspectorName
+        const error = errors[template.id]
 
         return (
             <div key={template.id} id={`field-${template.id}`} className={cn(
                 "space-y-2 p-3 rounded-lg border transition-colors shadow-sm",
-                isAuto ? "bg-gray-50 border-dashed border-gray-300" : "bg-card hover:border-primary/50"
+                isAuto ? "bg-gray-50 border-dashed border-gray-300" : "bg-card hover:border-primary/50",
+                error && "border-destructive ring-1 ring-destructive"
             )}>
                 <div className="flex justify-between items-start">
                     <Label className={cn("text-sm font-semibold", isAuto && "text-gray-500")}>
