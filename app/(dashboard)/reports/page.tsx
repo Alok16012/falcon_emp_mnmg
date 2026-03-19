@@ -167,13 +167,28 @@ export default function ReportsPage() {
         fetchReport()
     }, [fetchReport])
 
-    const handleExportExcel = () => {
-        if (!data?.records || data.records.length === 0) return
+    const filteredRecords = useMemo(() => {
+        if (!data?.records) return []
+        if (!searchTerm) return data.records
+        const low = searchTerm.toLowerCase()
+        return data.records.filter((r: any) =>
+            (r.id && r.id.toLowerCase().includes(low)) ||
+            (r.inspector && r.inspector.toLowerCase().includes(low)) ||
+            (r.partName && r.partName.toLowerCase().includes(low)) ||
+            (r.location && r.location.toLowerCase().includes(low)) ||
+            (r.project && r.project.toLowerCase().includes(low))
+        )
+    }, [data?.records, searchTerm])
 
-        const formattedData = data.records.map((r: any) => {
+    const handleExportExcel = () => {
+        if (!filteredRecords || filteredRecords.length === 0) return
+
+        const formattedData = filteredRecords.map((r: any) => {
             const row: any = {
                 "Date": r.date ? format(new Date(r.date), "dd/MM/yyyy HH:mm") : "—",
                 "Shift": r.shift || "—",
+                "Company": r.company || "—",
+                "Project": r.project || "—",
                 "Location": r.location || "—",
                 "Part Name": r.partName || "—",
                 "Part Number": r.partNumber || "—",
@@ -217,19 +232,6 @@ export default function ReportsPage() {
             setExportingPdf(false)
         }, 500)
     }
-
-    const filteredRecords = useMemo(() => {
-        if (!data?.records) return []
-        if (!searchTerm) return data.records
-        const low = searchTerm.toLowerCase()
-        return data.records.filter((r: any) =>
-            (r.id && r.id.toLowerCase().includes(low)) ||
-            (r.inspector && r.inspector.toLowerCase().includes(low)) ||
-            (r.partName && r.partName.toLowerCase().includes(low)) ||
-            (r.location && r.location.toLowerCase().includes(low)) ||
-            (r.project && r.project.toLowerCase().includes(low))
-        )
-    }, [data?.records, searchTerm])
 
     const s = data?.summary
     const pieData = useMemo(() => s ? [
@@ -314,8 +316,8 @@ export default function ReportsPage() {
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`p-[7px_14px] rounded-[7px] text-[13px] font-[500] transition-colors whitespace-nowrap ${activeTab === tab
-                                    ? "bg-[#1a1a18] text-white"
-                                    : "bg-transparent text-[#6b6860] hover:bg-[#f9f8f5] hover:text-[#1a1a18]"
+                                ? "bg-[#1a1a18] text-white"
+                                : "bg-transparent text-[#6b6860] hover:bg-[#f9f8f5] hover:text-[#1a1a18]"
                                 }`}
                         >
                             {tab}
