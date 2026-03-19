@@ -242,11 +242,11 @@ function FieldPreview({ field }: { field: FormField }) {
             </div>
             <div className="p-[4px_12px_10px]">
                 {field.fieldType === "dropdown" ? (
-                    <select disabled className="w-full bg-transparent border-none outline-none text-[14px] font-[500] text-[#1a1a18] font-[Inter] appearance-none" style={{ backgroundImage: dropdownBg, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0px center' }}>
+                    <select disabled className="w-full bg-transparent border-none outline-none text-[14px] font-[500] text-[#1a1a18] appearance-none" style={{ backgroundImage: dropdownBg, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0px center' }}>
                         <option value="">Select option...</option>
                     </select>
                 ) : (
-                    <input disabled type={field.fieldType} placeholder={field.fieldType === 'number' ? '0' : `Enter ${field.fieldLabel.toLowerCase()}...`} className="w-full bg-transparent border-none outline-none text-[14px] font-[500] text-[#1a1a18] font-[Inter] placeholder:text-[#9e9b95]" />
+                    <input disabled type={field.fieldType} placeholder={field.fieldType === 'number' ? '0' : `Enter ${field.fieldLabel.toLowerCase()}...`} className="w-full bg-transparent border-none outline-none text-[14px] font-[500] text-[#1a1a18] placeholder:text-[#9e9b95]" />
                 )}
             </div>
         </div>
@@ -440,7 +440,7 @@ export default function FormBuilderClient({
     }
 
     return (
-        <div className="min-h-[calc(100vh-54px)] bg-[#f5f4f0] p-[24px] font-[Inter]">
+        <div className="min-h-[calc(100vh-54px)] bg-[#f5f4f0] p-[24px]">
             <div className="flex items-start gap-[14px] mb-[20px]">
                 <Link
                     href={`/companies/${companyId}`}

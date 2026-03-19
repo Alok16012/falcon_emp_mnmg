@@ -218,7 +218,7 @@ export default function InspectionFormPage() {
     const defectFields = templates.filter(t => t.category === "DEFECT")
     const autoFields = templates.filter(t => t.category === "AUTO")
 
-    const totalSteps = 4 
+    const totalSteps = 4
 
     const validateCurrentStep = () => {
         let currentFields: any[] = []
@@ -362,7 +362,7 @@ export default function InspectionFormPage() {
                             value={value}
                             onChange={(e) => handleFieldChange(template.id, e.target.value)}
                             disabled={readOnly}
-                            className="w-full bg-transparent border-none outline-none text-[14px] font-[500] text-[#1a1a18] font-[Inter] appearance-none"
+                            className="w-full bg-transparent border-none outline-none text-[14px] font-[500] text-[#1a1a18] appearance-none"
                             style={{ backgroundImage: dropdownBg, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
                         >
                             <option value="" disabled className="text-[#9e9b95]">Select option...</option>
@@ -377,7 +377,7 @@ export default function InspectionFormPage() {
                             disabled={readOnly}
                             rows={3}
                             placeholder={`Enter ${template.fieldLabel.toLowerCase()}...`}
-                            className="w-full bg-transparent border-none outline-none text-[14px] font-[500] text-[#1a1a18] font-[Inter] placeholder:text-[#9e9b95] resize-y"
+                            className="w-full bg-transparent border-none outline-none text-[14px] font-[500] text-[#1a1a18] placeholder:text-[#9e9b95] resize-y"
                         />
                     ) : (
                         <input
@@ -386,7 +386,7 @@ export default function InspectionFormPage() {
                             onChange={(e) => handleFieldChange(template.id, e.target.value)}
                             disabled={readOnly}
                             placeholder={template.fieldType === 'number' ? '0' : `Enter ${template.fieldLabel.toLowerCase()}...`}
-                            className="w-full bg-transparent border-none outline-none text-[14px] font-[500] text-[#1a1a18] font-[Inter] placeholder:text-[#9e9b95]"
+                            className="w-full bg-transparent border-none outline-none text-[14px] font-[500] text-[#1a1a18] placeholder:text-[#9e9b95]"
                             style={{ fontFamily: template.fieldType === "date" ? "Inter" : "inherit" }}
                         />
                     )}
@@ -458,12 +458,12 @@ export default function InspectionFormPage() {
     }
 
     return (
-        <div className="flex flex-col min-h-[100vh] bg-[#f5f4f0] p-0 font-[Inter]">
-            
+        <div className="flex flex-col min-h-[100vh] bg-[#f5f4f0] p-0">
+
             {/* INNER HEADER */}
             <div className="bg-white border-b border-[#e8e6e1] p-[12px_24px] flex justify-between items-center sticky top-0 z-40">
                 <div className="flex items-center">
-                    <button 
+                    <button
                         onClick={() => router.push("/inspection")}
                         className="w-[30px] h-[30px] border border-[#e8e6e1] bg-white rounded-[8px] flex items-center justify-center text-[#6b6860] hover:bg-[#f9f8f5] transition-colors"
                     >
@@ -473,7 +473,7 @@ export default function InspectionFormPage() {
                     <span className="text-[#9e9b95] mx-[8px]">•</span>
                     <span className="text-[13px] text-[#6b6860]">{assignment?.project?.company?.name}</span>
                 </div>
-                
+
                 {!isSubmitted && (
                     <div className="flex items-center gap-[8px]">
                         {saving ? (
@@ -503,7 +503,7 @@ export default function InspectionFormPage() {
 
             {/* FORM CONTENT */}
             <div className="w-full max-w-[660px] mx-auto p-[20px_20px_100px]">
-                
+
                 {isSubmitted && (
                     <div className="bg-[#f0fdf4] border border-[rgba(26,158,110,0.25)] rounded-[12px] p-[14px_18px] flex items-center gap-[12px] mb-[24px]">
                         <CheckCircle2 className="h-[20px] w-[20px] text-[#1a9e6e] shrink-0" />
@@ -520,7 +520,7 @@ export default function InspectionFormPage() {
 
                 {defectFields.length > 0 && (
                     <>
-                         <div className="text-[10.5px] font-[600] text-[#9e9b95] uppercase tracking-[1px] border-b-[1.5px] border-[#e8e6e1] pb-[8px] mb-[14px] mt-[24px]">
+                        <div className="text-[10.5px] font-[600] text-[#9e9b95] uppercase tracking-[1px] border-b-[1.5px] border-[#e8e6e1] pb-[8px] mb-[14px] mt-[24px]">
                             Defect Entry
                         </div>
                         <div className="grid grid-cols-3 gap-[8px]">
@@ -570,7 +570,7 @@ export default function InspectionFormPage() {
                                 </div>
                             </div>
                         </div>
-                     ) : !isSubmitted ? (
+                    ) : !isSubmitted ? (
                         <div className="space-y-[12px]">
                             <label className="flex flex-col items-center justify-center w-full h-[100px] border-[1.5px] border-dashed border-[#d4d1ca] rounded-[8px] cursor-pointer bg-[#f9f8f5] hover:bg-[#f5f4f0] transition-colors">
                                 <div className="flex flex-col items-center justify-center">
@@ -631,7 +631,7 @@ export default function InspectionFormPage() {
                             </>
                         )}
                     </div>
-                    
+
                     <div className="flex items-center gap-[10px]">
                         <button
                             type="button"
