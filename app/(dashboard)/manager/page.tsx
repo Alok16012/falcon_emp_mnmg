@@ -53,13 +53,13 @@ export default function ManagerDashboard() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#f5f4f0] p-7 space-y-5">
-                <div className="grid grid-cols-3 gap-3">
+            <div className="min-h-screen bg-[#f5f4f0] p-4 lg:p-7 space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {[1, 2, 3].map((i) => (
                         <Skeleton key={i} className="h-[120px] rounded-[14px]" />
                     ))}
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Skeleton className="h-[400px] rounded-[14px]" />
                     <Skeleton className="h-[400px] rounded-[14px]" />
                 </div>
@@ -118,19 +118,42 @@ export default function ManagerDashboard() {
     ]
 
     return (
-        <div className="min-h-screen bg-[#f5f4f0] p-6 lg:p-7">
-            <div className="flex items-center justify-between mb-6">
+        <div className="min-h-screen bg-[#f5f4f0] p-4 lg:p-7">
+            {/* Mobile Welcome Banner */}
+            <div className="md:hidden bg-gradient-to-br from-[#1a9e6e] to-[#0d6b4a] rounded-[16px] p-4 text-white shadow-sm mb-4">
+                <p className="text-[11px] font-medium opacity-70 mb-0.5 uppercase tracking-wider">Welcome back 👋</p>
+                <p className="text-[20px] font-bold tracking-tight">Manager Dashboard</p>
+                <p className="text-[12px] opacity-70 mt-1">Monitor operations and review pending inspections</p>
+            </div>
+
+            {/* Desktop Header */}
+            <div className="hidden md:flex items-center justify-between mb-6">
                 <div>
                     <h1 className="text-[22px] font-semibold text-[#1a1a18] tracking-[-0.4px]">Manager Dashboard</h1>
                     <p className="text-[13px] text-[#6b6860] mt-[3px]">Monitor operations and review pending inspections</p>
                 </div>
                 <BulkImportInspectors />
             </div>
+            {/* Mobile BulkImport */}
+            <div className="md:hidden mb-4">
+                <BulkImportInspectors />
+            </div>
 
-            <div className="grid grid-cols-3 gap-3 mb-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 md:mb-5">
                 {kpiCards.map((card) => (
                     <Link key={card.title} href={card.link}>
-                        <div className="bg-white border border-[#e8e6e1] rounded-[14px] p-5 hover:shadow-md transition-shadow">
+                        {/* Mobile horizontal card */}
+                        <div className="sm:hidden bg-white border border-[#e8e6e1] rounded-[14px] p-4 flex items-center gap-4 hover:shadow-md transition-shadow active:scale-[0.99]">
+                            <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: card.bg }}>
+                                <card.icon className="h-5 w-5" style={{ color: card.color }} />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[12px] text-[#6b6860]">{card.title}</p>
+                                <p className="text-[28px] font-bold text-[#1a1a18] tracking-[-1px] tabular-nums leading-none mt-0.5">{card.value}</p>
+                            </div>
+                        </div>
+                        {/* Desktop vertical card */}
+                        <div className="hidden sm:block bg-white border border-[#e8e6e1] rounded-[14px] p-5 hover:shadow-md transition-shadow">
                             <div className="w-9 h-9 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: card.bg }}>
                                 <card.icon className="h-5 w-5" style={{ color: card.color }} />
                             </div>
@@ -141,7 +164,7 @@ export default function ManagerDashboard() {
                 ))}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden">
                     <div className="p-4 border-b border-[#e8e6e1] flex items-center justify-between">
                         <div className="flex items-center gap-2">

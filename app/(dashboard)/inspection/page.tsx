@@ -127,13 +127,39 @@ export default function InspectionDashboard() {
 
     return (
         <div className="min-h-screen bg-[#f5f4f0] p-4 md:p-6 lg:p-7">
-            <div className="mb-5">
+            {/* Mobile Welcome Banner */}
+            <div className="md:hidden bg-gradient-to-br from-[#3b82f6] to-[#1d4ed8] rounded-[16px] p-4 text-white shadow-sm mb-4">
+                <p className="text-[11px] font-medium opacity-70 mb-0.5 uppercase tracking-wider">Welcome back 👋</p>
+                <p className="text-[20px] font-bold tracking-tight">Inspector Workspace</p>
+                <p className="text-[12px] opacity-70 mt-1">Track assignments and submit inspection reports</p>
+                <div className="flex items-center gap-2 mt-3">
+                    <div className="flex-1 bg-white/10 rounded-[10px] p-2.5 text-center">
+                        <p className="text-[20px] font-bold tabular-nums">{activeCount}</p>
+                        <p className="text-[10px] opacity-70 mt-0.5">Active</p>
+                    </div>
+                    <div className="flex-1 bg-white/10 rounded-[10px] p-2.5 text-center">
+                        <p className="text-[20px] font-bold tabular-nums">{draftCount}</p>
+                        <p className="text-[10px] opacity-70 mt-0.5">Drafts</p>
+                    </div>
+                    <div className="flex-1 bg-white/10 rounded-[10px] p-2.5 text-center">
+                        <p className="text-[20px] font-bold tabular-nums">{pendingCount}</p>
+                        <p className="text-[10px] opacity-70 mt-0.5">Pending</p>
+                    </div>
+                    <div className="flex-1 bg-white/10 rounded-[10px] p-2.5 text-center">
+                        <p className="text-[20px] font-bold tabular-nums">{approvedCount}</p>
+                        <p className="text-[10px] opacity-70 mt-0.5">Approved</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Desktop Header */}
+            <div className="hidden md:block mb-5">
                 <h1 className="text-[22px] font-semibold text-[#1a1a18] tracking-[-0.4px]">Inspector Workspace</h1>
                 <p className="text-[13px] text-[#6b6860] mt-[3px]">Track assignments and submit inspection reports</p>
             </div>
 
-            {/* SECTION 1: STATUS CARDS */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            {/* SECTION 1: STATUS CARDS — hidden on mobile (shown in welcome banner) */}
+            <div className="hidden md:grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 <div className="bg-white border border-[#e8e6e1] rounded-[12px] p-5 flex items-center gap-4 hover:shadow-md transition-shadow">
                     <div className="w-[38px] h-[38px] rounded-full bg-[#eff6ff] flex items-center justify-center">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

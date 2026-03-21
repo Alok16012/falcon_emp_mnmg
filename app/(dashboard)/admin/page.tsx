@@ -87,9 +87,33 @@ export default function AdminDashboard() {
     ]
 
     return (
-        <div className="p-4 lg:p-6 space-y-5 bg-[var(--bg)] min-h-screen">
-            {/* Page Header */}
-            <div className="flex items-center justify-between">
+        <div className="p-4 lg:p-6 space-y-4 bg-[var(--bg)] min-h-screen">
+            {/* Mobile Welcome Banner */}
+            <div className="md:hidden bg-gradient-to-br from-[#1a9e6e] to-[#0d6b4a] rounded-[16px] p-4 text-white shadow-sm">
+                <p className="text-[11px] font-medium opacity-70 mb-0.5 uppercase tracking-wider">Welcome back 👋</p>
+                <p className="text-[20px] font-bold tracking-tight">Admin Dashboard</p>
+                <div className="flex items-center gap-2 mt-3">
+                    <div className="flex-1 bg-white/10 rounded-[10px] p-2.5 text-center">
+                        <p className="text-[20px] font-bold tabular-nums">{stats.totalCompanies ?? 0}</p>
+                        <p className="text-[10px] opacity-70 mt-0.5">Companies</p>
+                    </div>
+                    <div className="flex-1 bg-white/10 rounded-[10px] p-2.5 text-center">
+                        <p className="text-[20px] font-bold tabular-nums">{stats.totalProjects ?? 0}</p>
+                        <p className="text-[10px] opacity-70 mt-0.5">Projects</p>
+                    </div>
+                    <div className="flex-1 bg-white/10 rounded-[10px] p-2.5 text-center">
+                        <p className="text-[20px] font-bold tabular-nums">{stats.pendingApprovals ?? 0}</p>
+                        <p className="text-[10px] opacity-70 mt-0.5">Pending</p>
+                    </div>
+                    <div className="flex-1 bg-white/10 rounded-[10px] p-2.5 text-center">
+                        <p className="text-[20px] font-bold tabular-nums">{stats.totalUsers ?? 0}</p>
+                        <p className="text-[10px] opacity-70 mt-0.5">Users</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Page Header — Desktop only */}
+            <div className="hidden md:flex items-center justify-between">
                 <h1 className="text-[20px] font-semibold text-[var(--text)] tracking-tight">Admin Dashboard</h1>
                 <div className="flex items-center gap-2">
                     <button className="h-9 px-4 flex items-center gap-2 bg-white border border-[var(--border)] rounded-[8px] text-[13px] font-medium text-[var(--text2)] hover:bg-[var(--surface2)] transition-all">
@@ -102,8 +126,8 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* STAT ROW */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-[14px]">
+            {/* STAT ROW — Desktop only (mobile uses welcome banner above) */}
+            <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-[14px]">
                 {statRow.map((stat) => (
                     <div key={stat.label} className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] p-4 flex flex-col justify-between hover:shadow-sm transition-all group">
                         <div className="flex items-center justify-between mb-3 text-[11.5px] font-medium text-[var(--text2)]">
@@ -118,8 +142,8 @@ export default function AdminDashboard() {
                 ))}
             </div>
 
-            {/* ALERT CARDS */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-[14px]">
+            {/* ALERT CARDS — Mobile quick-action row */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-[14px]">
                 {/* Card 1: Safety Compliance */}
                 <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] p-[18px] flex flex-col justify-between hover:shadow-sm transition-all">
                     <div className="flex items-start justify-between">
@@ -228,15 +252,39 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* Existing Functionality: Recent Submissions & Quick Actions (Preserved and styled) */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-[14px]">
+            {/* Recent Submissions & Quick Actions */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-[14px]">
                 {/* Recent Submissions */}
                 <div className="lg:col-span-2 bg-[var(--surface)] border border-[var(--border)] rounded-[14px] overflow-hidden">
-                    <div className="px-[18px] py-4 border-b border-[var(--border)] flex items-center justify-between">
-                        <h3 className="text-[15px] font-semibold text-[var(--text)] leading-none">Recent Submissions</h3>
+                    <div className="px-4 py-3.5 border-b border-[var(--border)] flex items-center justify-between">
+                        <h3 className="text-[14px] font-semibold text-[var(--text)] leading-none">Recent Submissions</h3>
                         <Link href="/approvals" className="text-[12px] font-medium text-[var(--accent-text)] hover:underline">View All</Link>
                     </div>
-                    <div className="overflow-x-auto">
+
+                    {/* Mobile card list */}
+                    <div className="sm:hidden divide-y divide-[var(--border)]">
+                        {(stats.recentInspections || []).length === 0 ? (
+                            <p className="text-center text-[13px] text-[var(--text3)] py-8">No submissions yet</p>
+                        ) : (stats.recentInspections || []).map((i: any) => (
+                            <Link key={i.id} href={`/approvals/${i.id}`} className="flex items-center justify-between px-4 py-3.5 hover:bg-[var(--surface2)] transition-colors active:bg-[var(--surface2)]">
+                                <div className="min-w-0 mr-3">
+                                    <p className="text-[13px] font-medium text-[var(--text)] truncate">{i.projectName}</p>
+                                    <p className="text-[11.5px] text-[var(--text3)] mt-0.5">{i.inspectorName} · {i.submittedAt ? format(new Date(i.submittedAt), "MMM d, HH:mm") : "—"}</p>
+                                </div>
+                                <span className={cn(
+                                    "shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase",
+                                    i.status === "pending" ? "bg-[var(--amber-light)] text-[var(--amber)]" :
+                                        i.status === "approved" ? "bg-[var(--accent-light)] text-[var(--accent-text)]" :
+                                            "bg-[var(--red-light)] text-[var(--red)]"
+                                )}>
+                                    {i.status}
+                                </span>
+                            </Link>
+                        ))}
+                    </div>
+
+                    {/* Desktop table */}
+                    <div className="hidden sm:block overflow-x-auto">
                         <table className="w-full text-left">
                             <thead className="bg-[var(--surface2)]/50 border-b border-[var(--border)]">
                                 <tr>
@@ -277,10 +325,27 @@ export default function AdminDashboard() {
 
                 {/* Quick Actions */}
                 <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] overflow-hidden h-fit">
-                    <div className="px-[18px] py-4 border-b border-[var(--border)]">
-                        <h3 className="text-[15px] font-semibold text-[var(--text)] leading-none">Quick Actions</h3>
+                    <div className="px-4 py-3.5 border-b border-[var(--border)]">
+                        <h3 className="text-[14px] font-semibold text-[var(--text)] leading-none">Quick Actions</h3>
                     </div>
-                    <div className="p-4 grid grid-cols-1 gap-2">
+                    {/* Mobile: 2x2 icon grid */}
+                    <div className="sm:hidden p-3 grid grid-cols-2 gap-2">
+                        {[
+                            { href: "/companies/create", icon: Plus, label: "Add Company", color: "#1a9e6e", bg: "#e8f7f1" },
+                            { href: "/projects/create", icon: Folder, label: "New Project", color: "#3b82f6", bg: "#eff6ff" },
+                            { href: "/assignments", icon: ClipboardList, label: "Assignments", color: "#d97706", bg: "#fef3c7" },
+                            { href: "/admin/users", icon: Users, label: "Users", color: "#7c3aed", bg: "#f5f3ff" },
+                        ].map(({ href, icon: Icon, label, color, bg }) => (
+                            <Link key={href} href={href} className="flex flex-col items-center justify-center gap-2 p-4 bg-[var(--surface2)] rounded-[12px] hover:opacity-80 active:scale-95 transition-all">
+                                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: bg }}>
+                                    <Icon size={18} style={{ color }} />
+                                </div>
+                                <span className="text-[12px] font-medium text-[var(--text)] text-center">{label}</span>
+                            </Link>
+                        ))}
+                    </div>
+                    {/* Desktop: list */}
+                    <div className="hidden sm:block p-4 grid grid-cols-1 gap-2">
                         <Link href="/companies/create" className="h-10 px-4 flex items-center gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-[8px] text-[13px] font-medium text-[var(--text2)] hover:bg-[var(--surface2)] hover:text-[var(--text)] transition-all">
                             <Plus size={16} /> Add New Company
                         </Link>

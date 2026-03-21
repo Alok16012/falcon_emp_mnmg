@@ -71,10 +71,10 @@ export function TopNav({ onMenuClick }: { onMenuClick: () => void }) {
     }, [pathname])
 
     return (
-        <div className="sticky top-0 z-30 flex h-[54px] items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-4 md:px-6 shrink-0">
+        <div className="sticky top-0 z-30 flex h-[54px] items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-3 md:px-6 shrink-0 gap-2">
             {/* Left: Mobile Menu & Breadcrumb */}
-            <div className="flex items-center gap-4">
-                <button onClick={onMenuClick} className="inline-flex items-center justify-center rounded-md p-2 text-[var(--text2)] hover:bg-[var(--surface2)] md:hidden">
+            <div className="flex items-center gap-2 shrink-0">
+                <button onClick={onMenuClick} className="inline-flex items-center justify-center rounded-[10px] w-9 h-9 text-[var(--text2)] hover:bg-[var(--surface2)] active:bg-[var(--surface2)] md:hidden transition-colors">
                     <Menu size={20} />
                 </button>
 
@@ -86,7 +86,7 @@ export function TopNav({ onMenuClick }: { onMenuClick: () => void }) {
             </div>
 
             {/* Center: Search Bar */}
-            <div className="flex-1 max-w-[180px] sm:max-w-[400px] mx-2 sm:mx-4 relative" ref={dropdownRef}>
+            <div className="flex-1 max-w-[200px] sm:max-w-[400px] relative" ref={dropdownRef}>
                 <div className="relative group">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text3)] group-focus-within:text-[var(--accent)] transition-colors" />
                     <input
