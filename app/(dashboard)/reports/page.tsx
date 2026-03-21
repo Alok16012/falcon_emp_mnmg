@@ -109,11 +109,15 @@ export default function ReportsPage() {
     const now = new Date()
     const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1)
     const [selectedYear, setSelectedYear] = useState(now.getFullYear())
+    const [mounted, setMounted] = useState(false)
     const [selectedCompanyId, setSelectedCompanyId] = useState("all")
     const [selectedProjectId, setSelectedProjectId] = useState("all")
     const [selectedInspectorId, setSelectedInspectorId] = useState("all")
-
     const [companies, setCompanies] = useState<{ id: string; name: string }[]>([])
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
     const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
     const [inspectors, setInspectors] = useState<{ id: string; name: string }[]>([])
 
@@ -124,11 +128,11 @@ export default function ReportsPage() {
     const [exportingPdf, setExportingPdf] = useState(false)
 
     useEffect(() => {
-        if (role === "ADMIN" || role === "MANAGER") {
+        if (mounted && (role === "ADMIN" || role === "MANAGER")) {
             fetch("/api/companies").then(r => r.json()).then(d => setCompanies(Array.isArray(d) ? d : [])).catch(() => { })
             fetch("/api/users?role=INSPECTION_BOY").then(r => r.json()).then(d => setInspectors(Array.isArray(d) ? d : [])).catch(() => { })
         }
-    }, [role])
+    }, [role, mounted])
 
     useEffect(() => {
         if (selectedCompanyId === "all") {

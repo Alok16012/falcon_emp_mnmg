@@ -9,15 +9,21 @@ export default function AssignmentsPage() {
     const { data: session, status } = useSession()
     const router = useRouter()
 
+    const [mounted, setMounted] = useState(false)
     const isManagerOrAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "MANAGER"
 
     useEffect(() => {
+        setMounted(true)
+    }, [])
+
+    useEffect(() => {
+        if (!mounted) return
         if (status === "unauthenticated") {
             router.push("/login")
-        } else if (status === "authenticated" && !isManagerOrAdmin && session?.user?.role !== "INSPECTION_BOY") {
-            router.push("/client")
+        } else if (status === "authenticated" && !isManagerOrAdmin) {
+            router.push(session?.user?.role === "INSPECTION_BOY" ? "/inspection" : "/client")
         }
-    }, [status, session, router, isManagerOrAdmin])
+    }, [status, session, router, isManagerOrAdmin, mounted])
 
     const [companies, setCompanies] = useState<any[]>([])
     const [projects, setProjects] = useState<any[]>([])
@@ -38,11 +44,11 @@ export default function AssignmentsPage() {
     const [filterStatus, setFilterStatus] = useState("all")
 
     useEffect(() => {
-        if (isManagerOrAdmin) {
+        if (mounted && isManagerOrAdmin) {
             fetchInitialData()
             fetchGroups()
         }
-    }, [isManagerOrAdmin])
+    }, [isManagerOrAdmin, mounted])
 
     useEffect(() => {
         if (selectedCompanyId) {
@@ -407,10 +413,10 @@ export default function AssignmentsPage() {
                                         type="button"
                                         onClick={() => setRecurrenceType(opt.value)}
                                         className={`flex-1 flex flex-col items-center gap-[4px] p-[10px_8px] rounded-[10px] border-[1.5px] transition-all text-[12px] font-[500] ${recurrenceType === opt.value
-                                                ? opt.value === "none"
-                                                    ? "border-[#1a9e6e] bg-[#f0fdf4] text-[#0d6b4a]"
-                                                    : "border-[#3b82f6] bg-[#eff6ff] text-[#1d4ed8]"
-                                                : "border-[#e8e6e1] bg-[#f9f8f5] text-[#6b6860] hover:bg-white"
+                                            ? opt.value === "none"
+                                                ? "border-[#1a9e6e] bg-[#f0fdf4] text-[#0d6b4a]"
+                                                : "border-[#3b82f6] bg-[#eff6ff] text-[#1d4ed8]"
+                                            : "border-[#e8e6e1] bg-[#f9f8f5] text-[#6b6860] hover:bg-white"
                                             }`}
                                     >
                                         <span className="text-[16px]">{opt.icon}</span>

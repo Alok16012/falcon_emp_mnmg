@@ -24,7 +24,12 @@ export function TopNav({ onMenuClick }: { onMenuClick: () => void }) {
     const dropdownRef = useRef<HTMLDivElement>(null)
     const profileRef = useRef<HTMLDivElement>(null)
     const [isProfileOpen, setIsProfileOpen] = useState(false)
+    const [mounted, setMounted] = useState(false)
     const pathname = usePathname()
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
 
     const isAdminOrManager = session?.user?.role === "ADMIN" || session?.user?.role === "MANAGER"
 
@@ -76,7 +81,6 @@ export function TopNav({ onMenuClick }: { onMenuClick: () => void }) {
             <div className="flex items-center gap-2 shrink-0">
                 <button
                     onClick={onMenuClick}
-                    suppressHydrationWarning
                     className="inline-flex items-center justify-center rounded-[10px] w-9 h-9 text-[var(--text2)] hover:bg-[var(--surface2)] active:bg-[var(--surface2)] md:hidden transition-colors"
                 >
                     <Menu size={20} />
@@ -184,7 +188,7 @@ export function TopNav({ onMenuClick }: { onMenuClick: () => void }) {
                         className="flex items-center gap-2 p-1 rounded-full hover:bg-[var(--surface2)] transition-all"
                     >
                         <div className="h-[34px] w-[34px] rounded-full bg-[var(--accent)] flex items-center justify-center text-white text-[13px] font-bold overflow-hidden shadow-sm">
-                            {session?.user?.name ? session.user.name.charAt(0).toUpperCase() : <UserCircle size={20} />}
+                            {mounted && session?.user?.name ? session.user.name.charAt(0).toUpperCase() : <UserCircle size={20} />}
                         </div>
                         <ChevronDown size={14} className={cn("text-[var(--text3)] transition-transform duration-200", isProfileOpen && "rotate-180")} />
                     </button>
