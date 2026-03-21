@@ -47,18 +47,29 @@ export async function GET(req: Request) {
                         }
                     },
                     inspectionBoy: { select: { id: true, name: true, email: true } },
-                    assigner: { select: { name: true } }
+                    assigner: { select: { name: true } },
+                    inspections: {
+                        select: {
+                            id: true,
+                            status: true,
+                            submittedAt: true,
+                            assignmentId: true,
+                        },
+                        orderBy: { createdAt: "desc" },
+                        take: 1
+                    }
                 },
                 orderBy: { createdAt: "desc" }
             });
 
-            const result = assignments.map(a => ({
+            const result = assignments.map(({ inspections, project, ...a }) => ({
                 ...a,
+                inspection: inspections?.[0] || null,
                 project: {
-                    id: a.project.id,
-                    name: a.project.name,
-                    company: a.project.company,
-                    managers: a.project.projectManagers.map(pm => pm.manager)
+                    id: project.id,
+                    name: project.name,
+                    company: project.company,
+                    managers: project.projectManagers.map(pm => pm.manager)
                 }
             }));
 

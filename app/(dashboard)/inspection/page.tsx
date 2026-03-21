@@ -113,11 +113,15 @@ export default function InspectionDashboard() {
     }
 
     const submittedAssignmentIds = new Set(recentSubmissions.map((s: any) => s.assignmentId))
-    const activeAssignments = assignments.filter(a => a.status === "active" && !submittedAssignmentIds.has(a.id))
-    const completedAssignments = [
-        ...assignments.filter(a => a.status === "completed"),
-        ...assignments.filter(a => a.status === "active" && submittedAssignmentIds.has(a.id))
-    ]
+    // Active: no inspection yet, or inspection is still a draft
+    const activeAssignments = assignments.filter(a =>
+        a.status === "active" && (!a.inspection || a.inspection.status === "draft")
+    )
+    // Completed: assignment marked completed in DB, OR has a submitted (non-draft) inspection
+    const completedAssignments = assignments.filter(a =>
+        a.status === "completed" ||
+        (a.status === "active" && a.inspection && a.inspection.status !== "draft")
+    )
     const activeCount = activeAssignments.length
     const draftCount = recentSubmissions.filter(s => s.status === "draft").length
     const pendingCount = recentSubmissions.filter(s => s.status === "pending").length
@@ -400,13 +404,13 @@ export default function InspectionDashboard() {
                         ) : (
                             <div className="space-y-2">
                                 {completedAssignments.slice(0, 10).map((a) => {
-                                    const isSubmitted = submittedAssignmentIds.has(a.id)
-                                    const submission = recentSubmissions.find((s: any) => s.assignmentId === a.id)
                                     const badge = a.status === "completed"
                                         ? { label: "Approved", cls: "bg-[#e8f7f1] text-[#0d6b4a]" }
-                                        : submission?.status === "rejected"
-                                            ? { label: "Rejected", cls: "bg-[#fef2f2] text-[#dc2626]" }
-                                            : { label: "Pending Review", cls: "bg-[#fef3c7] text-[#d97706]" }
+                                        : a.inspection?.status === "approved"
+                                            ? { label: "Approved", cls: "bg-[#e8f7f1] text-[#0d6b4a]" }
+                                            : a.inspection?.status === "rejected"
+                                                ? { label: "Rejected", cls: "bg-[#fef2f2] text-[#dc2626]" }
+                                                : { label: "Pending Review", cls: "bg-[#fef3c7] text-[#d97706]" }
                                     return (
                                         <div key={a.id} className="bg-white border border-[#e8e6e1] rounded-[10px] p-[12px_14px] flex items-center justify-between">
                                             <div>
