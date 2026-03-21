@@ -311,7 +311,7 @@ export default function ReportsPage() {
     const StatCard = ({ label, value, bg, iconBg, iconColor, icon: Icon }: any) => {
         const animatedValue = useCountUp(value)
         return (
-            <div className="bg-white border border-[#e8e6e1] rounded-[12px] p-[16px_18px] print-card">
+            <div className="bg-white border border-[#e8e6e1] rounded-[12px] p-[12px_14px] md:p-[16px_18px] print-card">
                 <div className={`w-[32px] h-[32px] rounded-full flex items-center justify-center mb-[10px] ${iconBg}`}>
                     <Icon className="h-[16px] w-[16px]" style={{ color: iconColor }} />
                 </div>
@@ -335,8 +335,8 @@ export default function ReportsPage() {
             `}</style>
 
             {/* FILTER ROW */}
-            <div className="no-print bg-white border-b border-[#e8e6e1] p-[12px_24px] sticky top-0 z-20">
-                <div className="grid grid-cols-5 gap-[12px]">
+            <div className="no-print bg-white border-b border-[#e8e6e1] p-3 md:p-[12px_24px] sticky top-0 z-20">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-[10px] md:gap-[12px]">
                     {[
                         { label: "Company", value: selectedCompanyId, options: companies, setter: setSelectedCompanyId, allLabel: "Global View" },
                         { label: "Project", value: selectedProjectId, options: projects, setter: setSelectedProjectId, allLabel: "All Projects", disabled: selectedCompanyId === "all" },
@@ -366,8 +366,8 @@ export default function ReportsPage() {
             </div>
 
             {/* TABS ROW */}
-            <div className="no-print bg-white border-b border-[#e8e6e1] p-[10px_24px] flex items-center justify-between">
-                <div className="bg-white border border-[#e8e6e1] rounded-[10px] p-[4px] flex gap-[2px]">
+            <div className="no-print bg-white border-b border-[#e8e6e1] p-3 md:p-[10px_24px] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="bg-white border border-[#e8e6e1] rounded-[10px] p-[4px] flex gap-[2px] overflow-x-auto">
                     {["Dashboard", "Graphical", "Pareto Chart", "Day Wise", "Part Wise", "Inspection Report"].map(tab => (
                         <button
                             key={tab}
@@ -382,40 +382,42 @@ export default function ReportsPage() {
                     ))}
                 </div>
 
-                <div className="flex items-center gap-[8px]">
+                <div className="flex flex-wrap items-center gap-[6px]">
                     {!["Day Wise", "Part Wise", "Inspection Report"].includes(activeTab) && (
                         <button
                             onClick={handleExportPdf}
                             disabled={loading || exportingPdf}
-                            className="flex items-center gap-[6px] bg-[#dc2626] text-white shadow-sm border-none rounded-[9px] text-[13px] font-[600] px-[14px] py-[8px] hover:bg-[#b91c1c] transition-colors disabled:opacity-50"
+                            className="flex items-center gap-[6px] bg-[#dc2626] text-white shadow-sm border-none rounded-[9px] text-[13px] font-[600] px-[12px] py-[8px] hover:bg-[#b91c1c] transition-colors disabled:opacity-50"
                         >
                             <FileText className="h-[14px] w-[14px]" />
-                            {exportingPdf ? "Generating PDF..." : "Export Full Report PDF"}
+                            <span className="hidden sm:inline">{exportingPdf ? "Generating PDF..." : "Export Full Report PDF"}</span>
+                            <span className="sm:hidden">PDF</span>
                         </button>
                     )}
                     {(["Day Wise", "Part Wise", "Inspection Report"].includes(activeTab)) && (
                         <button
                             onClick={handleExportExcel}
                             disabled={loading || (activeTab === "Day Wise" ? !data?.dayWise?.length : activeTab === "Part Wise" ? !data?.partWise?.length : !filteredRecords?.length)}
-                            className="flex items-center gap-[6px] bg-[#1a9e6e] text-white shadow-sm border-none rounded-[9px] text-[13px] font-[600] px-[14px] py-[8px] hover:bg-[#158a5e] focus:bg-[#158a5e] transition-colors disabled:opacity-50"
+                            className="flex items-center gap-[6px] bg-[#1a9e6e] text-white shadow-sm border-none rounded-[9px] text-[13px] font-[600] px-[12px] py-[8px] hover:bg-[#158a5e] focus:bg-[#158a5e] transition-colors disabled:opacity-50"
                         >
                             <FileSpreadsheet className="h-[14px] w-[14px]" />
-                            Export Excel
+                            Excel
                         </button>
                     )}
                     <button
                         onClick={fetchReport}
                         disabled={loading}
-                        className="flex items-center gap-[6px] bg-[#1a9e6e] text-white border-none rounded-[9px] text-[13px] font-[600] px-[14px] py-[8px] hover:bg-[#158a5e] transition-colors disabled:opacity-50 shadow-sm"
+                        className="flex items-center gap-[6px] bg-[#1a9e6e] text-white border-none rounded-[9px] text-[13px] font-[600] px-[12px] py-[8px] hover:bg-[#158a5e] transition-colors disabled:opacity-50 shadow-sm"
                     >
                         {loading ? <div className="h-[14px] w-[14px] rounded-full border-2 border-white border-t-transparent animate-spin" /> : <ExternalLink className="h-[14px] w-[14px]" />}
-                        Update Dashboard
+                        <span className="hidden sm:inline">Update Dashboard</span>
+                        <span className="sm:hidden">Update</span>
                     </button>
                 </div>
             </div>
 
             {/* MAIN CONTENT AREA */}
-            <div className="p-[20px_24px]">
+            <div className="p-3 md:p-[20px_24px]">
 
                 {/* Print Header Visible Only in PDF */}
                 <div className="hidden print:block mb-[24px] border-b border-[#1a1a18] pb-[16px]">
@@ -428,7 +430,7 @@ export default function ReportsPage() {
                 </div>
 
                 {loading ? (
-                    <div className="grid grid-cols-6 gap-[14px]">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-[14px]">
                         {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-[110px] rounded-[12px] w-full bg-white border border-[#e8e6e1]" />)}
                     </div>
                 ) : !data ? (
@@ -442,7 +444,7 @@ export default function ReportsPage() {
 
                         {/* DASHBOARD STAT CARDS */}
                         {activeTab === "Dashboard" && (
-                            <div className="grid grid-cols-6 gap-[14px]">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-[14px]">
                                 <StatCard label="TOTAL INSPECTED" value={s?.totalInspected || 0} iconBg="bg-[#eff6ff]" iconColor="#3b82f6" icon={Terminal} />
                                 <StatCard label="TOTAL ACCEPTED" value={s?.totalAccepted || 0} iconBg="bg-[#e8f7f1]" iconColor="#1a9e6e" icon={CheckCircle2} />
                                 <StatCard label="TOTAL REWORK" value={s?.totalRework || 0} iconBg="bg-[#fef3c7]" iconColor="#d97706" icon={TrendingDown} />
@@ -453,7 +455,7 @@ export default function ReportsPage() {
                         )}
 
                         {activeTab === "Dashboard" && (
-                            <div className="grid grid-cols-2 gap-[16px]">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
                                 <div className="bg-white border border-[#e8e6e1] rounded-[14px] p-[20px] print-card">
                                     <div className="mb-[16px]">
                                         <h3 className="text-[14px] font-[600] text-[#1a1a18]">Overall Status</h3>
@@ -552,7 +554,7 @@ export default function ReportsPage() {
                         )}
 
                         {activeTab === "Graphical" && (
-                            <div className="grid grid-cols-2 gap-[16px]">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
                                 <div className="bg-white border border-[#e8e6e1] rounded-[14px] p-[20px] print-card">
                                     <h3 className="text-[14px] font-[600] text-[#1a1a18] mb-[20px]">Part-Wise Quality Split</h3>
                                     {data.partWise.length > 0 ? (
@@ -689,16 +691,16 @@ export default function ReportsPage() {
 
                         {activeTab === "Inspection Report" && (
                             <div className="bg-white border border-[#e8e6e1] rounded-[14px] mt-[16px] overflow-hidden no-print">
-                                <div className="p-[14px_18px] border-b border-[#e8e6e1] flex items-center justify-between">
+                                <div className="p-[14px_18px] border-b border-[#e8e6e1] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                     <div>
                                         <h3 className="text-[13.5px] font-[600] text-[#1a1a18]">Inspection Record Explorer</h3>
                                         <p className="text-[10.5px] font-[600] text-[#9e9b95] uppercase tracking-[0.6px] mt-[2px]">LIVE DATA FEED</p>
                                     </div>
                                     <div className="flex items-center gap-[12px]">
-                                        <div className="relative">
+                                        <div className="relative w-full sm:w-auto">
                                             <Search className="absolute left-[12px] top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-[#9e9b95]" />
                                             <Input
-                                                className="w-[300px] pl-[34px] h-[36px] bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] font-[500] focus-visible:ring-0 focus:border-[#1a9e6e] focus:bg-white transition-all shadow-none"
+                                                className="w-full sm:w-[300px] pl-[34px] h-[36px] bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] font-[500] focus-visible:ring-0 focus:border-[#1a9e6e] focus:bg-white transition-all shadow-none"
                                                 placeholder="Search records..."
                                                 value={searchTerm}
                                                 onChange={e => setSearchTerm(e.target.value)}
