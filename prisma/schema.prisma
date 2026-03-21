@@ -60,12 +60,14 @@ model Assignment {
   projectId       String
   inspectionBoyId String
   assignedBy      String
-  status          String       @default("active")
-  createdAt       DateTime     @default(now())
-  assigner        User         @relation("AssignmentAssigner", fields: [assignedBy], references: [id])
-  inspectionBoy   User         @relation("AssignmentInspector", fields: [inspectionBoyId], references: [id])
-  project         Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  inspections     Inspection[]
+  status           String       @default("active")
+  recurrenceType   String       @default("none")
+  recurrenceActive Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  assigner         User         @relation("AssignmentAssigner", fields: [assignedBy], references: [id])
+  inspectionBoy    User         @relation("AssignmentInspector", fields: [inspectionBoyId], references: [id])
+  project          Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  inspections      Inspection[]
 
   @@index([inspectionBoyId])
   @@index([projectId])

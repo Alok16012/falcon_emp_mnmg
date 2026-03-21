@@ -71,19 +71,19 @@ export async function PATCH(
 
     try {
         const body = await req.json()
-        const { status } = body
+        const { status, recurrenceActive } = body
 
-        if (!status) {
-            return NextResponse.json({ error: "Missing status" }, { status: 400 })
+        if (!status && recurrenceActive === undefined) {
+            return NextResponse.json({ error: "Missing fields" }, { status: 400 })
         }
 
+        const updateData: any = {}
+        if (status) updateData.status = status
+        if (recurrenceActive !== undefined) updateData.recurrenceActive = recurrenceActive
+
         const assignment = await prisma.assignment.update({
-            where: {
-                id: params.id
-            },
-            data: {
-                status
-            }
+            where: { id: params.id },
+            data: updateData
         })
 
         return NextResponse.json(assignment)

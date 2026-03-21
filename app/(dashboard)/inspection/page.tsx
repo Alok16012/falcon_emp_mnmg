@@ -57,7 +57,7 @@ export default function InspectionDashboard() {
         const fetchMain = async () => {
             try {
                 const [asgnRes, subRes] = await Promise.all([
-                    fetch("/api/assignments"),
+                    fetch("/api/assignments?status=all"),
                     fetch("/api/inspections?recent=20"),
                 ])
                 const [asgnData, subData] = await Promise.all([
@@ -112,7 +112,13 @@ export default function InspectionDashboard() {
         )
     }
 
-    const activeCount = assignments.filter(a => a.status === "active").length
+    const submittedAssignmentIds = new Set(recentSubmissions.map((s: any) => s.assignmentId))
+    const activeAssignments = assignments.filter(a => a.status === "active" && !submittedAssignmentIds.has(a.id))
+    const completedAssignments = [
+        ...assignments.filter(a => a.status === "completed"),
+        ...assignments.filter(a => a.status === "active" && submittedAssignmentIds.has(a.id))
+    ]
+    const activeCount = activeAssignments.length
     const draftCount = recentSubmissions.filter(s => s.status === "draft").length
     const pendingCount = recentSubmissions.filter(s => s.status === "pending").length
     const approvedInspections = recentSubmissions.filter(s => s.status === "approved")
@@ -282,7 +288,7 @@ export default function InspectionDashboard() {
 
             {/* SECTION 3: BOTTOM TWO COLUMNS */}
             <div className="grid grid-cols-2 gap-4">
-                {/* LEFT — ACTIVE ASSIGNMENTS */}
+                {/* LEFT — ACTIVE + COMPLETED ASSIGNMENTS */}
                 <div>
                     <div className="flex items-center gap-2 mb-4">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b6860" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -292,7 +298,7 @@ export default function InspectionDashboard() {
                         <h2 className="text-[15px] font-semibold text-[#1a1a18]">Active Assignments</h2>
                     </div>
 
-                    {assignments.filter(a => a.status === "active").length === 0 ? (
+                    {activeAssignments.length === 0 ? (
                         <div className="bg-white border border-dashed border-[#e8e6e1] rounded-[12px] p-8 text-center">
                             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d4d1ca" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
                                 <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
@@ -301,7 +307,7 @@ export default function InspectionDashboard() {
                             <p className="text-[13px] text-[#9e9b95]">No active assignments</p>
                         </div>
                     ) : (
-                        assignments.filter(a => a.status === "active").map((a) => (
+                        activeAssignments.map((a) => (
                             <div key={a.id} className="bg-white border border-[#e8e6e1] rounded-[12px] p-5 mb-3 hover:shadow-md transition-shadow">
                                 <p className="text-[10.5px] font-semibold text-[#9e9b95] uppercase tracking-[0.6px] mb-1 flex items-center gap-1">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -350,6 +356,58 @@ export default function InspectionDashboard() {
                             </div>
                         ))
                     )}
+
+                    {/* COMPLETED ASSIGNMENTS */}
+                    <div className="mt-5">
+                        <div className="flex items-center gap-2 mb-3">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a9e6e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                <polyline points="22 4 12 14.01 9 11.01" />
+                            </svg>
+                            <h3 className="text-[13.5px] font-semibold text-[#1a1a18]">Completed Assignments</h3>
+                            <span className="bg-[#e8f7f1] text-[#0d6b4a] text-[11px] font-[500] px-[8px] py-[2px] rounded-[20px]">{completedAssignments.length}</span>
+                        </div>
+                        {completedAssignments.length === 0 ? (
+                            <div className="bg-white border border-dashed border-[#e8e6e1] rounded-[10px] p-6 text-center">
+                                <p className="text-[13px] text-[#9e9b95]">No completed assignments yet</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {completedAssignments.slice(0, 10).map((a) => {
+                                    const isSubmitted = submittedAssignmentIds.has(a.id)
+                                    const submission = recentSubmissions.find((s: any) => s.assignmentId === a.id)
+                                    const badge = a.status === "completed"
+                                        ? { label: "Approved", cls: "bg-[#e8f7f1] text-[#0d6b4a]" }
+                                        : submission?.status === "rejected"
+                                            ? { label: "Rejected", cls: "bg-[#fef2f2] text-[#dc2626]" }
+                                            : { label: "Pending Review", cls: "bg-[#fef3c7] text-[#d97706]" }
+                                    return (
+                                        <div key={a.id} className="bg-white border border-[#e8e6e1] rounded-[10px] p-[12px_14px] flex items-center justify-between">
+                                            <div>
+                                                <p className="text-[10.5px] font-semibold text-[#9e9b95] uppercase tracking-[0.6px] mb-[2px]">{a.project?.company?.name}</p>
+                                                <p className="text-[13.5px] font-semibold text-[#1a1a18]">{a.project?.name}</p>
+                                                <p className="text-[11.5px] text-[#9e9b95] mt-[2px]">{safeFormat(a.createdAt, "MMM d, yyyy")}</p>
+                                            </div>
+                                            <div className="flex items-center gap-[8px]">
+                                                {a.recurrenceType && a.recurrenceType !== "none" && (
+                                                    <span className="bg-[#eff6ff] text-[#1d4ed8] text-[10.5px] font-[500] px-[7px] py-[2px] rounded-[20px]">
+                                                        {a.recurrenceType === "daily" ? "📅 Daily" : "🗓️ Weekly"}
+                                                    </span>
+                                                )}
+                                                <span className={`text-[11px] font-[500] px-[10px] py-[3px] rounded-[20px] ${badge.cls}`}>{badge.label}</span>
+                                                <Link
+                                                    href={`/inspection/${a.id}/form`}
+                                                    className="text-[12px] font-[500] text-[#6b6860] hover:text-[#1a9e6e] hover:underline"
+                                                >
+                                                    View →
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* RIGHT — ACTIVITY FEED */}

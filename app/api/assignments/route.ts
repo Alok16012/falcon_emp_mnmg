@@ -161,7 +161,8 @@ export async function POST(req: Request) {
 
     try {
         const body = await req.json()
-        const { projectId, inspectorIds, managerId, managerIds } = body
+        const { projectId, inspectorIds, managerId, managerIds, recurrenceType } = body
+        const recurType: string = ["daily", "weekly"].includes(recurrenceType) ? recurrenceType : "none"
 
         const hasInspectors = inspectorIds && Array.isArray(inspectorIds) && inspectorIds.length > 0
         const mgrIds: string[] = managerIds && Array.isArray(managerIds) ? managerIds : (managerId ? [managerId] : [])
@@ -190,7 +191,14 @@ export async function POST(req: Request) {
 
                 try {
                     const assignment = await prisma.assignment.create({
-                        data: { projectId, inspectionBoyId, assignedBy: session.user.id, status: "active" }
+                        data: {
+                            projectId,
+                            inspectionBoyId,
+                            assignedBy: session.user.id,
+                            status: "active",
+                            recurrenceType: recurType,
+                            recurrenceActive: recurType !== "none"
+                        }
                     })
                     created.push(assignment)
                 } catch (err: any) {

@@ -34,10 +34,13 @@ export default function InspectionFormPage() {
     const [cameraFieldId, setCameraFieldId] = useState<string | null>(null)
     const [currentStep, setCurrentStep] = useState(0)
 
+    const isAdmin = session?.user?.role === "ADMIN"
+    const canEdit = inspection?.status === "draft" || isAdmin
+
     useEffect(() => {
         if (authStatus === "unauthenticated") {
             router.push("/login")
-        } else if (authStatus === "authenticated" && session?.user?.role !== "INSPECTION_BOY") {
+        } else if (authStatus === "authenticated" && session?.user?.role !== "INSPECTION_BOY" && session?.user?.role !== "ADMIN") {
             router.push("/")
         }
     }, [authStatus, session, router])
@@ -124,7 +127,7 @@ export default function InspectionFormPage() {
     }, [isDirty, inspection, responses])
 
     useEffect(() => {
-        if (inspection?.status !== "draft" || templates.length === 0) return
+        if ((!canEdit) || templates.length === 0) return
 
         const fieldMap: Record<string, string> = {}
         const defectIds: string[] = []
@@ -183,7 +186,7 @@ export default function InspectionFormPage() {
     }, [responses, templates, inspection?.status, session])
 
     const handleFieldChange = (fieldId: string, value: string) => {
-        if (inspection?.status !== "draft") return
+        if (!canEdit) return
         setResponses(prev => ({ ...prev, [fieldId]: value }))
         setIsDirty(true)
 
@@ -260,7 +263,9 @@ export default function InspectionFormPage() {
     }
 
     const saveForm = async (status: string = "draft", holdsSilent = false) => {
-        if (!inspection || inspection.status !== "draft") return
+        if (!inspection || !canEdit) return
+        // Admin editing submitted inspection — preserve the current status, never downgrade
+        const effectiveStatus = isAdmin && inspection.status !== "draft" ? inspection.status : status
 
         if (!holdsSilent) setSaving(true)
 
@@ -275,7 +280,7 @@ export default function InspectionFormPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     responses: resData,
-                    status
+                    status: effectiveStatus
                 })
             })
 
@@ -284,7 +289,7 @@ export default function InspectionFormPage() {
                 setInspection(updated)
                 setIsDirty(false)
                 setLastSaved(new Date())
-                if (status === "pending") {
+                if (effectiveStatus === "pending") {
                     router.push("/inspection")
                 }
             } else {
@@ -307,7 +312,7 @@ export default function InspectionFormPage() {
     }
 
     const handleFileUpload = async (fieldId: string, file: File) => {
-        if (inspection?.status !== "draft") return
+        if (!canEdit) return
 
         const formData = new FormData()
         formData.append("file", file)
@@ -334,7 +339,7 @@ export default function InspectionFormPage() {
     const renderBasicField = (template: any) => {
         const value = responses[template.id] || ""
         const error = errors[template.id]
-        const readOnly = inspection?.status !== "draft"
+        const readOnly = !canEdit
 
         let pillClass = ""
         let pillText = template.fieldType.toUpperCase()
@@ -464,7 +469,7 @@ export default function InspectionFormPage() {
             <div className="bg-white border-b border-[#e8e6e1] p-[12px_24px] flex justify-between items-center sticky top-0 z-40">
                 <div className="flex items-center">
                     <button
-                        onClick={() => router.push("/inspection")}
+                        onClick={() => router.push(isAdmin ? "/approvals" : "/inspection")}
                         className="w-[30px] h-[30px] border border-[#e8e6e1] bg-white rounded-[8px] flex items-center justify-center text-[#6b6860] hover:bg-[#f9f8f5] transition-colors"
                     >
                         <ChevronLeft size={16} />
@@ -504,11 +509,19 @@ export default function InspectionFormPage() {
             {/* FORM CONTENT */}
             <div className="w-full max-w-[660px] mx-auto p-[20px_20px_100px]">
 
-                {isSubmitted && (
+                {isSubmitted && !isAdmin && (
                     <div className="bg-[#f0fdf4] border border-[rgba(26,158,110,0.25)] rounded-[12px] p-[14px_18px] flex items-center gap-[12px] mb-[24px]">
                         <CheckCircle2 className="h-[20px] w-[20px] text-[#1a9e6e] shrink-0" />
                         <span className="text-[13px] font-[500] text-[#0d6b4a] flex-1">
-                            This form has been submitted and is pending approval.
+                            This form has been submitted and is {inspection?.status === "approved" ? "approved" : "pending approval"}.
+                        </span>
+                    </div>
+                )}
+                {isAdmin && isSubmitted && (
+                    <div className="bg-[#eff6ff] border border-[rgba(59,130,246,0.25)] rounded-[12px] p-[14px_18px] flex items-center gap-[12px] mb-[24px]">
+                        <CheckCircle2 className="h-[20px] w-[20px] text-[#3b82f6] shrink-0" />
+                        <span className="text-[13px] font-[500] text-[#1d4ed8] flex-1">
+                            Admin edit mode — you can modify and save this {inspection?.status} inspection.
                         </span>
                     </div>
                 )}
@@ -534,7 +547,7 @@ export default function InspectionFormPage() {
                                         min="0"
                                         value={responses[t.id] || ""}
                                         onChange={(e) => handleFieldChange(t.id, e.target.value)}
-                                        disabled={inspection?.status !== "draft"}
+                                        disabled={!canEdit}
                                         placeholder="0"
                                         className="w-full bg-[#f9f8f5] border border-[#e8e6e1] rounded-[6px] p-[7px] text-[15px] font-[700] font-mono text-center outline-none focus:border-[#d97706] focus:bg-white transition-colors"
                                     />
@@ -562,7 +575,7 @@ export default function InspectionFormPage() {
                                     <a href={responses["paperFormPhoto"]} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center bg-[#f9f8f5] border border-[#e8e6e1] text-[#6b6860] rounded-[6px] text-[11px] font-medium px-[12px] py-[6px] hover:bg-white">
                                         <ExternalLink size={12} className="mr-[6px]" /> View Image
                                     </a>
-                                    {!isSubmitted && (
+                                    {canEdit && (
                                         <button type="button" onClick={() => handleFieldChange("paperFormPhoto", "")} className="inline-flex items-center justify-center bg-[#fef2f2] border border-[#e8e6e1] text-[#dc2626] rounded-[6px] text-[11px] font-medium px-[12px] py-[6px] hover:bg-white border-transparent">
                                             Remove
                                         </button>
@@ -570,7 +583,7 @@ export default function InspectionFormPage() {
                                 </div>
                             </div>
                         </div>
-                    ) : !isSubmitted ? (
+                    ) : canEdit ? (
                         <div className="space-y-[12px]">
                             <label className="flex flex-col items-center justify-center w-full h-[100px] border-[1.5px] border-dashed border-[#d4d1ca] rounded-[8px] cursor-pointer bg-[#f9f8f5] hover:bg-[#f5f4f0] transition-colors">
                                 <div className="flex flex-col items-center justify-center">
@@ -606,7 +619,7 @@ export default function InspectionFormPage() {
             </div>
 
             {/* STICKY BOTTOM BAR */}
-            {!isSubmitted && (
+            {(!isSubmitted || isAdmin) && (
                 <div className="fixed bottom-0 md:left-[220px] left-0 right-0 bg-white border-t border-[#e8e6e1] p-[12px_24px] flex justify-between items-center z-50">
                     <div className="flex items-center gap-[8px] flex-shrink-0">
                         {saving ? (
@@ -633,23 +646,36 @@ export default function InspectionFormPage() {
                     </div>
 
                     <div className="flex items-center gap-[10px]">
-                        <button
-                            type="button"
-                            onClick={() => saveForm("draft")}
-                            disabled={saving || !isDirty}
-                            className="bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[9px] text-[13px] font-[500] px-[16px] py-[9px] hover:bg-[#f9f8f5] disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                        >
-                            <span className="hidden sm:inline">Force Save</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleSubmit}
-                            disabled={saving}
-                            className="bg-[#1a9e6e] text-white border-none rounded-[9px] text-[13px] font-[500] px-[20px] py-[9px] hover:bg-[#158a5e] disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-colors shadow-sm"
-                        >
-                            <span className="hidden sm:inline">Submit for Approval</span>
-                            <span className="sm:hidden inline">Submit</span>
-                        </button>
+                        {isAdmin && isSubmitted ? (
+                            <button
+                                type="button"
+                                onClick={() => saveForm(inspection?.status || "approved")}
+                                disabled={saving}
+                                className="bg-[#3b82f6] text-white border-none rounded-[9px] text-[13px] font-[500] px-[20px] py-[9px] hover:bg-[#2563eb] disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-colors shadow-sm"
+                            >
+                                {saving ? "Saving..." : isDirty ? "Save Admin Changes" : "Saved ✓"}
+                            </button>
+                        ) : (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={() => saveForm("draft")}
+                                    disabled={saving || !isDirty}
+                                    className="bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[9px] text-[13px] font-[500] px-[16px] py-[9px] hover:bg-[#f9f8f5] disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                                >
+                                    <span className="hidden sm:inline">Force Save</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSubmit}
+                                    disabled={saving}
+                                    className="bg-[#1a9e6e] text-white border-none rounded-[9px] text-[13px] font-[500] px-[20px] py-[9px] hover:bg-[#158a5e] disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-colors shadow-sm"
+                                >
+                                    <span className="hidden sm:inline">Submit for Approval</span>
+                                    <span className="sm:hidden inline">Submit</span>
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
             )}

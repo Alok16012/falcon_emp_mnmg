@@ -88,6 +88,10 @@ export async function PATCH(
             updateData.approvedAt = new Date()
         }
 
+        const assignment = await prisma.assignment.findUnique({
+            where: { id: inspection.assignmentId }
+        })
+
         await prisma.$transaction(async (tx) => {
             await tx.inspection.update({
                 where: { id: inspectionId },
@@ -99,6 +103,20 @@ export async function PATCH(
                     where: { id: inspection.assignmentId },
                     data: { status: "completed" }
                 })
+
+                // Auto-create next recurring assignment
+                if (assignment && assignment.recurrenceType !== "none" && assignment.recurrenceActive) {
+                    await tx.assignment.create({
+                        data: {
+                            projectId: assignment.projectId,
+                            inspectionBoyId: assignment.inspectionBoyId,
+                            assignedBy: assignment.assignedBy,
+                            status: "active",
+                            recurrenceType: assignment.recurrenceType,
+                            recurrenceActive: true
+                        }
+                    })
+                }
             }
         })
 

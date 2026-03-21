@@ -31,6 +31,7 @@ export default function AssignmentsPage() {
     const [selectedInspectorIds, setSelectedInspectorIds] = useState<string[]>([])
     const [selectedManagerIds, setSelectedManagerIds] = useState<string[]>([])
     const [selectedGroupId, setSelectedGroupId] = useState("")
+    const [recurrenceType, setRecurrenceType] = useState("none")
 
     const [loading, setLoading] = useState(false)
     const [fetching, setFetching] = useState(true)
@@ -133,7 +134,8 @@ export default function AssignmentsPage() {
                 body: JSON.stringify({
                     projectId: selectedProjectId,
                     inspectorIds: selectedInspectorIds.length > 0 ? selectedInspectorIds : undefined,
-                    managerIds: selectedManagerIds.length > 0 ? selectedManagerIds : undefined
+                    managerIds: selectedManagerIds.length > 0 ? selectedManagerIds : undefined,
+                    recurrenceType
                 })
             })
 
@@ -179,12 +181,27 @@ export default function AssignmentsPage() {
         return true
     }) : []
 
+    const handleStopRecurrence = async (id: string) => {
+        if (!confirm("Stop auto-recurring for this assignment? No more assignments will be created automatically.")) return
+        try {
+            const res = await fetch(`/api/assignments/${id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ recurrenceActive: false })
+            })
+            if (res.ok) {
+                setAssignments(prev => prev.map(a => a.id === id ? { ...a, recurrenceActive: false } : a))
+            }
+        } catch { }
+    }
+
     const resetForm = () => {
         setSelectedInspectorIds([])
         setSelectedManagerIds([])
         setSelectedProjectId("")
         setSelectedCompanyId("")
         setSelectedGroupId("")
+        setRecurrenceType("none")
     }
 
     if (status === "loading" || fetching) {
@@ -372,6 +389,42 @@ export default function AssignmentsPage() {
                             </div>
                         </div>
 
+                        {/* STEP 4: RECURRENCE */}
+                        <div className="mt-[18px]">
+                            <label className="block text-[12.5px] font-[500] text-[#1a1a18] mb-[8px]">
+                                Assignment Type
+                            </label>
+                            <div className="flex gap-[8px]">
+                                {[
+                                    { value: "none", label: "One-time", icon: "📋" },
+                                    { value: "daily", label: "Daily", icon: "📅" },
+                                    { value: "weekly", label: "Weekly", icon: "🗓️" }
+                                ].map(opt => (
+                                    <button
+                                        key={opt.value}
+                                        type="button"
+                                        onClick={() => setRecurrenceType(opt.value)}
+                                        className={`flex-1 flex flex-col items-center gap-[4px] p-[10px_8px] rounded-[10px] border-[1.5px] transition-all text-[12px] font-[500] ${
+                                            recurrenceType === opt.value
+                                                ? opt.value === "none"
+                                                    ? "border-[#1a9e6e] bg-[#f0fdf4] text-[#0d6b4a]"
+                                                    : "border-[#3b82f6] bg-[#eff6ff] text-[#1d4ed8]"
+                                                : "border-[#e8e6e1] bg-[#f9f8f5] text-[#6b6860] hover:bg-white"
+                                        }`}
+                                    >
+                                        <span className="text-[16px]">{opt.icon}</span>
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                            {recurrenceType !== "none" && (
+                                <p className="text-[11.5px] text-[#3b82f6] mt-[6px] bg-[#eff6ff] px-[10px] py-[6px] rounded-[7px]">
+                                    After each inspection is approved, a new assignment will be auto-created {recurrenceType === "daily" ? "daily" : "weekly"}.
+                                    Manager can stop this anytime.
+                                </p>
+                            )}
+                        </div>
+
                         {/* ACTIONS */}
                         <div className="flex justify-end gap-[10px] mt-[18px] pt-[14px] border-t border-[#e8e6e1]">
                             <button
@@ -424,6 +477,7 @@ export default function AssignmentsPage() {
                                         <th className="p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Project</th>
                                         <th className="p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Company</th>
                                         <th className="p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Status</th>
+                                        <th className="p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Recurrence</th>
                                         <th className="p-[10px_16px] text-right text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Actions</th>
                                     </tr>
                                 </thead>
@@ -454,21 +508,46 @@ export default function AssignmentsPage() {
                                                     {a.project?.name || "Unknown"}
                                                 </td>
                                                 <td className="p-[12px_16px] text-[13px] text-[#6b6860]">
-                                                    {a.company?.name || "Unknown"}
+                                                    {a.project?.company?.name || "Unknown"}
                                                 </td>
                                                 <td className="p-[12px_16px]">
                                                     <span className={`inline-flex items-center px-[12px] py-[3px] rounded-[20px] text-[11.5px] font-[500] ${statusBadge.classes}`}>
                                                         {statusBadge.label}
                                                     </span>
                                                 </td>
+                                                <td className="p-[12px_16px]">
+                                                    {a.recurrenceType && a.recurrenceType !== "none" ? (
+                                                        <span className={`inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[20px] text-[11px] font-[500] ${
+                                                            a.recurrenceActive
+                                                                ? "bg-[#eff6ff] text-[#1d4ed8]"
+                                                                : "bg-[#f9f8f5] text-[#9e9b95] line-through"
+                                                        }`}>
+                                                            {a.recurrenceType === "daily" ? "📅 Daily" : "🗓️ Weekly"}
+                                                            {!a.recurrenceActive && " (stopped)"}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[11px] text-[#9e9b95]">One-time</span>
+                                                    )}
+                                                </td>
                                                 <td className="p-[12px_16px] text-right">
-                                                    <button
-                                                        onClick={() => handleDelete(a.id)}
-                                                        title="Delete Assignment"
-                                                        className="w-[28px] h-[28px] inline-flex items-center justify-center rounded-[7px] text-[#9e9b95] hover:bg-[#fef2f2] hover:text-[#dc2626] transition-colors"
-                                                    >
-                                                        <Trash2 className="h-[14px] w-[14px]" />
-                                                    </button>
+                                                    <div className="flex items-center justify-end gap-[4px]">
+                                                        {a.recurrenceType && a.recurrenceType !== "none" && a.recurrenceActive && (
+                                                            <button
+                                                                onClick={() => handleStopRecurrence(a.id)}
+                                                                title="Stop Recurrence"
+                                                                className="h-[26px] px-[8px] inline-flex items-center justify-center rounded-[7px] text-[11px] font-[500] text-[#d97706] bg-[#fef3c7] hover:bg-[#fde68a] transition-colors"
+                                                            >
+                                                                Stop
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={() => handleDelete(a.id)}
+                                                            title="Delete Assignment"
+                                                            className="w-[28px] h-[28px] inline-flex items-center justify-center rounded-[7px] text-[#9e9b95] hover:bg-[#fef2f2] hover:text-[#dc2626] transition-colors"
+                                                        >
+                                                            <Trash2 className="h-[14px] w-[14px]" />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         )

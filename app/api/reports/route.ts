@@ -168,16 +168,25 @@ export async function GET(req: Request) {
                 if (matchesLabel(label, ["total accepted", "accepted", "ok qty", "ok"])) {
                     accepted = parseNum(val)
                 }
-                if (matchesLabel(label, ["total rework", "rework", "rework qty"])) {
+                if (matchesLabel(label, ["rework qty", "total rework"])) {
                     rework = parseNum(val)
                 }
-                if (matchesLabel(label, ["total rejected", "rejected", "rejection qty", "rejection"])) {
+                if (matchesLabel(label, ["rejected qty", "rejection qty", "total rejected"])) {
                     rejected = parseNum(val)
                 }
                 if (matchesLabel(label, ["location", "shift location", "plant location"])) {
                     if (val) location = val
                 }
-                if (matchesLabel(label, ["defect", "defect type", "defect name", "defect reason"])) {
+                // Track DEFECT category fields by their label (field name = defect type)
+                if (r.field.category === "DEFECT") {
+                    const qty = parseNum(val)
+                    if (qty > 0) {
+                        // Strip trailing "qty"/"count"/"no" suffixes for cleaner names
+                        const cleanName = label.replace(/\s*(qty|count|no\.?|quantity)\s*$/i, "").trim() || label
+                        defectMap[cleanName] = (defectMap[cleanName] || 0) + qty
+                    }
+                } else if (matchesLabel(label, ["defect type", "defect name", "defect reason"])) {
+                    // Fallback: text fields where user types the defect name
                     if (val && val.trim()) {
                         defectMap[val.trim()] = (defectMap[val.trim()] || 0) + 1
                     }
@@ -277,8 +286,8 @@ export async function GET(req: Request) {
                     if (label.includes("part name") || label.includes("partname")) r.partName = val
                     if (label.includes("inspected")) r.inspected = parseNum(val)
                     if (label.includes("accepted")) r.accepted = parseNum(val)
-                    if (label.includes("rework")) r.rework = parseNum(val)
-                    if (label.includes("rejected")) r.rejected = parseNum(val)
+                    if (label.includes("rework qty") || label.includes("total rework")) r.rework = parseNum(val)
+                    if (label.includes("rejected qty") || label.includes("rejection qty") || label.includes("total rejected")) r.rejected = parseNum(val)
                     if (label.includes("location")) r.location = val
                 }
                 if (r.inspected === 0) r.inspected = r.accepted + r.rework + r.rejected

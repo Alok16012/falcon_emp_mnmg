@@ -252,16 +252,42 @@ export default function ReportsPage() {
         XLSX.writeFile(workbook, fileName)
     }
 
-    const handleExportPdf = () => {
+    const handleExportPdf = async () => {
+        if (!data) return
         setExportingPdf(true)
-        setTimeout(() => {
-            const companyName = companies.find(c => c.id === selectedCompanyId)?.name || "Global"
-            const oldTitle = document.title
-            document.title = `${companyName.replace(/\s+/g, '')}_${activeTab.replace(/\s+/g, '')}_${MONTHS[selectedMonth - 1]}_${selectedYear}`
-            window.print()
-            document.title = oldTitle
+        try {
+            const [{ pdf }, { ReportDocument }] = await Promise.all([
+                import("@react-pdf/renderer"),
+                import("./ReportPDF")
+            ])
+            const companyName = companies.find(c => c.id === selectedCompanyId)?.name || "Global View"
+            const period = `${MONTHS[selectedMonth - 1]} ${selectedYear}`
+            const project = projects.find(p => p.id === selectedProjectId)?.name || "All Projects"
+            const inspector = inspectors.find(i => i.id === selectedInspectorId)?.name || "All Inspectors"
+
+            const blob = await pdf(
+                <ReportDocument
+                    data={data}
+                    companyName={companyName}
+                    period={period}
+                    project={project}
+                    inspector={inspector}
+                />
+            ).toBlob()
+
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = `QualityReport_${companyName.replace(/\s+/g, "")}_${MONTHS[selectedMonth - 1]}_${selectedYear}.pdf`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+        } catch (err) {
+            console.error("PDF generation failed", err)
+        } finally {
             setExportingPdf(false)
-        }, 500)
+        }
     }
 
     const s = data?.summary
@@ -486,6 +512,42 @@ export default function ReportsPage() {
                                         </div>
                                     ) : <div className="h-[320px] flex items-center justify-center text-[13px] text-[#9e9b95]">No trend data available</div>}
                                 </div>
+                            </div>
+                        )}
+
+                        {activeTab === "Dashboard" && (
+                            <div className="bg-white border border-[#e8e6e1] rounded-[14px] p-[20px] print-card">
+                                <div className="flex items-center justify-between mb-[18px]">
+                                    <div>
+                                        <h3 className="text-[14px] font-[600] text-[#1a1a18]">Top 5 Defects</h3>
+                                        <p className="text-[11px] font-[500] text-[#9e9b95] mt-[2px]">Most frequent defects this period</p>
+                                    </div>
+                                    <Badge variant="outline" className="bg-[#fef2f2] text-[#dc2626] border-transparent font-[600] px-[10px] py-[2px] text-[11px]">
+                                        {(data?.topDefects || []).length > 0 ? `${Math.min(5, data.topDefects.length)} Defects` : "No Data"}
+                                    </Badge>
+                                </div>
+                                {(data?.topDefects || []).slice(0, 5).length > 0 ? (
+                                    <div className="space-y-[12px]">
+                                        {(data.topDefects as any[]).slice(0, 5).map((d: any, i: number) => (
+                                            <div key={i} className="flex items-center gap-[12px]">
+                                                <div className="w-[22px] h-[22px] rounded-full bg-[#fef2f2] flex items-center justify-center flex-shrink-0">
+                                                    <span className="text-[10px] font-[700] text-[#dc2626]">{i + 1}</span>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center justify-between mb-[4px]">
+                                                        <span className="text-[13px] font-[600] text-[#1a1a18] truncate">{d.defectName}</span>
+                                                        <span className="text-[12px] font-[700] text-[#dc2626] ml-[8px] flex-shrink-0">{d.count} <span className="text-[10px] font-[500] text-[#9e9b95]">({d.percentage.toFixed(1)}%)</span></span>
+                                                    </div>
+                                                    <div className="h-[5px] rounded-full bg-[#f5f4f0] overflow-hidden">
+                                                        <div className="h-full rounded-full bg-[#dc2626] transition-all duration-700" style={{ width: `${d.percentage}%` }} />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="h-[120px] flex items-center justify-center text-[13px] text-[#9e9b95]">No defect data for this period</div>
+                                )}
                             </div>
                         )}
 

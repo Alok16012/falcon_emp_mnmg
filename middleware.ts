@@ -56,8 +56,8 @@ export default withAuth(
         // If user is accessing a protected route that doesn't match their role
         if (
             (path.startsWith("/admin") && token.role !== "ADMIN") ||
-            (path.startsWith("/manager") && token.role !== "MANAGER") ||
-            (path.startsWith("/inspection") && token.role !== "INSPECTION_BOY") ||
+            (path.startsWith("/manager") && token.role !== "MANAGER" && token.role !== "ADMIN") ||
+            (path.startsWith("/inspection") && token.role !== "INSPECTION_BOY" && token.role !== "ADMIN") ||
             (path.startsWith("/client") && token.role !== "CLIENT")
         ) {
             // Special case for Inspection Boy path mapping

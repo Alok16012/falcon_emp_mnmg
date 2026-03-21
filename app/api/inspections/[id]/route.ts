@@ -25,14 +25,16 @@ export async function PATCH(
             return NextResponse.json({ error: "Inspection not found" }, { status: 404 })
         }
 
-        // Only the assigned inspector can update
-        if (inspection.submittedBy !== session.user.id) {
+        const isAdmin = session.user.role === "ADMIN"
+
+        // Only the assigned inspector or admin can update
+        if (!isAdmin && inspection.submittedBy !== session.user.id) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 
-        // Cannot edit if not in draft, unless inspector is reverting pending back to draft
+        // Cannot edit if not in draft, unless admin or reverting pending back to draft
         const isRevertToDraft = status === "draft" && inspection.status === "pending"
-        if (inspection.status !== "draft" && !isRevertToDraft) {
+        if (!isAdmin && inspection.status !== "draft" && !isRevertToDraft) {
             return NextResponse.json({ error: "Inspection is already submitted and cannot be edited" }, { status: 400 })
         }
 

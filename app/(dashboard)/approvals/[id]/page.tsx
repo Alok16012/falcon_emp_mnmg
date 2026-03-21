@@ -327,6 +327,14 @@ export default function ReviewInspectionPage() {
                                                 {actionLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <XCircle className="h-5 w-5 mr-2" />}
                                                 Reject Report
                                             </Button>
+                                            {session?.user?.role === "ADMIN" && (
+                                                <Button asChild variant="outline" className="w-full border-blue-200 text-blue-700 hover:bg-blue-50">
+                                                    <Link href={`/inspection/${inspection.assignment?.id}/form`}>
+                                                        <ExternalLink className="h-4 w-4 mr-2" />
+                                                        Edit Inspection (Admin)
+                                                    </Link>
+                                                </Button>
+                                            )}
                                         </div>
                                     </>
                                 ) : (
@@ -353,6 +361,19 @@ export default function ReviewInspectionPage() {
                                                 <p className="text-xs font-semibold text-muted-foreground uppercase">Reviewer Comments</p>
                                                 <p className="text-sm italic">"{inspection.reviewerNotes}"</p>
                                             </div>
+                                        )}
+
+                                        {session?.user?.role === "ADMIN" && (
+                                            <Button
+                                                asChild
+                                                variant="outline"
+                                                className="w-full border-blue-200 text-blue-700 hover:bg-blue-50"
+                                            >
+                                                <Link href={`/inspection/${inspection.assignment?.id}/form`}>
+                                                    <ExternalLink className="h-4 w-4 mr-2" />
+                                                    Edit Inspection (Admin)
+                                                </Link>
+                                            </Button>
                                         )}
                                     </div>
                                 )}
