@@ -215,12 +215,12 @@ export default function AssignmentsPage() {
     if (!isManagerOrAdmin) return null
 
     return (
-        <div className="min-h-screen bg-[#f5f4f0] p-[24px_28px]">
-            <div className="flex justify-between items-center mb-[20px]">
+        <div className="min-h-screen bg-[#f5f4f0] p-4 lg:p-[24px_28px]">
+            <div className="flex justify-between items-center mb-4 lg:mb-[20px]">
                 <h1 className="text-[22px] font-[600] tracking-[-0.4px] text-[#1a1a18]">Assignments</h1>
             </div>
 
-            <div className="grid grid-cols-2 gap-[20px] items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-[20px] items-start">
 
                 {/* LEFT COLUMN: FORM */}
                 <div>
@@ -263,7 +263,7 @@ export default function AssignmentsPage() {
                         <p className="text-[13px] text-[#6b6860] mb-[18px]">Assign members to a specific project.</p>
 
                         {/* STEP 1 */}
-                        <div className="grid grid-cols-2 gap-[12px] mb-[18px]">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-[12px] mb-[18px]">
                             <div>
                                 <label className="block text-[12.5px] font-[500] text-[#1a1a18] mb-[6px]">
                                     Select Company <span className="text-[#dc2626]">*</span>
@@ -446,7 +446,7 @@ export default function AssignmentsPage() {
                 </div>
 
                 {/* RIGHT COLUMN: TABLE */}
-                <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden sticky top-[24px]">
+                <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden lg:sticky lg:top-[24px]">
                     <div className="p-[14px_18px] border-b border-[#e8e6e1] flex justify-between items-center bg-white z-20">
                         <h2 className="text-[13.5px] font-[600] text-[#1a1a18]">Assignments</h2>
                         <div className="relative">
@@ -464,96 +464,119 @@ export default function AssignmentsPage() {
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto max-h-[calc(100vh-140px)] overflow-y-auto">
+                    <div className="overflow-x-auto lg:max-h-[calc(100vh-140px)] overflow-y-auto">
                         {filteredAssignments.length === 0 ? (
                             <div className="p-[30px] text-center text-[13px] text-[#9e9b95]">
                                 No assignments found.
                             </div>
                         ) : (
-                            <table className="w-full text-left border-collapse">
-                                <thead className="sticky top-0 z-10 bg-[#f9f8f5]">
-                                    <tr className="border-b border-[#e8e6e1]">
-                                        <th className="p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Inspector</th>
-                                        <th className="p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Project</th>
-                                        <th className="p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Company</th>
-                                        <th className="p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Status</th>
-                                        <th className="p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Recurrence</th>
-                                        <th className="p-[10px_16px] text-right text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
+                            <>
+                                {/* Mobile Card View */}
+                                <div className="lg:hidden divide-y divide-[#e8e6e1]">
                                     {filteredAssignments.map((a: any) => {
                                         let statusBadge = { label: "Inactive", classes: "bg-[#f9f8f5] border border-[#e8e6e1] text-[#9e9b95]" }
-                                        let displayStatus = a.status || ""
-
-                                        if (displayStatus === "active") {
-                                            statusBadge = { label: "Active", classes: "bg-[#e8f7f1] text-[#0d6b4a]" }
-                                        } else if (displayStatus === "pending") {
-                                            statusBadge = { label: "Pending", classes: "bg-[#fef3c7] text-[#d97706]" }
-                                        } else if (displayStatus === "manager_only") {
-                                            statusBadge = { label: "Manager Only", classes: "bg-[#eff6ff] text-[#1d4ed8]" }
-                                        }
-
+                                        const displayStatus = a.status || ""
+                                        if (displayStatus === "active") statusBadge = { label: "Active", classes: "bg-[#e8f7f1] text-[#0d6b4a]" }
+                                        else if (displayStatus === "pending") statusBadge = { label: "Pending", classes: "bg-[#fef3c7] text-[#d97706]" }
+                                        else if (displayStatus === "manager_only") statusBadge = { label: "Manager Only", classes: "bg-[#eff6ff] text-[#1d4ed8]" }
                                         return (
-                                            <tr key={a.id} className="border-b border-[#e8e6e1] last:border-b-0 hover:bg-[#f9f8f5] transition-colors">
-                                                <td className="p-[12px_16px]">
-                                                    <div className="text-[13px] font-[500] text-[#1a1a18] mb-[1px]">
-                                                        {a.inspectionBoy?.name || "System"}
+                                            <div key={a.id} className="p-[14px_16px] hover:bg-[#f9f8f5] transition-colors">
+                                                <div className="flex items-start justify-between gap-2 mb-2">
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-[13.5px] font-[600] text-[#1a1a18] truncate">{a.inspectionBoy?.name || "System"}</p>
+                                                        <p className="text-[12px] text-[#6b6860] font-[500] truncate">{a.project?.name || "Unknown"}</p>
+                                                        <p className="text-[11px] text-[#9e9b95] truncate">{a.project?.company?.name || "Unknown"}</p>
                                                     </div>
-                                                    <div className="text-[11.5px] text-[#9e9b95]">
-                                                        {a.manager ? "Manager" : "Inspector Role"}
-                                                    </div>
-                                                </td>
-                                                <td className="p-[12px_16px] text-[13px] text-[#6b6860] font-[500]">
-                                                    {a.project?.name || "Unknown"}
-                                                </td>
-                                                <td className="p-[12px_16px] text-[13px] text-[#6b6860]">
-                                                    {a.project?.company?.name || "Unknown"}
-                                                </td>
-                                                <td className="p-[12px_16px]">
-                                                    <span className={`inline-flex items-center px-[12px] py-[3px] rounded-[20px] text-[11.5px] font-[500] ${statusBadge.classes}`}>
+                                                    <span className={`shrink-0 inline-flex items-center px-[10px] py-[3px] rounded-[20px] text-[11px] font-[500] ${statusBadge.classes}`}>
                                                         {statusBadge.label}
                                                     </span>
-                                                </td>
-                                                <td className="p-[12px_16px]">
-                                                    {a.recurrenceType && a.recurrenceType !== "none" ? (
-                                                        <span className={`inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[20px] text-[11px] font-[500] ${
-                                                            a.recurrenceActive
-                                                                ? "bg-[#eff6ff] text-[#1d4ed8]"
-                                                                : "bg-[#f9f8f5] text-[#9e9b95] line-through"
-                                                        }`}>
-                                                            {a.recurrenceType === "daily" ? "📅 Daily" : "🗓️ Weekly"}
-                                                            {!a.recurrenceActive && " (stopped)"}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-[11px] text-[#9e9b95]">One-time</span>
-                                                    )}
-                                                </td>
-                                                <td className="p-[12px_16px] text-right">
-                                                    <div className="flex items-center justify-end gap-[4px]">
-                                                        {a.recurrenceType && a.recurrenceType !== "none" && a.recurrenceActive && (
-                                                            <button
-                                                                onClick={() => handleStopRecurrence(a.id)}
-                                                                title="Stop Recurrence"
-                                                                className="h-[26px] px-[8px] inline-flex items-center justify-center rounded-[7px] text-[11px] font-[500] text-[#d97706] bg-[#fef3c7] hover:bg-[#fde68a] transition-colors"
-                                                            >
-                                                                Stop
-                                                            </button>
+                                                </div>
+                                                <div className="flex items-center justify-between mt-[8px]">
+                                                    <div>
+                                                        {a.recurrenceType && a.recurrenceType !== "none" ? (
+                                                            <span className={`inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[20px] text-[11px] font-[500] ${a.recurrenceActive ? "bg-[#eff6ff] text-[#1d4ed8]" : "bg-[#f9f8f5] text-[#9e9b95] line-through"}`}>
+                                                                {a.recurrenceType === "daily" ? "📅 Daily" : "🗓️ Weekly"}
+                                                                {!a.recurrenceActive && " (stopped)"}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[11px] text-[#9e9b95]">One-time</span>
                                                         )}
-                                                        <button
-                                                            onClick={() => handleDelete(a.id)}
-                                                            title="Delete Assignment"
-                                                            className="w-[28px] h-[28px] inline-flex items-center justify-center rounded-[7px] text-[#9e9b95] hover:bg-[#fef2f2] hover:text-[#dc2626] transition-colors"
-                                                        >
+                                                    </div>
+                                                    <div className="flex items-center gap-[6px]">
+                                                        {a.recurrenceType && a.recurrenceType !== "none" && a.recurrenceActive && (
+                                                            <button onClick={() => handleStopRecurrence(a.id)} className="h-[28px] px-[10px] inline-flex items-center justify-center rounded-[7px] text-[11px] font-[500] text-[#d97706] bg-[#fef3c7] hover:bg-[#fde68a] transition-colors">Stop</button>
+                                                        )}
+                                                        <button onClick={() => handleDelete(a.id)} title="Delete" className="w-[28px] h-[28px] inline-flex items-center justify-center rounded-[7px] text-[#9e9b95] hover:bg-[#fef2f2] hover:text-[#dc2626] transition-colors">
                                                             <Trash2 className="h-[14px] w-[14px]" />
                                                         </button>
                                                     </div>
-                                                </td>
-                                            </tr>
+                                                </div>
+                                            </div>
                                         )
                                     })}
-                                </tbody>
-                            </table>
+                                </div>
+                                {/* Desktop Table View */}
+                                <table className="w-full text-left border-collapse hidden lg:table">
+                                    <thead className="sticky top-0 z-10 bg-[#f9f8f5]">
+                                        <tr className="border-b border-[#e8e6e1]">
+                                            <th className="p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Inspector</th>
+                                            <th className="p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Project</th>
+                                            <th className="p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Company</th>
+                                            <th className="p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Status</th>
+                                            <th className="p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Recurrence</th>
+                                            <th className="p-[10px_16px] text-right text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px]">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredAssignments.map((a: any) => {
+                                            let statusBadge = { label: "Inactive", classes: "bg-[#f9f8f5] border border-[#e8e6e1] text-[#9e9b95]" }
+                                            let displayStatus = a.status || ""
+
+                                            if (displayStatus === "active") {
+                                                statusBadge = { label: "Active", classes: "bg-[#e8f7f1] text-[#0d6b4a]" }
+                                            } else if (displayStatus === "pending") {
+                                                statusBadge = { label: "Pending", classes: "bg-[#fef3c7] text-[#d97706]" }
+                                            } else if (displayStatus === "manager_only") {
+                                                statusBadge = { label: "Manager Only", classes: "bg-[#eff6ff] text-[#1d4ed8]" }
+                                            }
+
+                                            return (
+                                                <tr key={a.id} className="border-b border-[#e8e6e1] last:border-b-0 hover:bg-[#f9f8f5] transition-colors">
+                                                    <td className="p-[12px_16px]">
+                                                        <div className="text-[13px] font-[500] text-[#1a1a18] mb-[1px]">{a.inspectionBoy?.name || "System"}</div>
+                                                        <div className="text-[11.5px] text-[#9e9b95]">{a.manager ? "Manager" : "Inspector Role"}</div>
+                                                    </td>
+                                                    <td className="p-[12px_16px] text-[13px] text-[#6b6860] font-[500]">{a.project?.name || "Unknown"}</td>
+                                                    <td className="p-[12px_16px] text-[13px] text-[#6b6860]">{a.project?.company?.name || "Unknown"}</td>
+                                                    <td className="p-[12px_16px]">
+                                                        <span className={`inline-flex items-center px-[12px] py-[3px] rounded-[20px] text-[11.5px] font-[500] ${statusBadge.classes}`}>{statusBadge.label}</span>
+                                                    </td>
+                                                    <td className="p-[12px_16px]">
+                                                        {a.recurrenceType && a.recurrenceType !== "none" ? (
+                                                            <span className={`inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[20px] text-[11px] font-[500] ${a.recurrenceActive ? "bg-[#eff6ff] text-[#1d4ed8]" : "bg-[#f9f8f5] text-[#9e9b95] line-through"}`}>
+                                                                {a.recurrenceType === "daily" ? "📅 Daily" : "🗓️ Weekly"}
+                                                                {!a.recurrenceActive && " (stopped)"}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[11px] text-[#9e9b95]">One-time</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-[12px_16px] text-right">
+                                                        <div className="flex items-center justify-end gap-[4px]">
+                                                            {a.recurrenceType && a.recurrenceType !== "none" && a.recurrenceActive && (
+                                                                <button onClick={() => handleStopRecurrence(a.id)} title="Stop Recurrence" className="h-[26px] px-[8px] inline-flex items-center justify-center rounded-[7px] text-[11px] font-[500] text-[#d97706] bg-[#fef3c7] hover:bg-[#fde68a] transition-colors">Stop</button>
+                                                            )}
+                                                            <button onClick={() => handleDelete(a.id)} title="Delete Assignment" className="w-[28px] h-[28px] inline-flex items-center justify-center rounded-[7px] text-[#9e9b95] hover:bg-[#fef2f2] hover:text-[#dc2626] transition-colors">
+                                                                <Trash2 className="h-[14px] w-[14px]" />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })}
+                                    </tbody>
+                                </table>
+                            </>
                         )}
                     </div>
                 </div>

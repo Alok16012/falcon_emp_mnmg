@@ -96,14 +96,14 @@ export default function InspectionDashboard() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#f5f4f0] p-6 lg:p-7">
+            <div className="min-h-screen bg-[#f5f4f0] p-4 md:p-6 lg:p-7">
                 <div className="space-y-5 animate-pulse">
-                    <div className="grid grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {[1, 2, 3, 4].map((i) => (
                             <Skeleton key={i} className="h-[100px] rounded-[12px]" />
                         ))}
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Skeleton className="h-[300px] rounded-[12px]" />
                         <Skeleton className="h-[300px] rounded-[12px]" />
                     </div>
@@ -126,14 +126,14 @@ export default function InspectionDashboard() {
     const rejectedCount = recentSubmissions.filter(s => s.status === "rejected").length
 
     return (
-        <div className="min-h-screen bg-[#f5f4f0] p-6 lg:p-7">
+        <div className="min-h-screen bg-[#f5f4f0] p-4 md:p-6 lg:p-7">
             <div className="mb-5">
                 <h1 className="text-[22px] font-semibold text-[#1a1a18] tracking-[-0.4px]">Inspector Workspace</h1>
                 <p className="text-[13px] text-[#6b6860] mt-[3px]">Track assignments and submit inspection reports</p>
             </div>
 
             {/* SECTION 1: STATUS CARDS */}
-            <div className="grid grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 <div className="bg-white border border-[#e8e6e1] rounded-[12px] p-5 flex items-center gap-4 hover:shadow-md transition-shadow">
                     <div className="w-[38px] h-[38px] rounded-full bg-[#eff6ff] flex items-center justify-center">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -198,12 +198,12 @@ export default function InspectionDashboard() {
                 </div>
 
                 {reportLoading ? (
-                    <div className="grid grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-[80px] rounded-[10px]" />)}
                     </div>
                 ) : reportData?.summary ? (
                     <>
-                        <div className="grid grid-cols-4 gap-3 mb-3">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                             <div className="bg-white border border-[#e8e6e1] rounded-[10px] p-4 flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-[#eff6ff] flex items-center justify-center shrink-0">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -255,7 +255,7 @@ export default function InspectionDashboard() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-4 gap-3">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             <div className="bg-white border border-[#e8e6e1] rounded-[10px] p-4">
                                 <p className="text-[11px] font-semibold text-[#9e9b95] uppercase tracking-[0.5px] mb-1.5">Quality Rate</p>
                                 <p className="text-[22px] font-bold text-[#1a9e6e] tabular-nums">{reportData.summary.acceptanceRate}%</p>
@@ -287,7 +287,7 @@ export default function InspectionDashboard() {
             </div>
 
             {/* SECTION 3: BOTTOM TWO COLUMNS */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* LEFT — ACTIVE + COMPLETED ASSIGNMENTS */}
                 <div>
                     <div className="flex items-center gap-2 mb-4">

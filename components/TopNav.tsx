@@ -86,7 +86,7 @@ export function TopNav({ onMenuClick }: { onMenuClick: () => void }) {
             </div>
 
             {/* Center: Search Bar */}
-            <div className="flex-1 max-w-[400px] mx-4 relative" ref={dropdownRef}>
+            <div className="flex-1 max-w-[180px] sm:max-w-[400px] mx-2 sm:mx-4 relative" ref={dropdownRef}>
                 <div className="relative group">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text3)] group-focus-within:text-[var(--accent)] transition-colors" />
                     <input

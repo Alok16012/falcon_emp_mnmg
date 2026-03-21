@@ -84,14 +84,14 @@ export default function ApprovalsPage() {
     }
 
     return (
-        <div className="p-6 lg:p-7">
+        <div className="p-4 lg:p-7">
             <div className="mb-5">
                 <h1 className="text-[22px] font-semibold tracking-tight text-[#1a1a18]">Inspection Approvals</h1>
                 <p className="text-[13px] text-[#6b6860] mt-[3px]">Review and approve submitted inspections to finalize reports.</p>
             </div>
 
-            <div className="flex items-center justify-between gap-4 mb-4">
-                <div className="flex items-center bg-white border border-[#e8e6e1] rounded-[10px] p-1">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <div className="flex items-center bg-white border border-[#e8e6e1] rounded-[10px] p-1 overflow-x-auto">
                     <button
                         onClick={() => setActiveTab("pending")}
                         className={`px-[18px] py-1.5 rounded-[7px] text-[13px] font-medium transition-all duration-150 ${
@@ -134,7 +134,7 @@ export default function ApprovalsPage() {
                     </button>
                 </div>
 
-                <div className="relative w-[280px]">
+                <div className="relative w-full sm:w-[280px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-[#9e9b95]" />
                     <Input
                         placeholder="Search..."
@@ -163,7 +163,73 @@ export default function ApprovalsPage() {
                     </div>
                 ) : (
                     <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden">
-                        <div className="overflow-x-auto">
+                        {/* Mobile Card View */}
+                        <div className="sm:hidden divide-y divide-[#e8e6e1]">
+                            {filteredInspections.map((inspection) => (
+                                <div key={inspection.id} className="p-4 hover:bg-[#f9f8f5] transition-colors">
+                                    <div className="flex items-start justify-between gap-2 mb-3">
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-[13.5px] font-semibold text-[#1a1a18] truncate">{inspection.submitter?.name}</p>
+                                            <p className="text-[11.5px] text-[#9e9b95] truncate">{inspection.submitter?.email}</p>
+                                            <p className="text-[12px] text-[#6b6860] font-[500] truncate mt-1">{inspection.assignment?.project?.name}</p>
+                                            <p className="text-[11px] text-[#9e9b95] truncate">{inspection.assignment?.project?.company?.name}</p>
+                                        </div>
+                                        <span className={`shrink-0 inline-block px-[10px] py-[4px] rounded-[20px] text-[11px] font-medium ${
+                                            inspection.status === "pending" ? "bg-[#fef3c7] text-[#d97706]" :
+                                            inspection.status === "approved" ? "bg-[#e8f7f1] text-[#0d6b4a]" :
+                                            inspection.status === "rejected" ? "bg-[#fef2f2] text-[#dc2626]" :
+                                            "bg-[#f9f8f5] text-[#6b6860]"
+                                        }`}>
+                                            {inspection.status === "pending" ? "Pending" : inspection.status === "approved" ? "Approved" : inspection.status === "rejected" ? "Rejected" : inspection.status}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-[12px] text-[#9e9b95]">
+                                            {inspection.submittedAt ? new Date(inspection.submittedAt).toLocaleDateString('en-GB') : "—"}
+                                        </p>
+                                        <div className="flex items-center gap-2">
+                                            {inspection.status === "pending" && (
+                                                <button
+                                                    onClick={async () => {
+                                                        try {
+                                                            const res = await fetch(`/api/inspections/${inspection.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "approved" }) })
+                                                            if (res.ok) fetchData(activeTab)
+                                                        } catch {}
+                                                    }}
+                                                    className="h-8 w-8 rounded-[7px] bg-[#e8f7f1] text-[#0d6b4a] flex items-center justify-center hover:bg-[#1a9e6e] hover:text-white transition-colors"
+                                                    title="Approve"
+                                                >
+                                                    <CheckCircle2 className="h-4 w-4" />
+                                                </button>
+                                            )}
+                                            {inspection.status === "pending" && (
+                                                <button
+                                                    onClick={async () => {
+                                                        try {
+                                                            const res = await fetch(`/api/inspections/${inspection.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "rejected" }) })
+                                                            if (res.ok) fetchData(activeTab)
+                                                        } catch {}
+                                                    }}
+                                                    className="h-8 w-8 rounded-[7px] bg-[#fef2f2] text-[#dc2626] flex items-center justify-center hover:bg-[#dc2626] hover:text-white transition-colors"
+                                                    title="Reject"
+                                                >
+                                                    <XCircle className="h-4 w-4" />
+                                                </button>
+                                            )}
+                                            <Link
+                                                href={`/approvals/${inspection.id}`}
+                                                className="h-8 px-3 rounded-[7px] bg-[#f9f8f5] text-[#6b6860] flex items-center justify-center hover:bg-[#1a1a18] hover:text-white transition-colors text-[12px] font-[500]"
+                                                title="View"
+                                            >
+                                                View →
+                                            </Link>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {/* Desktop Table View */}
+                        <div className="hidden sm:block overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-[#f9f8f5] border-b border-[#e8e6e1]">
