@@ -22,7 +22,14 @@ import {
     ChevronRight,
     ExternalLink,
     Terminal,
-    Target
+    Target,
+    ArrowUpDown,
+    ArrowUp,
+    ArrowDown,
+    Columns,
+    SlidersHorizontal,
+    X,
+    Check
 } from "lucide-react"
 import * as XLSX from "xlsx"
 import { Badge } from "@/components/ui/badge"
@@ -109,6 +116,10 @@ export default function ReportsPage() {
     const now = new Date()
     const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1)
     const [selectedYear, setSelectedYear] = useState(now.getFullYear())
+    const [dateFilterMode, setDateFilterMode] = useState<"month" | "single" | "range">("month")
+    const todayStr = now.toISOString().slice(0, 10)
+    const [dateFrom, setDateFrom] = useState(todayStr)
+    const [dateTo, setDateTo] = useState(todayStr)
     const [mounted, setMounted] = useState(false)
     const [selectedCompanyId, setSelectedCompanyId] = useState("all")
     const [selectedProjectId, setSelectedProjectId] = useState("all")
@@ -126,6 +137,18 @@ export default function ReportsPage() {
     const [activeTab, setActiveTab] = useState("Dashboard")
     const [searchTerm, setSearchTerm] = useState("")
     const [exportingPdf, setExportingPdf] = useState(false)
+
+    // Table features — sorting
+    const [sortKey, setSortKey] = useState<string>("date")
+    const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
+    // Column visibility
+    const ALL_COLS = ["date", "inspector", "company", "project", "part", "location", "inspected", "accepted", "rework", "rejected"] as const
+    type ColKey = typeof ALL_COLS[number]
+    const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(new Set(ALL_COLS))
+    const [showColMenu, setShowColMenu] = useState(false)
+    // Per-column filters
+    const [showFilterRow, setShowFilterRow] = useState(false)
+    const [colFilters, setColFilters] = useState<Partial<Record<ColKey, string>>>({})
 
     useEffect(() => {
         if (mounted && (role === "ADMIN" || role === "MANAGER")) {
@@ -150,10 +173,17 @@ export default function ReportsPage() {
     const fetchReport = useCallback(async () => {
         setLoading(true)
         try {
-            const params = new URLSearchParams({
-                month: String(selectedMonth),
-                year: String(selectedYear),
-            })
+            const params = new URLSearchParams()
+            if (dateFilterMode === "month") {
+                params.set("month", String(selectedMonth))
+                params.set("year", String(selectedYear))
+            } else if (dateFilterMode === "single") {
+                params.set("dateFrom", dateFrom)
+                params.set("dateTo", dateFrom)
+            } else {
+                params.set("dateFrom", dateFrom)
+                params.set("dateTo", dateTo)
+            }
             if (selectedCompanyId !== "all") params.set("companyId", selectedCompanyId)
             if (selectedProjectId !== "all") params.set("projectId", selectedProjectId)
             if (selectedInspectorId !== "all") params.set("inspectorId", selectedInspectorId)
@@ -165,7 +195,7 @@ export default function ReportsPage() {
         } finally {
             setLoading(false)
         }
-    }, [selectedMonth, selectedYear, selectedCompanyId, selectedProjectId, selectedInspectorId])
+    }, [selectedMonth, selectedYear, dateFilterMode, dateFrom, dateTo, selectedCompanyId, selectedProjectId, selectedInspectorId])
 
     useEffect(() => {
         fetchReport()
@@ -173,16 +203,42 @@ export default function ReportsPage() {
 
     const filteredRecords = useMemo(() => {
         if (!data?.records) return []
-        if (!searchTerm) return data.records
-        const low = searchTerm.toLowerCase()
-        return data.records.filter((r: any) =>
-            (r.id && r.id.toLowerCase().includes(low)) ||
-            (r.inspector && r.inspector.toLowerCase().includes(low)) ||
-            (r.partName && r.partName.toLowerCase().includes(low)) ||
-            (r.location && r.location.toLowerCase().includes(low)) ||
-            (r.project && r.project.toLowerCase().includes(low))
-        )
-    }, [data?.records, searchTerm])
+        let rows = data.records as any[]
+        // Global search
+        if (searchTerm) {
+            const low = searchTerm.toLowerCase()
+            rows = rows.filter((r: any) =>
+                (r.id && r.id.toLowerCase().includes(low)) ||
+                (r.inspector && r.inspector.toLowerCase().includes(low)) ||
+                (r.partName && r.partName.toLowerCase().includes(low)) ||
+                (r.location && r.location.toLowerCase().includes(low)) ||
+                (r.project && r.project.toLowerCase().includes(low))
+            )
+        }
+        // Per-column filters
+        Object.entries(colFilters).forEach(([key, val]) => {
+            if (!val) return
+            const low = val.toLowerCase()
+            rows = rows.filter((r: any) => {
+                const cell = key === "date" ? (r.date ? new Date(r.date).toLocaleDateString("en-GB") : "")
+                    : key === "part" ? (r.partName || "")
+                        : (r[key] ?? "")
+                return String(cell).toLowerCase().includes(low)
+            })
+        })
+        // Sorting
+        rows = [...rows].sort((a: any, b: any) => {
+            let av: any, bv: any
+            if (sortKey === "date") { av = new Date(a.date || 0).getTime(); bv = new Date(b.date || 0).getTime() }
+            else if (sortKey === "part") { av = (a.partName || "").toLowerCase(); bv = (b.partName || "").toLowerCase() }
+            else if (["inspected", "accepted", "rework", "rejected"].includes(sortKey)) { av = a[sortKey] ?? 0; bv = b[sortKey] ?? 0 }
+            else { av = (a[sortKey] || "").toLowerCase(); bv = (b[sortKey] || "").toLowerCase() }
+            if (av < bv) return sortDir === "asc" ? -1 : 1
+            if (av > bv) return sortDir === "asc" ? 1 : -1
+            return 0
+        })
+        return rows
+    }, [data?.records, searchTerm, colFilters, sortKey, sortDir])
 
     const handleExportExcel = () => {
         let formattedData: any = []
@@ -341,12 +397,11 @@ export default function ReportsPage() {
             {/* FILTER ROW */}
             <div className="no-print bg-white border-b border-[#e8e6e1] p-3 md:p-[12px_24px] sticky top-0 z-20">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-[10px] md:gap-[12px]">
+                    {/* Company */}
                     {[
                         { label: "Company", value: selectedCompanyId, options: companies, setter: setSelectedCompanyId, allLabel: "Global View" },
                         { label: "Project", value: selectedProjectId, options: projects, setter: setSelectedProjectId, allLabel: "All Projects", disabled: selectedCompanyId === "all" },
                         { label: "Inspector", value: selectedInspectorId, options: inspectors, setter: setSelectedInspectorId, allLabel: "All Inspectors" },
-                        { label: "Month", value: selectedMonth, options: MONTHS.map((m, i) => ({ id: i + 1, name: m })), setter: (v: string) => setSelectedMonth(Number(v)) },
-                        { label: "Year", value: selectedYear, options: YEARS.map(y => ({ id: y, name: y.toString() })), setter: (v: string) => setSelectedYear(Number(v)) }
                     ].map((filter, idx) => (
                         <div key={idx} className="flex flex-col">
                             <label className="text-[10.5px] font-[600] text-[#9e9b95] uppercase tracking-[0.6px] mb-[5px]">{filter.label}</label>
@@ -366,6 +421,90 @@ export default function ReportsPage() {
                             </div>
                         </div>
                     ))}
+
+                    {/* DATE FILTER — spans last 2 columns on desktop */}
+                    <div className="col-span-2 sm:col-span-3 md:col-span-2 flex flex-col gap-[6px]">
+                        {/* Mode toggle */}
+                        <div className="flex items-center justify-between">
+                            <label className="text-[10.5px] font-[600] text-[#9e9b95] uppercase tracking-[0.6px]">Date Filter</label>
+                            <div className="flex bg-[#f9f8f5] border border-[#e8e6e1] rounded-[8px] p-[2px] gap-[2px]">
+                                {(["month", "single", "range"] as const).map(mode => (
+                                    <button
+                                        key={mode}
+                                        onClick={() => setDateFilterMode(mode)}
+                                        className={`px-[10px] py-[4px] rounded-[6px] text-[11px] font-[600] transition-colors whitespace-nowrap ${dateFilterMode === mode
+                                            ? "bg-[#1a1a18] text-white"
+                                            : "text-[#6b6860] hover:text-[#1a1a18]"
+                                            }`}
+                                    >
+                                        {mode === "month" ? "Month" : mode === "single" ? "Single Day" : "Date Range"}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Month mode */}
+                        {dateFilterMode === "month" && (
+                            <div className="grid grid-cols-2 gap-[8px]">
+                                <div className="relative">
+                                    <select
+                                        value={selectedMonth}
+                                        onChange={e => setSelectedMonth(Number(e.target.value))}
+                                        className="w-full bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] p-[9px_14px] text-[13px] text-[#1a1a18] font-[500] outline-none appearance-none transition-all focus:border-[#1a9e6e] focus:bg-white cursor-pointer"
+                                    >
+                                        {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                                    </select>
+                                    <ChevronRight className="absolute right-[12px] top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-[#9e9b95] pointer-events-none rotate-90" />
+                                </div>
+                                <div className="relative">
+                                    <select
+                                        value={selectedYear}
+                                        onChange={e => setSelectedYear(Number(e.target.value))}
+                                        className="w-full bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] p-[9px_14px] text-[13px] text-[#1a1a18] font-[500] outline-none appearance-none transition-all focus:border-[#1a9e6e] focus:bg-white cursor-pointer"
+                                    >
+                                        {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                                    </select>
+                                    <ChevronRight className="absolute right-[12px] top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-[#9e9b95] pointer-events-none rotate-90" />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Single day mode */}
+                        {dateFilterMode === "single" && (
+                            <div className="flex items-center gap-[8px]">
+                                <Calendar className="h-[14px] w-[14px] text-[#9e9b95] flex-shrink-0" />
+                                <input
+                                    type="date"
+                                    value={dateFrom}
+                                    max={todayStr}
+                                    onChange={e => setDateFrom(e.target.value)}
+                                    className="flex-1 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] p-[8px_12px] text-[13px] text-[#1a1a18] font-[500] outline-none transition-all focus:border-[#1a9e6e] focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,158,110,0.08)] cursor-pointer"
+                                />
+                            </div>
+                        )}
+
+                        {/* Date range mode */}
+                        {dateFilterMode === "range" && (
+                            <div className="flex items-center gap-[8px]">
+                                <input
+                                    type="date"
+                                    value={dateFrom}
+                                    max={dateTo}
+                                    onChange={e => setDateFrom(e.target.value)}
+                                    className="flex-1 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] p-[8px_12px] text-[13px] text-[#1a1a18] font-[500] outline-none transition-all focus:border-[#1a9e6e] focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,158,110,0.08)] cursor-pointer"
+                                />
+                                <span className="text-[11px] font-[600] text-[#9e9b95] flex-shrink-0">to</span>
+                                <input
+                                    type="date"
+                                    value={dateTo}
+                                    min={dateFrom}
+                                    max={todayStr}
+                                    onChange={e => setDateTo(e.target.value)}
+                                    className="flex-1 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] p-[8px_12px] text-[13px] text-[#1a1a18] font-[500] outline-none transition-all focus:border-[#1a9e6e] focus:bg-white focus:shadow-[0_0_0_3px_rgba(26,158,110,0.08)] cursor-pointer"
+                                />
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -693,63 +832,195 @@ export default function ReportsPage() {
                             </div>
                         )}
 
-                        {activeTab === "Inspection Report" && (
-                            <div className="bg-white border border-[#e8e6e1] rounded-[14px] mt-[16px] overflow-hidden no-print">
-                                <div className="p-[14px_18px] border-b border-[#e8e6e1] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                    <div>
-                                        <h3 className="text-[13.5px] font-[600] text-[#1a1a18]">Inspection Record Explorer</h3>
-                                        <p className="text-[10.5px] font-[600] text-[#9e9b95] uppercase tracking-[0.6px] mt-[2px]">LIVE DATA FEED</p>
-                                    </div>
-                                    <div className="flex items-center gap-[12px]">
-                                        <div className="relative w-full sm:w-auto">
-                                            <Search className="absolute left-[12px] top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-[#9e9b95]" />
-                                            <Input
-                                                className="w-full sm:w-[300px] pl-[34px] h-[36px] bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] font-[500] focus-visible:ring-0 focus:border-[#1a9e6e] focus:bg-white transition-all shadow-none"
-                                                placeholder="Search records..."
-                                                value={searchTerm}
-                                                onChange={e => setSearchTerm(e.target.value)}
-                                            />
+                        {activeTab === "Inspection Report" && (() => {
+                            const COL_META: { key: ColKey; label: string; numeric: boolean }[] = [
+                                { key: "date", label: "Date", numeric: false },
+                                { key: "inspector", label: "Inspector", numeric: false },
+                                { key: "company", label: "Company", numeric: false },
+                                { key: "project", label: "Project", numeric: false },
+                                { key: "part", label: "Part", numeric: false },
+                                { key: "location", label: "Location", numeric: false },
+                                { key: "inspected", label: "Inspected", numeric: true },
+                                { key: "accepted", label: "Accepted", numeric: true },
+                                { key: "rework", label: "Rework", numeric: true },
+                                { key: "rejected", label: "Rejected", numeric: true },
+                            ]
+                            const visibleMeta = COL_META.filter(c => visibleCols.has(c.key))
+
+                            const handleSort = (key: string) => {
+                                if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc")
+                                else { setSortKey(key); setSortDir("desc") }
+                            }
+
+                            const SortIcon = ({ col }: { col: string }) => {
+                                if (sortKey !== col) return <ArrowUpDown className="h-[11px] w-[11px] text-[#c5c3bd] ml-[4px] inline" />
+                                return sortDir === "asc"
+                                    ? <ArrowUp className="h-[11px] w-[11px] text-[#1a9e6e] ml-[4px] inline" />
+                                    : <ArrowDown className="h-[11px] w-[11px] text-[#1a9e6e] ml-[4px] inline" />
+                            }
+
+                            return (
+                                <div className="bg-white border border-[#e8e6e1] rounded-[14px] mt-[16px] overflow-hidden no-print">
+                                    {/* Header bar */}
+                                    <div className="p-[14px_18px] border-b border-[#e8e6e1] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                        <div>
+                                            <h3 className="text-[13.5px] font-[600] text-[#1a1a18]">Inspection Record Explorer</h3>
+                                            <p className="text-[10.5px] font-[600] text-[#9e9b95] uppercase tracking-[0.6px] mt-[2px]">
+                                                {filteredRecords.length} record{filteredRecords.length !== 1 ? "s" : ""} &nbsp;·&nbsp; LIVE DATA FEED
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-[8px] flex-wrap">
+                                            {/* Global search */}
+                                            <div className="relative">
+                                                <Search className="absolute left-[10px] top-1/2 -translate-y-1/2 h-[13px] w-[13px] text-[#9e9b95]" />
+                                                <Input
+                                                    className="w-[200px] pl-[30px] h-[34px] bg-[#f9f8f5] border border-[#e8e6e1] rounded-[8px] text-[12.5px] font-[500] focus-visible:ring-0 focus:border-[#1a9e6e] focus:bg-white transition-all shadow-none"
+                                                    placeholder="Search all..."
+                                                    value={searchTerm}
+                                                    onChange={e => setSearchTerm(e.target.value)}
+                                                />
+                                            </div>
+                                            {/* Filter toggle */}
+                                            <button
+                                                onClick={() => setShowFilterRow(v => !v)}
+                                                className={`flex items-center gap-[5px] h-[34px] px-[10px] rounded-[8px] border text-[12px] font-[600] transition-colors ${showFilterRow || Object.values(colFilters).some(Boolean)
+                                                        ? "bg-[#1a9e6e] text-white border-[#1a9e6e]"
+                                                        : "bg-[#f9f8f5] text-[#6b6860] border-[#e8e6e1] hover:border-[#1a9e6e] hover:text-[#1a9e6e]"
+                                                    }`}
+                                                title="Column filters"
+                                            >
+                                                <SlidersHorizontal className="h-[13px] w-[13px]" />
+                                                <span className="hidden sm:inline">Filter</span>
+                                                {Object.values(colFilters).some(Boolean) && (
+                                                    <span className="bg-white text-[#1a9e6e] rounded-full w-[16px] h-[16px] text-[10px] font-[700] flex items-center justify-center">
+                                                        {Object.values(colFilters).filter(Boolean).length}
+                                                    </span>
+                                                )}
+                                            </button>
+                                            {/* Column visibility */}
+                                            <div className="relative">
+                                                <button
+                                                    onClick={() => setShowColMenu(v => !v)}
+                                                    className={`flex items-center gap-[5px] h-[34px] px-[10px] rounded-[8px] border text-[12px] font-[600] transition-colors ${showColMenu
+                                                            ? "bg-[#1a1a18] text-white border-[#1a1a18]"
+                                                            : "bg-[#f9f8f5] text-[#6b6860] border-[#e8e6e1] hover:border-[#1a1a18] hover:text-[#1a1a18]"
+                                                        }`}
+                                                    title="Show/hide columns"
+                                                >
+                                                    <Columns className="h-[13px] w-[13px]" />
+                                                    <span className="hidden sm:inline">Columns</span>
+                                                </button>
+                                                {showColMenu && (
+                                                    <div className="absolute right-0 top-[38px] z-[50] bg-white border border-[#e8e6e1] rounded-[10px] shadow-lg p-[8px] min-w-[160px]">
+                                                        <p className="text-[10px] font-[700] text-[#9e9b95] uppercase tracking-[0.6px] px-[8px] pt-[4px] pb-[8px] border-b border-[#f5f4f0] mb-[4px]">Visible Columns</p>
+                                                        {COL_META.map(c => (
+                                                            <button
+                                                                key={c.key}
+                                                                onClick={() => {
+                                                                    setVisibleCols(prev => {
+                                                                        const next = new Set(prev)
+                                                                        if (next.has(c.key)) { if (next.size > 1) next.delete(c.key) }
+                                                                        else next.add(c.key)
+                                                                        return next
+                                                                    })
+                                                                }}
+                                                                className="w-full flex items-center gap-[8px] px-[8px] py-[5px] rounded-[6px] hover:bg-[#f9f8f5] transition-colors text-left"
+                                                            >
+                                                                <div className={`w-[14px] h-[14px] rounded-[3px] border flex items-center justify-center flex-shrink-0 ${visibleCols.has(c.key) ? "bg-[#1a9e6e] border-[#1a9e6e]" : "border-[#d4d1ca]"
+                                                                    }`}>
+                                                                    {visibleCols.has(c.key) && <Check className="h-[9px] w-[9px] text-white" />}
+                                                                </div>
+                                                                <span className="text-[12.5px] font-[500] text-[#1a1a18]">{c.label}</span>
+                                                            </button>
+                                                        ))}
+                                                        <button
+                                                            onClick={() => setVisibleCols(new Set(ALL_COLS))}
+                                                            className="w-full text-center text-[11px] font-[600] text-[#1a9e6e] mt-[6px] pt-[6px] border-t border-[#f5f4f0] hover:underline"
+                                                        >Reset all</button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {/* Clear all col filters */}
+                                            {Object.values(colFilters).some(Boolean) && (
+                                                <button
+                                                    onClick={() => setColFilters({})}
+                                                    className="flex items-center gap-[4px] h-[34px] px-[8px] rounded-[8px] border border-[#fca5a5] bg-[#fef2f2] text-[#dc2626] text-[11.5px] font-[600] hover:bg-[#fee2e2] transition-colors"
+                                                >
+                                                    <X className="h-[11px] w-[11px]" /> Clear filters
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
-                                </div>
-                                <div className="overflow-x-auto">
-                                    {filteredRecords.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center p-[60px]">
-                                            <Search className="h-[32px] w-[32px] text-[#d4d1ca] mb-[10px]" />
-                                            <p className="text-[13px] text-[#9e9b95]">No records matching your search</p>
-                                        </div>
-                                    ) : (
-                                        <table className="w-full">
-                                            <thead>
-                                                <tr className="bg-[#f9f8f5] border-b border-[#e8e6e1]">
-                                                    {["DATE", "INSPECTOR", "COMPANY", "PROJECT", "PART", "LOCATION", "INSPECTED", "ACCEPTED", "REWORK", "REJECTED"].map(h => (
-                                                        <th key={h} className={`p-[10px_16px] text-[11px] font-[500] text-[#9e9b95] uppercase tracking-[0.5px] ${["INSPECTED", "ACCEPTED", "REWORK", "REJECTED"].includes(h) ? "text-right" : "text-left"}`}>
-                                                            {h}
-                                                        </th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-[#e8e6e1]">
-                                                {filteredRecords.map((r: any) => (
-                                                    <tr key={r.id} className="hover:bg-[#f9f8f5] transition-colors">
-                                                        <td className="p-[12px_16px] text-[12.5px] font-mono text-[#6b6860] whitespace-nowrap">{r.date ? format(new Date(r.date), "dd/MM/yyyy") : "—"}</td>
-                                                        <td className="p-[12px_16px] text-[13px] font-[500] text-[#1a1a18] whitespace-nowrap">{r.inspector}</td>
-                                                        <td className="p-[12px_16px] text-[13px] text-[#6b6860]">{r.company}</td>
-                                                        <td className="p-[12px_16px] text-[13px] text-[#6b6860]">{r.project}</td>
-                                                        <td className="p-[12px_16px] text-[13px] text-[#6b6860]">{r.partName}</td>
-                                                        <td className="p-[12px_16px] text-[13px] text-[#6b6860]">{r.location}</td>
-                                                        <td className="p-[12px_16px] text-[13px] font-[600] font-mono text-right text-[#1a1a18]">{r.inspected}</td>
-                                                        <td className={`p-[12px_16px] text-[13px] font-[600] font-mono text-right ${r.accepted > 0 ? "text-[#0d6b4a]" : "text-[#1a1a18]"}`}>{r.accepted}</td>
-                                                        <td className={`p-[12px_16px] text-[13px] font-[600] font-mono text-right ${r.rework > 0 ? "text-[#d97706]" : "text-[#1a1a18]"}`}>{r.rework}</td>
-                                                        <td className={`p-[12px_16px] text-[13px] font-[600] font-mono text-right ${r.rejected > 0 ? "text-[#dc2626]" : "text-[#1a1a18]"}`}>{r.rejected}</td>
+
+                                    {/* Click-outside overlay for col menu */}
+                                    {showColMenu && <div className="fixed inset-0 z-[40]" onClick={() => setShowColMenu(false)} />}
+
+                                    <div className="overflow-x-auto">
+                                        {filteredRecords.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center p-[60px]">
+                                                <Search className="h-[32px] w-[32px] text-[#d4d1ca] mb-[10px]" />
+                                                <p className="text-[13px] text-[#9e9b95]">No records matching your filters</p>
+                                            </div>
+                                        ) : (
+                                            <table className="w-full">
+                                                <thead>
+                                                    {/* Column headers with sort */}
+                                                    <tr className="bg-[#f9f8f5] border-b border-[#e8e6e1]">
+                                                        {visibleMeta.map(c => (
+                                                            <th
+                                                                key={c.key}
+                                                                onClick={() => handleSort(c.key)}
+                                                                className={`p-[10px_16px] text-[11px] font-[600] text-[#9e9b95] uppercase tracking-[0.5px] cursor-pointer select-none hover:text-[#1a1a18] hover:bg-[#f0efeb] transition-colors group ${c.numeric ? "text-right" : "text-left"
+                                                                    }`}
+                                                            >
+                                                                <span className="inline-flex items-center gap-[2px]">
+                                                                    {c.label}
+                                                                    <SortIcon col={c.key} />
+                                                                </span>
+                                                            </th>
+                                                        ))}
                                                     </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    )}
+                                                    {/* Filter row */}
+                                                    {showFilterRow && (
+                                                        <tr className="bg-[#fafaf8] border-b border-[#e8e6e1]">
+                                                            {visibleMeta.map(c => (
+                                                                <td key={c.key} className="p-[4px_8px]">
+                                                                    <input
+                                                                        type={c.numeric ? "number" : "text"}
+                                                                        placeholder={`Filter ${c.label}…`}
+                                                                        value={colFilters[c.key] || ""}
+                                                                        onChange={e => setColFilters(prev => ({ ...prev, [c.key]: e.target.value }))}
+                                                                        className={`w-full bg-white border border-[#e8e6e1] rounded-[6px] px-[8px] py-[5px] text-[11.5px] text-[#1a1a18] placeholder-[#c5c3bd] outline-none focus:border-[#1a9e6e] focus:shadow-[0_0_0_2px_rgba(26,158,110,0.1)] transition-all ${c.numeric ? "text-right" : "text-left"
+                                                                            } ${colFilters[c.key] ? "border-[#1a9e6e] bg-[#f0faf6]" : ""
+                                                                            }`}
+                                                                    />
+                                                                </td>
+                                                            ))}
+                                                        </tr>
+                                                    )}
+                                                </thead>
+                                                <tbody className="divide-y divide-[#e8e6e1]">
+                                                    {filteredRecords.map((r: any) => (
+                                                        <tr key={r.id} className="hover:bg-[#f9f8f5] transition-colors">
+                                                            {visibleCols.has("date") && <td className="p-[12px_16px] text-[12.5px] font-mono text-[#6b6860] whitespace-nowrap">{r.date ? format(new Date(r.date), "dd/MM/yyyy") : "—"}</td>}
+                                                            {visibleCols.has("inspector") && <td className="p-[12px_16px] text-[13px] font-[500] text-[#1a1a18] whitespace-nowrap">{r.inspector}</td>}
+                                                            {visibleCols.has("company") && <td className="p-[12px_16px] text-[13px] text-[#6b6860]">{r.company}</td>}
+                                                            {visibleCols.has("project") && <td className="p-[12px_16px] text-[13px] text-[#6b6860]">{r.project}</td>}
+                                                            {visibleCols.has("part") && <td className="p-[12px_16px] text-[13px] text-[#6b6860]">{r.partName}</td>}
+                                                            {visibleCols.has("location") && <td className="p-[12px_16px] text-[13px] text-[#6b6860]">{r.location}</td>}
+                                                            {visibleCols.has("inspected") && <td className="p-[12px_16px] text-[13px] font-[600] font-mono text-right text-[#1a1a18]">{r.inspected}</td>}
+                                                            {visibleCols.has("accepted") && <td className={`p-[12px_16px] text-[13px] font-[600] font-mono text-right ${r.accepted > 0 ? "text-[#0d6b4a]" : "text-[#1a1a18]"}`}>{r.accepted}</td>}
+                                                            {visibleCols.has("rework") && <td className={`p-[12px_16px] text-[13px] font-[600] font-mono text-right ${r.rework > 0 ? "text-[#d97706]" : "text-[#1a1a18]"}`}>{r.rework}</td>}
+                                                            {visibleCols.has("rejected") && <td className={`p-[12px_16px] text-[13px] font-[600] font-mono text-right ${r.rejected > 0 ? "text-[#dc2626]" : "text-[#1a1a18]"}`}>{r.rejected}</td>}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )
+                        })()}
 
                     </div>
                 )}

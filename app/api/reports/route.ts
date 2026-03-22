@@ -28,6 +28,8 @@ export async function GET(req: Request) {
     const now = new Date()
     const month = parseInt(searchParams.get("month") || String(now.getMonth() + 1))
     const year = parseInt(searchParams.get("year") || String(now.getFullYear()))
+    const dateFromParam = searchParams.get("dateFrom")
+    const dateToParam = searchParams.get("dateTo")
     const role = session.user.role
 
     // Determine filters
@@ -70,9 +72,21 @@ export async function GET(req: Request) {
 
     const projectId = searchParams.get("projectId") || null
 
-    // Date range for the selected month/year
-    const startDate = new Date(year, month - 1, 1)
-    const endDate = new Date(year, month, 0, 23, 59, 59, 999)
+    // Date range — prefer explicit dateFrom/dateTo if provided, else fall back to full month
+    let startDate: Date
+    let endDate: Date
+    let periodLabel: string
+    if (dateFromParam && dateToParam) {
+        startDate = new Date(dateFromParam + "T00:00:00.000Z")
+        endDate = new Date(dateToParam + "T23:59:59.999Z")
+        periodLabel = dateFromParam === dateToParam
+            ? dateFromParam
+            : `${dateFromParam} to ${dateToParam}`
+    } else {
+        startDate = new Date(year, month - 1, 1)
+        endDate = new Date(year, month, 0, 23, 59, 59, 999)
+        periodLabel = `${getMonthName(month)} ${year}`
+    }
 
     try {
         // Fetch all relevant inspections with full relations
@@ -105,6 +119,7 @@ export async function GET(req: Request) {
                 },
                 submitter: true,
             },
+            orderBy: { submittedAt: "desc" },
         })
 
         // Aggregate data
@@ -119,7 +134,7 @@ export async function GET(req: Request) {
             reworkPPM: 0,
             rejectionPPM: 0,
             overallPPM: 0,
-            period: `${getMonthName(month)} ${year}`,
+            period: periodLabel,
             companyName: "All Companies",
             partModel: "",
         }
