@@ -29,8 +29,10 @@ import {
     Columns,
     SlidersHorizontal,
     X,
-    Check
+    Check,
+    Trash2
 } from "lucide-react"
+import { toast } from "sonner"
 import * as XLSX from "xlsx"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -137,6 +139,8 @@ export default function ReportsPage() {
     const [activeTab, setActiveTab] = useState("Dashboard")
     const [searchTerm, setSearchTerm] = useState("")
     const [exportingPdf, setExportingPdf] = useState(false)
+    const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+    const [deleting, setDeleting] = useState(false)
 
     // Table features — sorting
     const [sortKey, setSortKey] = useState<string>("date")
@@ -347,6 +351,25 @@ export default function ReportsPage() {
             console.error("PDF generation failed", err)
         } finally {
             setExportingPdf(false)
+        }
+    }
+
+    const handleDeleteRecord = async (inspectionId: string) => {
+        setDeleting(true)
+        try {
+            const res = await fetch(`/api/inspections/${inspectionId}`, { method: "DELETE" })
+            if (!res.ok) throw new Error("Delete failed")
+            toast.success("Inspection record deleted")
+            setDeleteConfirmId(null)
+            // Remove from local data
+            setData((prev: any) => {
+                if (!prev?.records) return prev
+                return { ...prev, records: prev.records.filter((r: any) => r.id !== inspectionId) }
+            })
+        } catch {
+            toast.error("Failed to delete record")
+        } finally {
+            setDeleting(false)
         }
     }
 
@@ -979,6 +1002,7 @@ export default function ReportsPage() {
                                                                 </span>
                                                             </th>
                                                         ))}
+                                                        {role === "ADMIN" && <th className="p-[10px_16px] text-[11px] font-[600] text-[#9e9b95] uppercase tracking-[0.5px] text-right w-[60px]">Actions</th>}
                                                     </tr>
                                                     {/* Filter row */}
                                                     {showFilterRow && (
@@ -996,6 +1020,7 @@ export default function ReportsPage() {
                                                                     />
                                                                 </td>
                                                             ))}
+                                                            {role === "ADMIN" && <td />}
                                                         </tr>
                                                     )}
                                                 </thead>
@@ -1012,6 +1037,17 @@ export default function ReportsPage() {
                                                             {visibleCols.has("accepted") && <td className={`p-[12px_16px] text-[13px] font-[600] font-mono text-right ${r.accepted > 0 ? "text-[#0d6b4a]" : "text-[#1a1a18]"}`}>{r.accepted}</td>}
                                                             {visibleCols.has("rework") && <td className={`p-[12px_16px] text-[13px] font-[600] font-mono text-right ${r.rework > 0 ? "text-[#d97706]" : "text-[#1a1a18]"}`}>{r.rework}</td>}
                                                             {visibleCols.has("rejected") && <td className={`p-[12px_16px] text-[13px] font-[600] font-mono text-right ${r.rejected > 0 ? "text-[#dc2626]" : "text-[#1a1a18]"}`}>{r.rejected}</td>}
+                                                            {role === "ADMIN" && (
+                                                                <td className="p-[8px_12px] text-right">
+                                                                    <button
+                                                                        onClick={() => setDeleteConfirmId(r.id)}
+                                                                        className="h-[28px] w-[28px] rounded-[7px] bg-[#fef2f2] border border-[#fca5a5] flex items-center justify-center hover:bg-[#fee2e2] transition-colors ml-auto"
+                                                                        title="Delete record"
+                                                                    >
+                                                                        <Trash2 className="h-[13px] w-[13px] text-[#dc2626]" />
+                                                                    </button>
+                                                                </td>
+                                                            )}
                                                         </tr>
                                                     ))}
                                                 </tbody>
@@ -1025,6 +1061,35 @@ export default function ReportsPage() {
                     </div>
                 )}
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfirmId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white rounded-[16px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] p-6 w-[360px] max-w-[90vw]">
+                        <div className="w-[44px] h-[44px] bg-[#fef2f2] rounded-full flex items-center justify-center mb-4">
+                            <Trash2 className="h-5 w-5 text-[#dc2626]" />
+                        </div>
+                        <h3 className="text-[16px] font-semibold text-[#1a1a18] mb-1">Delete Inspection Record?</h3>
+                        <p className="text-[13px] text-[#6b6860] mb-5 leading-relaxed">This action is permanent and cannot be undone. All responses associated with this record will be deleted.</p>
+                        <div className="flex gap-2.5">
+                            <button
+                                onClick={() => setDeleteConfirmId(null)}
+                                className="flex-1 py-2.5 bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[9px] text-[13px] font-medium hover:bg-[#f9f8f5] transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => handleDeleteRecord(deleteConfirmId)}
+                                disabled={deleting}
+                                className="flex-1 py-2.5 bg-[#dc2626] text-white rounded-[9px] text-[13px] font-medium hover:bg-[#b91c1c] transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                            >
+                                {deleting ? <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                Delete Record
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

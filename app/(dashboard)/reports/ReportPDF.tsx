@@ -2,10 +2,19 @@ import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer"
 
 const styles = StyleSheet.create({
     page: { fontFamily: "Helvetica", padding: 36, fontSize: 10, backgroundColor: "#ffffff" },
-    header: { marginBottom: 18, paddingBottom: 14, borderBottomWidth: 1.5, borderBottomColor: "#1a1a18" },
+    header: { marginBottom: 18, paddingBottom: 14, borderBottomWidth: 1.5, borderBottomColor: "#1a9e6e" },
+    headerTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+    headerLeft: { flex: 1 },
+    logoBadge: { width: 44, height: 44, backgroundColor: "#1a9e6e", borderRadius: 8, alignItems: "center", justifyContent: "center", marginLeft: 12 },
+    logoText: { fontSize: 12, fontFamily: "Helvetica-Bold", color: "#ffffff" },
     headerTitle: { fontSize: 18, fontFamily: "Helvetica-Bold", color: "#1a1a18", marginBottom: 3 },
-    headerSub: { fontSize: 8.5, color: "#6b6860" },
-    sectionTitle: { fontSize: 10, fontFamily: "Helvetica-Bold", color: "#1a1a18", marginBottom: 6, marginTop: 18, textTransform: "uppercase", letterSpacing: 0.5 },
+    headerProject: { fontSize: 11, fontFamily: "Helvetica-Bold", color: "#1a9e6e", marginBottom: 4 },
+    headerSub: { fontSize: 8, color: "#6b6860" },
+    headerMeta: { flexDirection: "row", flexWrap: "wrap", marginTop: 8 },
+    metaItem: { marginRight: 18, marginBottom: 3 },
+    metaLabel: { fontSize: 7, color: "#9e9b95", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 1 },
+    metaValue: { fontSize: 9, fontFamily: "Helvetica-Bold", color: "#1a1a18" },
+    sectionTitle: { fontSize: 10, fontFamily: "Helvetica-Bold", color: "#1a1a18", marginBottom: 6, marginTop: 18, textTransform: "uppercase", letterSpacing: 0.5, paddingLeft: 8, borderLeftWidth: 3, borderLeftColor: "#1a9e6e" },
     statsGrid: { flexDirection: "row", gap: 6, marginBottom: 6 },
     statCard: { flex: 1, backgroundColor: "#f9f8f5", borderRadius: 5, padding: "9 11", borderWidth: 1, borderColor: "#e8e6e1" },
     statLabel: { fontSize: 7.5, color: "#9e9b95", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 },
@@ -26,8 +35,8 @@ const styles = StyleSheet.create({
     defectPct: { fontSize: 8.5, color: "#9e9b95" },
     progressTrack: { flex: 1.2, height: 4, backgroundColor: "#f0f0f0", borderRadius: 2, marginLeft: 10, marginRight: 8 },
     progressFill: { height: 4, backgroundColor: "#dc2626", borderRadius: 2 },
-    pageNum: { position: "absolute", bottom: 22, right: 36, fontSize: 8, color: "#9e9b95" },
     footer: { position: "absolute", bottom: 22, left: 36, fontSize: 8, color: "#9e9b95" },
+    pageNum: { position: "absolute", bottom: 22, right: 36, fontSize: 8, color: "#9e9b95" },
 })
 
 export function ReportDocument({ data, companyName, period, project, inspector }: {
@@ -39,15 +48,42 @@ export function ReportDocument({ data, companyName, period, project, inspector }
     const partWise: any[] = data?.partWise || []
     const inspectorWise: any[] = data?.inspectorWise || []
 
+    // Derive initials for logo badge
+    const initials = companyName.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()
+
     return (
         <Document>
-            {/* PAGE 1: Summary + Top 5 Defects */}
+            {/* Single page — content flows continuously across pages automatically */}
             <Page size="A4" style={styles.page}>
+                {/* Header with company name, project, period, logo */}
                 <View style={styles.header}>
-                    <Text style={styles.headerTitle}>{companyName} — Quality Inspection Report</Text>
-                    <Text style={styles.headerSub}>Period: {period}   |   Project: {project}   |   Inspector: {inspector}</Text>
+                    <View style={styles.headerTop}>
+                        <View style={styles.headerLeft}>
+                            <Text style={styles.headerTitle}>{companyName}</Text>
+                            <Text style={styles.headerProject}>{project}</Text>
+                            <Text style={styles.headerSub}>Quality Inspection Report</Text>
+                            <View style={styles.headerMeta}>
+                                <View style={styles.metaItem}>
+                                    <Text style={styles.metaLabel}>Period</Text>
+                                    <Text style={styles.metaValue}>{period}</Text>
+                                </View>
+                                <View style={styles.metaItem}>
+                                    <Text style={styles.metaLabel}>Inspector</Text>
+                                    <Text style={styles.metaValue}>{inspector}</Text>
+                                </View>
+                                <View style={styles.metaItem}>
+                                    <Text style={styles.metaLabel}>Generated</Text>
+                                    <Text style={styles.metaValue}>{new Date().toLocaleDateString("en-IN")}</Text>
+                                </View>
+                            </View>
+                        </View>
+                        <View style={styles.logoBadge}>
+                            <Text style={styles.logoText}>{initials || 'CO'}</Text>
+                        </View>
+                    </View>
                 </View>
 
+                {/* Section 1: Summary Statistics */}
                 <Text style={styles.sectionTitle}>Summary Statistics</Text>
                 <View style={styles.statsGrid}>
                     <View style={styles.statCard}>
@@ -92,6 +128,7 @@ export function ReportDocument({ data, companyName, period, project, inspector }
                     </View>
                 </View>
 
+                {/* Section 2: Top Defects */}
                 {topDefects.length > 0 && (
                     <>
                         <Text style={styles.sectionTitle}>Top 5 Defects</Text>
@@ -101,7 +138,7 @@ export function ReportDocument({ data, companyName, period, project, inspector }
                                     <Text style={styles.rankText}>{i + 1}</Text>
                                 </View>
                                 <Text style={styles.defectName}>{d.defectName}</Text>
-                                <View style={[styles.progressTrack]}>
+                                <View style={styles.progressTrack}>
                                     <View style={[styles.progressFill, { width: `${Math.min(d.percentage, 100)}%` }]} />
                                 </View>
                                 <Text style={styles.defectCount}>{d.count}</Text>
@@ -111,105 +148,87 @@ export function ReportDocument({ data, companyName, period, project, inspector }
                     </>
                 )}
 
-                <Text style={styles.footer}>Generated: {new Date().toLocaleDateString("en-IN")}  |  CIMS Quality Report</Text>
-                <Text style={styles.pageNum}>Page 1</Text>
-            </Page>
-
-            {/* PAGE 2: Day-wise + Inspector-wise */}
-            {(dayWise.length > 0 || inspectorWise.length > 0) && (
-                <Page size="A4" style={styles.page}>
-                    <View style={styles.header}>
-                        <Text style={styles.headerTitle}>{companyName} — Day-wise & Inspector-wise</Text>
-                        <Text style={styles.headerSub}>Period: {period}   |   Project: {project}</Text>
-                    </View>
-
-                    {dayWise.length > 0 && (
-                        <>
-                            <Text style={styles.sectionTitle}>Day-wise Inspection Log</Text>
-                            <View style={styles.tableHeaderRow}>
-                                <Text style={[styles.th, { flex: 1.8 }]}>Date</Text>
-                                <Text style={styles.th}>Inspected</Text>
-                                <Text style={styles.th}>Accepted</Text>
-                                <Text style={styles.th}>Rework</Text>
-                                <Text style={styles.th}>Rejected</Text>
-                                <Text style={styles.th}>Quality %</Text>
-                            </View>
-                            {dayWise.map((d: any, i: number) => (
-                                <View key={i} style={[styles.tableRow, i % 2 !== 0 ? styles.tableRowAlt : {}]}>
-                                    <Text style={[styles.td, { flex: 1.8 }]}>{d.date}</Text>
-                                    <Text style={styles.td}>{d.totalInspected.toLocaleString()}</Text>
-                                    <Text style={styles.tdGreen}>{d.totalAccepted.toLocaleString()}</Text>
-                                    <Text style={styles.tdOrange}>{d.totalRework.toLocaleString()}</Text>
-                                    <Text style={styles.tdRed}>{d.totalRejected.toLocaleString()}</Text>
-                                    <Text style={styles.td}>{d.qualityRate.toFixed(1)}%</Text>
-                                </View>
-                            ))}
-                        </>
-                    )}
-
-                    {inspectorWise.length > 0 && (
-                        <>
-                            <Text style={[styles.sectionTitle, { marginTop: 22 }]}>Inspector-wise Summary</Text>
-                            <View style={styles.tableHeaderRow}>
-                                <Text style={[styles.th, { flex: 2 }]}>Inspector</Text>
-                                <Text style={styles.th}>Inspected</Text>
-                                <Text style={styles.th}>Accepted</Text>
-                                <Text style={styles.th}>Rework</Text>
-                                <Text style={styles.th}>Rejected</Text>
-                                <Text style={styles.th}>Quality %</Text>
-                            </View>
-                            {inspectorWise.map((d: any, i: number) => (
-                                <View key={i} style={[styles.tableRow, i % 2 !== 0 ? styles.tableRowAlt : {}]}>
-                                    <Text style={[styles.td, { flex: 2 }]}>{d.inspectorName}</Text>
-                                    <Text style={styles.td}>{d.totalInspected.toLocaleString()}</Text>
-                                    <Text style={styles.tdGreen}>{d.totalAccepted.toLocaleString()}</Text>
-                                    <Text style={styles.tdOrange}>{d.totalRework.toLocaleString()}</Text>
-                                    <Text style={styles.tdRed}>{d.totalRejected.toLocaleString()}</Text>
-                                    <Text style={styles.td}>{d.qualityRate.toFixed(1)}%</Text>
-                                </View>
-                            ))}
-                        </>
-                    )}
-
-                    <Text style={styles.footer}>Generated: {new Date().toLocaleDateString("en-IN")}  |  CIMS Quality Report</Text>
-                    <Text style={styles.pageNum}>Page 2</Text>
-                </Page>
-            )}
-
-            {/* PAGE 3: Part-wise */}
-            {partWise.length > 0 && (
-                <Page size="A4" style={styles.page}>
-                    <View style={styles.header}>
-                        <Text style={styles.headerTitle}>{companyName} — Part-wise Analysis</Text>
-                        <Text style={styles.headerSub}>Period: {period}   |   Project: {project}</Text>
-                    </View>
-
-                    <Text style={styles.sectionTitle}>Part-wise Performance</Text>
-                    <View style={styles.tableHeaderRow}>
-                        <Text style={[styles.th, { flex: 2.5 }]}>Part / Component</Text>
-                        <Text style={styles.th}>Inspected</Text>
-                        <Text style={styles.th}>Accepted</Text>
-                        <Text style={styles.th}>Rework</Text>
-                        <Text style={styles.th}>Rejected</Text>
-                        <Text style={styles.th}>Quality %</Text>
-                        <Text style={styles.th}>Rej %</Text>
-                    </View>
-                    {partWise.map((p: any, i: number) => (
-                        <View key={i} style={[styles.tableRow, i % 2 !== 0 ? styles.tableRowAlt : {}]}>
-                            <Text style={[styles.td, { flex: 2.5 }]}>{p.partName}</Text>
-                            <Text style={styles.td}>{p.totalInspected.toLocaleString()}</Text>
-                            <Text style={styles.tdGreen}>{p.totalAccepted.toLocaleString()}</Text>
-                            <Text style={styles.tdOrange}>{p.totalRework.toLocaleString()}</Text>
-                            <Text style={styles.tdRed}>{p.totalRejected.toLocaleString()}</Text>
-                            <Text style={styles.td}>{p.qualityRate.toFixed(1)}%</Text>
-                            <Text style={styles.tdRed}>{p.rejectionPercent?.toFixed(1) || "0.0"}%</Text>
+                {/* Section 3: Day-wise Inspection Log */}
+                {dayWise.length > 0 && (
+                    <>
+                        <Text style={styles.sectionTitle}>Day-wise Inspection Log</Text>
+                        <View style={styles.tableHeaderRow}>
+                            <Text style={[styles.th, { flex: 1.8 }]}>Date</Text>
+                            <Text style={styles.th}>Inspected</Text>
+                            <Text style={styles.th}>Accepted</Text>
+                            <Text style={styles.th}>Rework</Text>
+                            <Text style={styles.th}>Rejected</Text>
+                            <Text style={styles.th}>Quality %</Text>
                         </View>
-                    ))}
+                        {dayWise.map((d: any, i: number) => (
+                            <View key={i} style={[styles.tableRow, i % 2 !== 0 ? styles.tableRowAlt : {}]} wrap={false}>
+                                <Text style={[styles.td, { flex: 1.8 }]}>{d.date}</Text>
+                                <Text style={styles.td}>{d.totalInspected.toLocaleString()}</Text>
+                                <Text style={styles.tdGreen}>{d.totalAccepted.toLocaleString()}</Text>
+                                <Text style={styles.tdOrange}>{d.totalRework.toLocaleString()}</Text>
+                                <Text style={styles.tdRed}>{d.totalRejected.toLocaleString()}</Text>
+                                <Text style={styles.td}>{d.qualityRate.toFixed(1)}%</Text>
+                            </View>
+                        ))}
+                    </>
+                )}
 
-                    <Text style={styles.footer}>Generated: {new Date().toLocaleDateString("en-IN")}  |  CIMS Quality Report</Text>
-                    <Text style={styles.pageNum}>Page 3</Text>
-                </Page>
-            )}
+                {/* Section 4: Inspector-wise Summary */}
+                {inspectorWise.length > 0 && (
+                    <>
+                        <Text style={styles.sectionTitle}>Inspector-wise Summary</Text>
+                        <View style={styles.tableHeaderRow}>
+                            <Text style={[styles.th, { flex: 2 }]}>Inspector</Text>
+                            <Text style={styles.th}>Inspected</Text>
+                            <Text style={styles.th}>Accepted</Text>
+                            <Text style={styles.th}>Rework</Text>
+                            <Text style={styles.th}>Rejected</Text>
+                            <Text style={styles.th}>Quality %</Text>
+                        </View>
+                        {inspectorWise.map((d: any, i: number) => (
+                            <View key={i} style={[styles.tableRow, i % 2 !== 0 ? styles.tableRowAlt : {}]} wrap={false}>
+                                <Text style={[styles.td, { flex: 2 }]}>{d.inspectorName}</Text>
+                                <Text style={styles.td}>{d.totalInspected.toLocaleString()}</Text>
+                                <Text style={styles.tdGreen}>{d.totalAccepted.toLocaleString()}</Text>
+                                <Text style={styles.tdOrange}>{d.totalRework.toLocaleString()}</Text>
+                                <Text style={styles.tdRed}>{d.totalRejected.toLocaleString()}</Text>
+                                <Text style={styles.td}>{d.qualityRate.toFixed(1)}%</Text>
+                            </View>
+                        ))}
+                    </>
+                )}
+
+                {/* Section 5: Part-wise Analysis */}
+                {partWise.length > 0 && (
+                    <>
+                        <Text style={styles.sectionTitle}>Part-wise Performance</Text>
+                        <View style={styles.tableHeaderRow}>
+                            <Text style={[styles.th, { flex: 2.5 }]}>Part / Component</Text>
+                            <Text style={styles.th}>Inspected</Text>
+                            <Text style={styles.th}>Accepted</Text>
+                            <Text style={styles.th}>Rework</Text>
+                            <Text style={styles.th}>Rejected</Text>
+                            <Text style={styles.th}>Quality %</Text>
+                            <Text style={styles.th}>Rej %</Text>
+                        </View>
+                        {partWise.map((p: any, i: number) => (
+                            <View key={i} style={[styles.tableRow, i % 2 !== 0 ? styles.tableRowAlt : {}]} wrap={false}>
+                                <Text style={[styles.td, { flex: 2.5 }]}>{p.partName}</Text>
+                                <Text style={styles.td}>{p.totalInspected.toLocaleString()}</Text>
+                                <Text style={styles.tdGreen}>{p.totalAccepted.toLocaleString()}</Text>
+                                <Text style={styles.tdOrange}>{p.totalRework.toLocaleString()}</Text>
+                                <Text style={styles.tdRed}>{p.totalRejected.toLocaleString()}</Text>
+                                <Text style={styles.td}>{p.qualityRate.toFixed(1)}%</Text>
+                                <Text style={styles.tdRed}>{p.rejectionPercent?.toFixed(1) || "0.0"}%</Text>
+                            </View>
+                        ))}
+                    </>
+                )}
+
+                {/* Footer on every page */}
+                <Text style={styles.footer} fixed>Generated: {new Date().toLocaleDateString("en-IN")}  |  {companyName}  |  CIMS Quality Report</Text>
+                <Text style={styles.pageNum} fixed render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
+            </Page>
         </Document>
     )
 }

@@ -5,6 +5,28 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { Role } from "@prisma/client"
 
+export async function DELETE(
+    req: Request,
+    { params }: { params: { id: string } }
+) {
+    const session = await getServerSession(authOptions)
+    if (!session || session.user.role !== Role.ADMIN) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    try {
+        const inspectionId = params.id
+        await prisma.$transaction([
+            prisma.inspectionData.deleteMany({ where: { inspectionId } }),
+            prisma.inspection.delete({ where: { id: inspectionId } })
+        ])
+        return NextResponse.json({ success: true })
+    } catch (error: any) {
+        console.error("DELETE_INSPECTION_ERROR:", error)
+        return NextResponse.json({ error: "Internal Error" }, { status: 500 })
+    }
+}
+
 export async function PATCH(
     req: Request,
     { params }: { params: { id: string } }

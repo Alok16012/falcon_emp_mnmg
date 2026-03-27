@@ -22,7 +22,9 @@ import {
     UserCheck,
     Filter,
     KeyRound,
-    UserCog
+    UserCog,
+    Pencil,
+    Trash2
 } from "lucide-react"
 import {
     Dialog,
@@ -54,9 +56,12 @@ export default function UserManagementPage() {
     const [roleFilter, setRoleFilter] = useState("ALL")
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
     const [isResetModalOpen, setIsResetModalOpen] = useState(false)
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
     const [newPassword, setNewPassword] = useState("")
     const [submitting, setSubmitting] = useState(false)
+    const [editData, setEditData] = useState({ name: "", email: "", role: "" })
 
     const [managers, setManagers] = useState<any[]>([])
     const [groupProjects, setGroupProjects] = useState<any[]>([])
@@ -213,6 +218,45 @@ export default function UserManagementPage() {
         }
     }
 
+    const handleEditUser = async () => {
+        if (!selectedUserId) return
+        setSubmitting(true)
+        try {
+            const res = await fetch(`/api/admin/users/${selectedUserId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(editData)
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || "Failed to update user")
+            setUsers(users.map(u => u.id === selectedUserId ? { ...u, ...data } : u))
+            toast.success("User updated successfully")
+            setIsEditModalOpen(false)
+        } catch (error: any) {
+            toast.error(error.message)
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
+    const handleDeleteUser = async () => {
+        if (!selectedUserId) return
+        setSubmitting(true)
+        try {
+            const res = await fetch(`/api/admin/users/${selectedUserId}`, { method: "DELETE" })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || "Failed to delete user")
+            setUsers(users.filter(u => u.id !== selectedUserId))
+            toast.success("User deleted successfully")
+            setIsDeleteConfirmOpen(false)
+            setSelectedUserId(null)
+        } catch (error: any) {
+            toast.error(error.message)
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
     const fetchGroupProjects = async (companyId: string) => {
         if (!companyId) { setGroupProjects([]); setGroupProjectId(""); return }
         try {
@@ -337,10 +381,25 @@ export default function UserManagementPage() {
                                 <KeyRound className="h-[14px] w-[14px] text-[#6b6860]" />
                             </button>
                             <button
-                                className="h-[30px] w-[30px] rounded-[7px] bg-[#f9f8f5] border border-[#e8e6e1] flex items-center justify-center hover:bg-[#e8f7f1] hover:text-[#0d6b4a] hover:border-[#6ee7b7] transition-colors"
-                                title="Change Role"
+                                onClick={() => {
+                                    setSelectedUserId(user.id)
+                                    setEditData({ name: user.name, email: user.email, role: user.role })
+                                    setIsEditModalOpen(true)
+                                }}
+                                className="h-[30px] w-[30px] rounded-[7px] bg-[#f9f8f5] border border-[#e8e6e1] flex items-center justify-center hover:bg-[#eff6ff] hover:text-[#1d4ed8] hover:border-[#93c5fd] transition-colors"
+                                title="Edit User"
                             >
-                                <UserCog className="h-[14px] w-[14px] text-[#6b6860]" />
+                                <Pencil className="h-[14px] w-[14px] text-[#6b6860]" />
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setSelectedUserId(user.id)
+                                    setIsDeleteConfirmOpen(true)
+                                }}
+                                className="h-[30px] w-[30px] rounded-[7px] bg-[#f9f8f5] border border-[#e8e6e1] flex items-center justify-center hover:bg-[#fef2f2] hover:text-[#dc2626] hover:border-[#fca5a5] transition-colors"
+                                title="Delete User"
+                            >
+                                <Trash2 className="h-[14px] w-[14px] text-[#6b6860]" />
                             </button>
                         </div>
                     </div>
@@ -502,6 +561,94 @@ export default function UserManagementPage() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Edit User Modal */}
+            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+                <DialogContent className="bg-white rounded-2xl w-[440px] max-w-[95vw] p-7 shadow-[0_20px_60px_rgba(0,0,0,0.12)] border-none [&>button]:hidden">
+                    <div className="flex items-start justify-between mb-5">
+                        <div>
+                            <h2 className="text-[17px] font-semibold text-[#1a1a18]">Edit User</h2>
+                            <p className="text-[13px] text-[#6b6860] mt-1">Update user details and role.</p>
+                        </div>
+                        <button
+                            onClick={() => setIsEditModalOpen(false)}
+                            className="h-[30px] w-[30px] rounded-[8px] bg-[#f9f8f5] border border-[#e8e6e1] text-[#6b6860] cursor-pointer hover:bg-[#fef2f2] hover:text-[#dc2626] hover:border-[#fca5a5] transition-colors flex items-center justify-center"
+                        >✕</button>
+                    </div>
+                    <div className="border-t border-[#e8e6e1] mb-5" />
+                    <div className="space-y-4">
+                        <div className="space-y-1.5">
+                            <label className="text-[11.5px] font-medium text-[#6b6860] uppercase tracking-wide">Full Name</label>
+                            <input
+                                type="text"
+                                value={editData.name}
+                                onChange={e => setEditData({ ...editData, name: e.target.value })}
+                                className="w-full px-3.5 py-2.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] focus:outline-none focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)]"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[11.5px] font-medium text-[#6b6860] uppercase tracking-wide">Email Address</label>
+                            <input
+                                type="email"
+                                value={editData.email}
+                                onChange={e => setEditData({ ...editData, email: e.target.value })}
+                                className="w-full px-3.5 py-2.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] focus:outline-none focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)]"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[11.5px] font-medium text-[#6b6860] uppercase tracking-wide">Role</label>
+                            <select
+                                value={editData.role}
+                                onChange={e => setEditData({ ...editData, role: e.target.value })}
+                                className="w-full px-3.5 py-2.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] focus:outline-none focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] appearance-none cursor-pointer"
+                            >
+                                <option value="ADMIN">Administrator</option>
+                                <option value="MANAGER">Manager</option>
+                                <option value="INSPECTION_BOY">Inspector</option>
+                                <option value="CLIENT">Client Portal User</option>
+                            </select>
+                        </div>
+                        <div className="border-t border-[#e8e6e1] pt-4">
+                            <button
+                                onClick={handleEditUser}
+                                disabled={submitting}
+                                className="w-full py-3 bg-[#1a9e6e] text-white border-none rounded-[9px] text-[13.5px] font-medium hover:bg-[#158a5e] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving...</> : "Save Changes"}
+                            </button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Modal */}
+            {isDeleteConfirmOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white rounded-[16px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] p-6 w-[360px] max-w-[90vw]">
+                        <div className="w-[44px] h-[44px] bg-[#fef2f2] rounded-full flex items-center justify-center mb-4">
+                            <Trash2 className="h-5 w-5 text-[#dc2626]" />
+                        </div>
+                        <h3 className="text-[16px] font-semibold text-[#1a1a18] mb-1">Delete User?</h3>
+                        <p className="text-[13px] text-[#6b6860] mb-5 leading-relaxed">
+                            This will permanently remove the user account. This action cannot be undone.
+                        </p>
+                        <div className="flex gap-2.5">
+                            <button
+                                onClick={() => { setIsDeleteConfirmOpen(false); setSelectedUserId(null) }}
+                                className="flex-1 py-2.5 bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[9px] text-[13px] font-medium hover:bg-[#f9f8f5] transition-colors"
+                            >Cancel</button>
+                            <button
+                                onClick={handleDeleteUser}
+                                disabled={submitting}
+                                className="flex-1 py-2.5 bg-[#dc2626] text-white rounded-[9px] text-[13px] font-medium hover:bg-[#b91c1c] transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                            >
+                                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                Delete User
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {filteredUsers.length === 0 && (
                 <div className="bg-white border border-[#e8e6e1] rounded-[14px] py-[60px] text-center">
