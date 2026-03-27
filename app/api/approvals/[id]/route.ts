@@ -34,7 +34,8 @@ export async function GET(
                     include: {
                         field: true
                     }
-                }
+                },
+                shareableLink: true
             }
         })
 
