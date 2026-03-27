@@ -3,34 +3,14 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import {
-    ChevronLeft,
-    CheckCircle2,
-    XCircle,
-    Loader2,
-    AlertCircle,
-    Calendar,
-    User as UserIcon,
-    Building2,
-    FileText,
-    ExternalLink,
-    Check,
-    X,
-    Clock,
-    ClipboardCheck,
-    Inbox,
-    CornerUpLeft,
-    Share2,
-    Copy,
-    PenTool,
-    Trash2
+    ChevronLeft, CheckCircle2, XCircle, Loader2, Calendar,
+    User as UserIcon, Building2, FileText, ExternalLink,
+    Check, X, Clock, CornerUpLeft, Share2, Copy, PenTool,
+    Trash2, MapPin, AlertCircle, Inbox
 } from "lucide-react"
 import Link from "next/link"
-import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
 export default function ReviewInspectionPage() {
@@ -82,14 +62,8 @@ export default function ReviewInspectionPage() {
             toast.error("Please provide a reason in the notes field.")
             return
         }
-
-        const msgs = {
-            approve: "Approve this inspection?",
-            reject: "Reject this inspection?",
-            send_back: "Send back to inspector for corrections?"
-        }
+        const msgs = { approve: "Approve this inspection?", reject: "Reject this inspection?", send_back: "Send back for corrections?" }
         if (!confirm(msgs[action])) return
-
         setActionLoading(true)
         try {
             const res = await fetch(`/api/approvals/${inspectionId}`, {
@@ -97,7 +71,6 @@ export default function ReviewInspectionPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ action, reviewerNotes })
             })
-
             if (res.ok) {
                 const labels = { approve: "approved", reject: "rejected", send_back: "sent back" }
                 toast.success(`Inspection ${labels[action]} successfully!`)
@@ -117,16 +90,14 @@ export default function ReviewInspectionPage() {
         setSharing(true)
         try {
             if (shareToken) {
-                const url = `${window.location.origin}/share/${shareToken}`
-                await navigator.clipboard.writeText(url)
-                toast.success("Share link copied to clipboard!")
+                await navigator.clipboard.writeText(`${window.location.origin}/share/${shareToken}`)
+                toast.success("Share link copied!")
             } else {
                 const res = await fetch(`/api/inspections/${inspectionId}/share`, { method: "POST" })
                 if (res.ok) {
                     const { token } = await res.json()
                     setShareToken(token)
-                    const url = `${window.location.origin}/share/${token}`
-                    await navigator.clipboard.writeText(url)
+                    await navigator.clipboard.writeText(`${window.location.origin}/share/${token}`)
                     toast.success("Share link created and copied!")
                 }
             }
@@ -137,199 +108,159 @@ export default function ReviewInspectionPage() {
         }
     }
 
-    // Signature pad
     const startDraw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         isDrawingRef.current = true
-        const canvas = canvasRef.current
-        if (!canvas) return
-        const ctx = canvas.getContext("2d")
-        if (!ctx) return
+        const canvas = canvasRef.current; if (!canvas) return
+        const ctx = canvas.getContext("2d"); if (!ctx) return
         const rect = canvas.getBoundingClientRect()
         const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left
         const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top
-        ctx.beginPath()
-        ctx.moveTo(x, y)
+        ctx.beginPath(); ctx.moveTo(x, y)
     }
-
     const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         if (!isDrawingRef.current) return
-        const canvas = canvasRef.current
-        if (!canvas) return
-        const ctx = canvas.getContext("2d")
-        if (!ctx) return
+        const canvas = canvasRef.current; if (!canvas) return
+        const ctx = canvas.getContext("2d"); if (!ctx) return
         const rect = canvas.getBoundingClientRect()
         const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left
         const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top
-        ctx.lineTo(x, y)
-        ctx.strokeStyle = "#1a9e6e"
-        ctx.lineWidth = 2
-        ctx.lineCap = "round"
-        ctx.stroke()
+        ctx.lineTo(x, y); ctx.strokeStyle = "#1a9e6e"; ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.stroke()
         setHasSig(true)
     }
-
     const stopDraw = () => { isDrawingRef.current = false }
-
     const clearSig = () => {
-        const canvas = canvasRef.current
-        if (!canvas) return
-        const ctx = canvas.getContext("2d")
-        ctx?.clearRect(0, 0, canvas.width, canvas.height)
-        setHasSig(false)
+        const canvas = canvasRef.current; if (!canvas) return
+        canvas.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height); setHasSig(false)
     }
-
     const submitSignature = async () => {
-        const canvas = canvasRef.current
-        if (!canvas || !hasSig) return
+        const canvas = canvasRef.current; if (!canvas || !hasSig) return
         const sig = canvas.toDataURL("image/png")
-
-        await fetch(`/api/inspections/${inspectionId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ signature: sig })
-        })
-        toast.success("Signature saved!")
-        setShowSignature(false)
-        fetchInspection()
+        await fetch(`/api/inspections/${inspectionId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signature: sig }) })
+        toast.success("Signature saved!"); setShowSignature(false); fetchInspection()
     }
 
     if (loading || authStatus === "loading") {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="text-muted-foreground font-medium">Loading report content...</p>
+            <div className="min-h-screen bg-[#f5f4f0] flex items-center justify-center">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="w-9 h-9 border-2 border-[#1a9e6e] border-t-transparent rounded-full animate-spin" />
+                    <p className="text-[13px] text-[#9e9b95]">Loading inspection...</p>
+                </div>
             </div>
         )
     }
 
     if (!inspection) return null
 
-    const renderResponse = (resp: any) => {
-        const { field, value } = resp
-        return (
-            <Card key={resp.id} className="overflow-hidden border-muted/60">
-                <CardHeader className="bg-muted/30 py-3 px-4">
-                    <CardTitle className="text-sm font-semibold flex items-center justify-between">
-                        {field.fieldLabel}
-                        <Badge variant="outline" className="text-[10px] uppercase opacity-60">{field.fieldType}</Badge>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
-                    {!value && <span className="text-muted-foreground italic text-sm">— Not filled —</span>}
-                    {value && field.fieldType !== "file" && field.fieldType !== "checkbox" && (
-                        <p className="text-sm whitespace-pre-wrap">{value}</p>
-                    )}
-                    {value && field.fieldType === "checkbox" && (
-                        <Badge variant="secondary" className={cn("rounded-sm px-3", value === "true" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800")}>
-                            {value === "true" ? <Check className="h-3 w-3 mr-1" /> : <X className="h-3 w-3 mr-1" />}
-                            {value === "true" ? "Yes" : "No"}
-                        </Badge>
-                    )}
-                    {value && field.fieldType === "dropdown" && (
-                        <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">{value}</Badge>
-                    )}
-                    {value && field.fieldType === "file" && (
-                        <div className="flex items-center gap-4">
-                            {value.match(/\.(jpg|jpeg|png|gif)$/i) ? (
-                                <div className="relative h-24 w-24 rounded border overflow-hidden shadow-sm bg-white">
-                                    <img src={value} alt="evidence" className="h-full w-full object-cover" />
-                                </div>
-                            ) : (
-                                <div className="h-24 w-24 flex items-center justify-center rounded border bg-white shadow-sm">
-                                    <FileText className="h-10 w-10 text-muted-foreground/40" />
-                                </div>
-                            )}
-                            <Button size="sm" variant="outline" className="h-8" asChild>
-                                <a href={value} target="_blank" rel="noopener noreferrer">
-                                    <ExternalLink className="h-3 w-3 mr-1.5" /> View Full File
-                                </a>
-                            </Button>
+    const statusConfig: Record<string, { label: string; bg: string; color: string; dot: string }> = {
+        pending:  { label: "Awaiting Review", bg: "#fefce8", color: "#92400e", dot: "#f59e0b" },
+        approved: { label: "Approved",        bg: "#f0fdf4", color: "#166534", dot: "#16a34a" },
+        rejected: { label: "Rejected",        bg: "#fef2f2", color: "#991b1b", dot: "#ef4444" },
+        draft:    { label: "Sent Back",       bg: "#fff7ed", color: "#9a3412", dot: "#f97316" },
+    }
+    const sc = statusConfig[inspection.status] || statusConfig.pending
+
+    const fillDuration = inspection.startedAt && inspection.submittedAt
+        ? Math.round((new Date(inspection.submittedAt).getTime() - new Date(inspection.startedAt).getTime()) / 60000)
+        : null
+
+    let gps: { lat: number; lng: number } | null = null
+    try { if (inspection.gpsLocation) gps = JSON.parse(inspection.gpsLocation) } catch {}
+
+    const renderFieldValue = (field: any, value: string) => {
+        if (!value) return <p className="text-[13px] text-[#d4d1ca] italic">Not filled</p>
+
+        if (field.fieldType === "checkbox") {
+            return (
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium ${value === "true" ? "bg-[#dcfce7] text-[#166534]" : "bg-[#f5f4f0] text-[#6b6860]"}`}>
+                    {value === "true" ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                    {value === "true" ? "Yes" : "No"}
+                </span>
+            )
+        }
+
+        if (field.fieldType === "dropdown" || field.fieldType === "select") {
+            return (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-[12px] font-semibold bg-[#e8f7f1] text-[#0d6b4a] border border-[#b6e8d5]">
+                    {value}
+                </span>
+            )
+        }
+
+        if (field.fieldType === "file") {
+            return (
+                <div className="space-y-2">
+                    {value.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                        <img src={value} alt="evidence" className="w-full h-36 object-cover rounded-[8px] border border-[#e8e6e1]" />
+                    ) : (
+                        <div className="h-20 flex items-center justify-center rounded-[8px] bg-[#f5f4f0] border border-[#e8e6e1]">
+                            <FileText className="h-6 w-6 text-[#d4d1ca]" />
                         </div>
                     )}
-                </CardContent>
-            </Card>
-        )
+                    <a href={value} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[12px] text-[#1a9e6e] hover:underline">
+                        <ExternalLink className="h-3 w-3" /> View File
+                    </a>
+                </div>
+            )
+        }
+
+        if (field.fieldType === "number") {
+            return <p className="text-[18px] font-bold text-[#1a1a18] tabular-nums">{value}</p>
+        }
+
+        if (field.fieldType === "date") {
+            try {
+                return <p className="text-[13px] text-[#1a1a18] font-medium">{new Date(value).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}</p>
+            } catch {
+                return <p className="text-[13px] text-[#1a1a18]">{value}</p>
+            }
+        }
+
+        return <p className="text-[13px] text-[#1a1a18] leading-relaxed whitespace-pre-wrap">{value}</p>
     }
 
     return (
-        <div className="container max-w-7xl py-10 space-y-8">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div className="space-y-2">
-                    <Button variant="ghost" size="sm" asChild className="-ml-2 text-muted-foreground">
-                        <Link href="/approvals"><ChevronLeft className="h-4 w-4 mr-1" /> Back to Approvals</Link>
-                    </Button>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{inspection.assignment?.project?.company?.name}</span>
-                        <span>/</span>
-                        <span>{inspection.assignment?.project?.name}</span>
-                    </div>
-                    <h1 className="text-3xl font-bold tracking-tight">Review Inspection</h1>
-                </div>
-                <div className="flex items-center gap-2">
-                    {inspection.status === "approved" && (
-                        <>
-                            <Button variant="outline" size="sm" onClick={handleShare} disabled={sharing} className="border-blue-200 text-blue-700 hover:bg-blue-50">
-                                {sharing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Share2 className="h-4 w-4 mr-1" />}
-                                {shareToken ? "Copy Share Link" : "Share Report"}
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => setShowSignature(true)} className="border-purple-200 text-purple-700 hover:bg-purple-50">
-                                <PenTool className="h-4 w-4 mr-1" />
-                                {inspection.signature ? "View Signature" : "Add Signature"}
-                            </Button>
-                        </>
-                    )}
-                    <Badge className={cn(
-                        "px-4 py-1 text-sm rounded-full",
-                        inspection.status === "pending" && "bg-yellow-100 text-yellow-800 border-yellow-200",
-                        inspection.status === "approved" && "bg-green-100 text-green-800 border-green-200",
-                        inspection.status === "rejected" && "bg-red-100 text-red-800 border-red-200",
-                        inspection.status === "draft" && "bg-gray-100 text-gray-800 border-gray-200",
-                    )}>
-                        {inspection.status === "pending" ? "Awaiting Review" : inspection.status === "draft" ? "Sent Back / Draft" : inspection.status}
-                    </Badge>
-                </div>
-            </div>
+        <div className="min-h-screen bg-[#f5f4f0] p-5 lg:p-7">
 
             {/* Signature Modal */}
             {showSignature && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-bold">Digital Signature</h3>
-                            <button onClick={() => setShowSignature(false)}><X className="h-5 w-5" /></button>
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-[18px] shadow-2xl p-6 max-w-md w-full">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 className="text-[15px] font-semibold text-[#1a1a18]">Digital Signature</h3>
+                                <p className="text-[11px] text-[#9e9b95]">Reviewer authorization signature</p>
+                            </div>
+                            <button onClick={() => setShowSignature(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f5f4f0] transition-colors">
+                                <X className="h-4 w-4 text-[#6b6860]" />
+                            </button>
                         </div>
                         {inspection.signature ? (
                             <div className="space-y-3">
-                                <p className="text-sm text-muted-foreground">Existing signature on this report:</p>
-                                <img src={inspection.signature} alt="signature" className="border rounded w-full" />
-                                <Button variant="outline" size="sm" className="text-red-600 border-red-200" onClick={async () => {
-                                    await fetch(`/api/inspections/${inspectionId}`, {
-                                        method: "PATCH",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ signature: null })
-                                    })
-                                    toast.success("Signature removed")
-                                    setShowSignature(false)
-                                    fetchInspection()
-                                }}>
-                                    <Trash2 className="h-4 w-4 mr-1" /> Remove Signature
-                                </Button>
+                                <img src={inspection.signature} alt="signature" className="border border-[#e8e6e1] rounded-[10px] w-full bg-[#f9f8f5]" />
+                                <button onClick={async () => {
+                                    await fetch(`/api/inspections/${inspectionId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signature: null }) })
+                                    toast.success("Signature removed"); setShowSignature(false); fetchInspection()
+                                }} className="flex items-center gap-1.5 text-[12px] text-red-500 hover:text-red-600 mt-1">
+                                    <Trash2 className="h-3.5 w-3.5" /> Remove Signature
+                                </button>
                             </div>
                         ) : (
                             <div className="space-y-3">
-                                <p className="text-sm text-muted-foreground">Draw your signature below:</p>
-                                <canvas
-                                    ref={canvasRef}
-                                    width={400} height={150}
-                                    className="border rounded w-full touch-none bg-gray-50 cursor-crosshair"
+                                <canvas ref={canvasRef} width={400} height={160}
+                                    className="border-2 border-dashed border-[#e8e6e1] rounded-[10px] w-full touch-none bg-[#f9f8f5] cursor-crosshair"
                                     onMouseDown={startDraw} onMouseMove={draw} onMouseUp={stopDraw} onMouseLeave={stopDraw}
                                     onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={stopDraw}
                                 />
+                                <p className="text-[11px] text-[#9e9b95] text-center">Draw your signature above</p>
                                 <div className="flex gap-2">
-                                    <Button variant="outline" size="sm" onClick={clearSig}><Trash2 className="h-4 w-4 mr-1" /> Clear</Button>
-                                    <Button size="sm" onClick={submitSignature} disabled={!hasSig} className="bg-[#1a9e6e] hover:bg-[#158a5e] text-white">
+                                    <button onClick={clearSig} className="flex items-center gap-1.5 px-3 py-2 border border-[#e8e6e1] rounded-[8px] text-[12px] text-[#6b6860] hover:bg-[#f5f4f0]">
+                                        <Trash2 className="h-3.5 w-3.5" /> Clear
+                                    </button>
+                                    <button onClick={submitSignature} disabled={!hasSig}
+                                        className="flex-1 flex items-center justify-center gap-1.5 bg-[#1a9e6e] text-white rounded-[8px] py-2 text-[13px] font-medium hover:bg-[#158a5e] disabled:opacity-40 transition-colors">
                                         Save Signature
-                                    </Button>
+                                    </button>
                                 </div>
                             </div>
                         )}
@@ -337,192 +268,300 @@ export default function ReviewInspectionPage() {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column - Responses */}
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="flex items-center gap-2 pb-2 border-b">
-                        <ClipboardCheck className="h-5 w-5 text-primary" />
-                        <h2 className="text-xl font-semibold">Inspection Responses</h2>
-                        {inspection.sentBackCount > 0 && (
-                            <Badge variant="outline" className="ml-auto text-orange-700 border-orange-200 bg-orange-50">
-                                Sent back {inspection.sentBackCount}x
-                            </Badge>
-                        )}
+            {/* Header */}
+            <div className="mb-6">
+                <Link href="/approvals" className="inline-flex items-center gap-1 text-[12px] text-[#9e9b95] hover:text-[#1a1a18] transition-colors mb-4">
+                    <ChevronLeft className="h-3.5 w-3.5" /> Back to Approvals
+                </Link>
+
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                        <p className="text-[12px] text-[#9e9b95] mb-1">
+                            {inspection.assignment?.project?.company?.name}
+                            <span className="mx-1.5 opacity-40">/</span>
+                            {inspection.assignment?.project?.name}
+                        </p>
+                        <h1 className="text-[22px] font-semibold text-[#1a1a18] tracking-[-0.4px]">Review Inspection</h1>
+                        <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[11px] font-mono text-[#9e9b95] bg-[#f0ede8] px-2 py-0.5 rounded">
+                                INS-{inspection.id.substring(0, 8).toUpperCase()}
+                            </span>
+                            {inspection.sentBackCount > 0 && (
+                                <span className="text-[11px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">
+                                    Sent back {inspection.sentBackCount}×
+                                </span>
+                            )}
+                        </div>
                     </div>
 
-                    {inspection.gpsLocation && (() => {
-                        try {
-                            const gps = JSON.parse(inspection.gpsLocation)
-                            return (
-                                <div className="flex items-center gap-2 text-sm bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5">
-                                    <span className="text-blue-600 font-semibold">📍 GPS:</span>
-                                    <span className="text-blue-800">{gps.lat.toFixed(5)}, {gps.lng.toFixed(5)}</span>
-                                    <a href={`https://maps.google.com?q=${gps.lat},${gps.lng}`} target="_blank" rel="noopener noreferrer" className="ml-auto text-blue-600 hover:underline text-xs">
-                                        View on Maps →
-                                    </a>
-                                </div>
-                            )
-                        } catch { return null }
-                    })()}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {inspection.status === "approved" && (
+                            <>
+                                <button onClick={handleShare} disabled={sharing}
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-[#e8e6e1] rounded-[9px] text-[12.5px] text-[#1a9e6e] font-medium hover:bg-[#f0faf6] hover:border-[#1a9e6e]/30 transition-colors shadow-sm">
+                                    {sharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
+                                    {shareToken ? "Copy Link" : "Share Report"}
+                                </button>
+                                <button onClick={() => setShowSignature(true)}
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-[#e8e6e1] rounded-[9px] text-[12.5px] text-[#6b6860] font-medium hover:bg-[#f5f4f0] transition-colors shadow-sm">
+                                    <PenTool className="h-3.5 w-3.5" />
+                                    {inspection.signature ? "View Signature" : "Add Signature"}
+                                </button>
+                            </>
+                        )}
+                        <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[9px] text-[12.5px] font-semibold shadow-sm"
+                            style={{ backgroundColor: sc.bg, color: sc.color }}>
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: sc.dot }} />
+                            {sc.label}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Body */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+                {/* LEFT — Responses */}
+                <div className="lg:col-span-2 space-y-4">
+
+                    {/* GPS */}
+                    {gps && (
+                        <div className="bg-white border border-[#e8e6e1] rounded-[12px] px-4 py-3 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                                <MapPin className="h-4 w-4 text-blue-500" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[10px] text-[#9e9b95] uppercase tracking-[0.5px] mb-0.5">GPS Location Captured</p>
+                                <p className="text-[13px] text-[#1a1a18] font-medium tabular-nums">{gps.lat.toFixed(6)}, {gps.lng.toFixed(6)}</p>
+                            </div>
+                            <a href={`https://maps.google.com?q=${gps.lat},${gps.lng}`} target="_blank" rel="noopener noreferrer"
+                                className="shrink-0 inline-flex items-center gap-1 text-[12px] text-blue-600 hover:text-blue-700 font-medium">
+                                <ExternalLink className="h-3 w-3" /> Open Maps
+                            </a>
+                        </div>
+                    )}
+
+                    {/* Responses header */}
+                    <div className="flex items-center justify-between px-0.5">
+                        <h2 className="text-[14px] font-semibold text-[#1a1a18]">Inspection Responses</h2>
+                        <span className="text-[12px] text-[#9e9b95] bg-[#f0ede8] px-2.5 py-1 rounded-full">
+                            {inspection.responses.length} fields
+                        </span>
+                    </div>
 
                     {inspection.responses.length === 0 ? (
-                        <div className="bg-muted/30 border-2 border-dashed rounded-xl py-20 text-center">
-                            <Inbox className="h-10 w-10 mx-auto text-muted-foreground opacity-20 mb-3" />
-                            <p className="text-muted-foreground font-medium">No form responses found</p>
+                        <div className="bg-white border border-[#e8e6e1] rounded-[14px] py-20 flex flex-col items-center gap-3 text-center">
+                            <div className="w-12 h-12 rounded-full bg-[#f5f4f0] flex items-center justify-center">
+                                <Inbox className="h-5 w-5 text-[#d4d1ca]" />
+                            </div>
+                            <p className="text-[13px] text-[#9e9b95]">No responses recorded</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {inspection.responses.sort((a: any, b: any) => a.field.displayOrder - b.field.displayOrder).map(renderResponse)}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {inspection.responses
+                                .sort((a: any, b: any) => a.field.displayOrder - b.field.displayOrder)
+                                .map((resp: any) => (
+                                    <div key={resp.id} className="bg-white border border-[#e8e6e1] rounded-[12px] p-4 hover:border-[#d4d1ca] transition-colors">
+                                        <div className="flex items-center justify-between gap-2 mb-3">
+                                            <p className="text-[10px] font-semibold text-[#9e9b95] uppercase tracking-[0.6px] leading-tight">
+                                                {resp.field.fieldLabel}
+                                            </p>
+                                            <span className="text-[9.5px] text-[#c4c1bb] bg-[#f5f4f0] px-1.5 py-0.5 rounded shrink-0 uppercase tracking-[0.3px]">
+                                                {resp.field.fieldType}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            {renderFieldValue(resp.field, resp.value)}
+                                        </div>
+                                    </div>
+                                ))}
                         </div>
                     )}
                 </div>
 
-                {/* Right Column - Info & Action */}
-                <div className="space-y-6">
-                    <div className="lg:sticky lg:top-24 space-y-6">
-                        <Card className="shadow-sm">
-                            <CardHeader><CardTitle className="text-lg">Inspection Details</CardTitle></CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="flex items-start gap-3">
-                                    <UserIcon className="h-4 w-4 text-muted-foreground mt-1" />
-                                    <div>
-                                        <p className="text-xs text-muted-foreground uppercase font-semibold">Inspector</p>
-                                        <p className="text-sm font-medium">{inspection.submitter?.name}</p>
-                                        <p className="text-xs text-muted-foreground">{inspection.submitter?.email}</p>
-                                    </div>
+                {/* RIGHT — Info + Actions */}
+                <div className="space-y-4 lg:sticky lg:top-5 lg:self-start">
+
+                    {/* Inspection Details */}
+                    <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden">
+                        <div className="px-5 py-4 border-b border-[#f0ede8]">
+                            <h3 className="text-[13px] font-semibold text-[#1a1a18]">Inspection Details</h3>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            <div className="flex items-start gap-3">
+                                <div className="w-8 h-8 rounded-full bg-[#f5f4f0] flex items-center justify-center shrink-0">
+                                    <UserIcon className="h-3.5 w-3.5 text-[#9e9b95]" />
                                 </div>
-                                <div className="flex items-start gap-3">
-                                    <Building2 className="h-4 w-4 text-muted-foreground mt-1" />
-                                    <div>
-                                        <p className="text-xs text-muted-foreground uppercase font-semibold">Client / Project</p>
-                                        <p className="text-sm font-medium">{inspection.assignment?.project?.company?.name}</p>
-                                        <p className="text-xs text-muted-foreground">{inspection.assignment?.project?.name}</p>
-                                    </div>
+                                <div>
+                                    <p className="text-[10px] text-[#9e9b95] uppercase tracking-[0.5px] mb-0.5">Inspector</p>
+                                    <p className="text-[13px] font-semibold text-[#1a1a18]">{inspection.submitter?.name}</p>
+                                    <p className="text-[11px] text-[#9e9b95]">{inspection.submitter?.email}</p>
                                 </div>
-                                <div className="flex items-start gap-3">
-                                    <Calendar className="h-4 w-4 text-muted-foreground mt-1" />
+                            </div>
+                            <div className="h-px bg-[#f5f4f0]" />
+                            <div className="flex items-start gap-3">
+                                <div className="w-8 h-8 rounded-full bg-[#f5f4f0] flex items-center justify-center shrink-0">
+                                    <Building2 className="h-3.5 w-3.5 text-[#9e9b95]" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] text-[#9e9b95] uppercase tracking-[0.5px] mb-0.5">Client / Project</p>
+                                    <p className="text-[13px] font-semibold text-[#1a1a18]">{inspection.assignment?.project?.company?.name}</p>
+                                    <p className="text-[11px] text-[#9e9b95]">{inspection.assignment?.project?.name}</p>
+                                </div>
+                            </div>
+                            <div className="h-px bg-[#f5f4f0]" />
+                            <div className="flex items-start gap-3">
+                                <div className="w-8 h-8 rounded-full bg-[#f5f4f0] flex items-center justify-center shrink-0">
+                                    <Calendar className="h-3.5 w-3.5 text-[#9e9b95]" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] text-[#9e9b95] uppercase tracking-[0.5px] mb-0.5">Submitted</p>
+                                    <p className="text-[13px] font-semibold text-[#1a1a18]">
+                                        {inspection.submittedAt
+                                            ? new Date(inspection.submittedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                                            : "N/A"}
+                                    </p>
+                                    {inspection.submittedAt && (
+                                        <p className="text-[11px] text-[#9e9b95]">
+                                            {new Date(inspection.submittedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                            {fillDuration !== null && (
+                                <>
+                                    <div className="h-px bg-[#f5f4f0]" />
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-[#f5f4f0] flex items-center justify-center shrink-0">
+                                            <Clock className="h-3.5 w-3.5 text-[#9e9b95]" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] text-[#9e9b95] uppercase tracking-[0.5px] mb-0.5">Fill Duration</p>
+                                            <p className="text-[13px] font-semibold text-[#1a1a18]">{fillDuration} min</p>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Share Link Active */}
+                    {shareToken && (
+                        <div className="bg-[#f0faf6] border border-[#b6e8d5] rounded-[14px] p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Share2 className="h-3.5 w-3.5 text-[#1a9e6e]" />
+                                <p className="text-[12px] font-semibold text-[#0d6b4a]">Share Link Active</p>
+                            </div>
+                            <p className="text-[11px] text-[#6b6860] break-all leading-relaxed mb-2.5">
+                                {typeof window !== "undefined" ? `${window.location.origin}/share/${shareToken}` : ""}
+                            </p>
+                            <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/share/${shareToken}`).then(() => toast.success("Copied!"))}
+                                className="inline-flex items-center gap-1.5 text-[12px] text-[#1a9e6e] hover:text-[#158a5e] font-medium transition-colors">
+                                <Copy className="h-3 w-3" /> Copy link
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Decision Panel */}
+                    <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden">
+                        <div className={`px-5 py-4 border-b ${
+                            inspection.status === "approved" ? "border-green-100 bg-[#f0fdf4]" :
+                            inspection.status === "rejected" ? "border-red-100 bg-[#fef2f2]" :
+                            inspection.status === "draft"    ? "border-orange-100 bg-[#fff7ed]" :
+                            "border-[#f0ede8] bg-white"
+                        }`}>
+                            <h3 className="text-[13px] font-semibold text-[#1a1a18]">
+                                {inspection.status === "pending" ? "Review Decision" : "Final Decision"}
+                            </h3>
+                        </div>
+
+                        <div className="p-5">
+                            {inspection.status === "pending" ? (
+                                <div className="space-y-3">
                                     <div>
-                                        <p className="text-xs text-muted-foreground uppercase font-semibold">Submitted Date</p>
-                                        <p className="text-sm font-medium">
-                                            {inspection.submittedAt ? new Date(inspection.submittedAt).toLocaleString() : "N/A"}
+                                        <label className="text-[10px] text-[#9e9b95] uppercase tracking-[0.5px] block mb-1.5">
+                                            Reviewer Notes
+                                        </label>
+                                        <Textarea
+                                            placeholder="Add feedback, corrections, or approval notes..."
+                                            className="bg-[#f9f8f5] border-[#e8e6e1] text-[13px] min-h-[90px] resize-none focus-visible:ring-0 focus-visible:border-[#1a9e6e] rounded-[10px]"
+                                            value={reviewerNotes}
+                                            onChange={(e) => setReviewerNotes(e.target.value)}
+                                        />
+                                        <p className="text-[10.5px] text-[#c4c1bb] mt-1.5">Required for rejection and send-back actions</p>
+                                    </div>
+
+                                    <div className="space-y-2 pt-1">
+                                        <button onClick={() => handleAction("approve")} disabled={actionLoading}
+                                            className="w-full flex items-center justify-center gap-2 bg-[#1a9e6e] hover:bg-[#158a5e] text-white rounded-[10px] py-[11px] text-[13px] font-semibold transition-colors disabled:opacity-50 shadow-sm">
+                                            {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                                            Approve Inspection
+                                        </button>
+                                        <button onClick={() => handleAction("send_back")} disabled={actionLoading}
+                                            className="w-full flex items-center justify-center gap-2 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-[10px] py-[11px] text-[13px] font-semibold transition-colors disabled:opacity-50">
+                                            {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CornerUpLeft className="h-4 w-4" />}
+                                            Send Back for Corrections
+                                        </button>
+                                        <button onClick={() => handleAction("reject")} disabled={actionLoading}
+                                            className="w-full flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-[10px] py-[11px] text-[13px] font-semibold transition-colors disabled:opacity-50">
+                                            {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                                            Reject Inspection
+                                        </button>
+                                        {session?.user?.role === "ADMIN" && (
+                                            <Link href={`/inspection/${inspection.assignment?.id}/form`}
+                                                className="w-full flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-[10px] py-[11px] text-[13px] font-semibold transition-colors">
+                                                <ExternalLink className="h-4 w-4" /> Edit Form (Admin)
+                                            </Link>
+                                        )}
+                                    </div>
+
+                                    <div className="flex items-start gap-2 pt-1">
+                                        <AlertCircle className="h-3.5 w-3.5 text-[#c4c1bb] shrink-0 mt-0.5" />
+                                        <p className="text-[11px] text-[#c4c1bb] leading-relaxed">
+                                            Send Back returns to inspector without permanently rejecting the inspection.
                                         </p>
                                     </div>
                                 </div>
-                                {inspection.startedAt && (
-                                    <div className="flex items-start gap-3">
-                                        <Clock className="h-4 w-4 text-muted-foreground mt-1" />
+                            ) : (
+                                <div className="space-y-3">
+                                    <div className={`flex items-center gap-3 p-3.5 rounded-[10px] ${
+                                        inspection.status === "approved" ? "bg-[#f0fdf4]" :
+                                        inspection.status === "rejected" ? "bg-[#fef2f2]" : "bg-[#fff7ed]"
+                                    }`}>
+                                        {inspection.status === "approved"
+                                            ? <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+                                            : inspection.status === "rejected"
+                                            ? <XCircle className="h-5 w-5 text-red-500 shrink-0" />
+                                            : <CornerUpLeft className="h-5 w-5 text-orange-500 shrink-0" />}
                                         <div>
-                                            <p className="text-xs text-muted-foreground uppercase font-semibold">Fill Duration</p>
-                                            <p className="text-sm font-medium">
-                                                {inspection.submittedAt
-                                                    ? `${Math.round((new Date(inspection.submittedAt).getTime() - new Date(inspection.startedAt).getTime()) / 60000)} min`
-                                                    : "In progress"}
+                                            <p className={`text-[13px] font-semibold ${
+                                                inspection.status === "approved" ? "text-green-800" :
+                                                inspection.status === "rejected" ? "text-red-800" : "text-orange-800"
+                                            }`}>
+                                                Inspection {inspection.status === "draft" ? "Sent Back" : inspection.status.charAt(0).toUpperCase() + inspection.status.slice(1)}
+                                            </p>
+                                            <p className="text-[11px] text-[#9e9b95]">
+                                                {new Date(inspection.approvedAt || inspection.sentBackAt || inspection.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                                             </p>
                                         </div>
                                     </div>
-                                )}
-                            </CardContent>
-                        </Card>
 
-                        {/* Share link info */}
-                        {shareToken && (
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
-                                <p className="font-semibold text-blue-800 mb-1 flex items-center gap-1"><Share2 className="h-3.5 w-3.5" /> Share Link Active</p>
-                                <p className="text-blue-600 text-xs break-all">{window.location.origin}/share/{shareToken}</p>
-                                <button className="mt-2 text-xs text-blue-700 hover:underline flex items-center gap-1" onClick={() => navigator.clipboard.writeText(`${window.location.origin}/share/${shareToken}`).then(() => toast.success("Copied!"))}>
-                                    <Copy className="h-3 w-3" /> Copy link
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Decision Panel */}
-                        <Card className={cn(
-                            "shadow-md border-2",
-                            inspection.status === "pending" && "border-primary/20 bg-primary/[0.02]",
-                            inspection.status === "approved" && "border-green-200 bg-green-50/30",
-                            inspection.status === "rejected" && "border-red-200 bg-red-50/30",
-                            inspection.status === "draft" && "border-orange-200 bg-orange-50/30",
-                        )}>
-                            <CardHeader>
-                                <CardTitle className="text-lg">
-                                    {inspection.status === "pending" ? "Review Decision" : "Final Status"}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                {inspection.status === "pending" ? (
-                                    <>
-                                        <div className="space-y-2">
-                                            <p className="text-sm font-medium">Reviewer Notes</p>
-                                            <Textarea
-                                                placeholder="Add feedback, corrections, or approval notes..."
-                                                className="bg-background min-h-[100px]"
-                                                value={reviewerNotes}
-                                                onChange={(e) => setReviewerNotes(e.target.value)}
-                                            />
-                                            <p className="text-[11px] text-muted-foreground italic">* Required for rejection and send-back.</p>
+                                    {inspection.reviewerNotes && (
+                                        <div className="bg-[#f9f8f5] border border-[#f0ede8] rounded-[10px] p-3.5">
+                                            <p className="text-[10px] text-[#9e9b95] uppercase tracking-[0.5px] mb-1.5">Reviewer Notes</p>
+                                            <p className="text-[13px] text-[#1a1a18] leading-relaxed">"{inspection.reviewerNotes}"</p>
                                         </div>
+                                    )}
 
-                                        <div className="flex flex-col gap-2">
-                                            <Button className="w-full bg-green-600 hover:bg-green-700 h-11 text-base shadow-sm" onClick={() => handleAction("approve")} disabled={actionLoading}>
-                                                {actionLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5 mr-2" />}
-                                                Approve
-                                            </Button>
-                                            <Button variant="outline" className="w-full border-orange-200 text-orange-700 hover:bg-orange-50 h-11 text-base" onClick={() => handleAction("send_back")} disabled={actionLoading}>
-                                                {actionLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <CornerUpLeft className="h-5 w-5 mr-2" />}
-                                                Send Back (Corrections)
-                                            </Button>
-                                            <Button variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-50 h-11 text-base" onClick={() => handleAction("reject")} disabled={actionLoading}>
-                                                {actionLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <XCircle className="h-5 w-5 mr-2" />}
-                                                Reject
-                                            </Button>
-                                            {session?.user?.role === "ADMIN" && (
-                                                <Button asChild variant="outline" className="w-full border-blue-200 text-blue-700 hover:bg-blue-50">
-                                                    <Link href={`/inspection/${inspection.assignment?.id}/form`}>
-                                                        <ExternalLink className="h-4 w-4 mr-2" /> Edit (Admin)
-                                                    </Link>
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="space-y-4">
-                                        <div className={cn(
-                                            "flex items-center gap-3 p-4 rounded-lg",
-                                            inspection.status === "approved" ? "bg-green-100 text-green-900" : inspection.status === "rejected" ? "bg-red-100 text-red-900" : "bg-orange-100 text-orange-900"
-                                        )}>
-                                            {inspection.status === "approved" ? <CheckCircle2 className="h-6 w-6" /> : inspection.status === "rejected" ? <XCircle className="h-6 w-6" /> : <CornerUpLeft className="h-6 w-6" />}
-                                            <div>
-                                                <p className="font-bold">Inspection {inspection.status === "draft" ? "Sent Back" : inspection.status}</p>
-                                                <p className="text-xs opacity-80">
-                                                    {new Date(inspection.approvedAt || inspection.sentBackAt || inspection.createdAt).toLocaleDateString()}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {inspection.reviewerNotes && (
-                                            <div className="bg-background/80 p-4 rounded-lg border border-muted-foreground/10 space-y-2">
-                                                <p className="text-xs font-semibold text-muted-foreground uppercase">Reviewer Comments</p>
-                                                <p className="text-sm italic">"{inspection.reviewerNotes}"</p>
-                                            </div>
-                                        )}
-
-                                        {session?.user?.role === "ADMIN" && (
-                                            <Button asChild variant="outline" className="w-full border-blue-200 text-blue-700 hover:bg-blue-50">
-                                                <Link href={`/inspection/${inspection.assignment?.id}/form`}>
-                                                    <ExternalLink className="h-4 w-4 mr-2" /> Edit (Admin)
-                                                </Link>
-                                            </Button>
-                                        )}
-                                    </div>
-                                )}
-                            </CardContent>
-                            {inspection.status === "pending" && (
-                                <CardFooter className="bg-muted/50 p-4 border-t flex items-center gap-2 text-[11px] text-muted-foreground">
-                                    <AlertCircle className="h-3.5 w-3.5" />
-                                    <span>Send Back returns to inspector for corrections without rejecting.</span>
-                                </CardFooter>
+                                    {session?.user?.role === "ADMIN" && (
+                                        <Link href={`/inspection/${inspection.assignment?.id}/form`}
+                                            className="w-full flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-[10px] py-[11px] text-[13px] font-semibold transition-colors">
+                                            <ExternalLink className="h-4 w-4" /> Edit Form (Admin)
+                                        </Link>
+                                    )}
+                                </div>
                             )}
-                        </Card>
+                        </div>
                     </div>
                 </div>
             </div>
