@@ -3,20 +3,10 @@
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import {
-    ClipboardCheck,
-    HardHat,
-    CheckCircle2,
-    Clock,
-    Building2,
-    Calendar,
-    Loader2,
-    UserCircle2,
-    ClipboardList,
-    Users,
-    ThumbsUp,
-    ThumbsDown
+    ClipboardCheck, HardHat, CheckCircle2, Clock, Building2, Calendar, Loader2,
+    UserCircle2, ClipboardList, Users, ThumbsUp, ThumbsDown, AlertTriangle,
+    TrendingUp, BarChart2
 } from "lucide-react"
 import Link from "next/link"
 import { format, formatDistanceToNow, isValid } from "date-fns"
@@ -37,27 +27,18 @@ export default function ManagerDashboard() {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const res = await fetch("/api/manager/stats")
-                const data = await res.json()
-                setStats(data)
-            } catch (error) {
-                console.error("Failed to fetch manager stats", error)
-            } finally {
-                setLoading(false)
-            }
-        }
-        fetchStats()
+        fetch("/api/manager/stats")
+            .then(r => r.json())
+            .then(d => setStats(d))
+            .catch(e => console.error(e))
+            .finally(() => setLoading(false))
     }, [])
 
     if (loading) {
         return (
             <div className="min-h-screen bg-[#f5f4f0] p-4 lg:p-7 space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {[1, 2, 3].map((i) => (
-                        <Skeleton key={i} className="h-[120px] rounded-[14px]" />
-                    ))}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-[120px] rounded-[14px]" />)}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Skeleton className="h-[400px] rounded-[14px]" />
@@ -75,15 +56,9 @@ export default function ManagerDashboard() {
                         <div className="h-10 w-10 text-[#dc2626] bg-[#fef2f2] rounded-full flex items-center justify-center mb-2">
                             <ClipboardList className="h-6 w-6" />
                         </div>
-                        <h3 className="text-xl font-bold tracking-tight text-[#1a1a18]">
-                            Failed to load dashboard data
-                        </h3>
-                        <p className="text-[13px] text-[#6b6860] flex flex-col gap-1 max-w-md">
-                            <span>{stats?.error || "An unexpected error occurred while fetching manager statistics."}</span>
-                        </p>
-                        <Button onClick={() => window.location.reload()} className="mt-4 bg-[#1a9e6e] hover:bg-[#158a5e]">
-                            Try Again
-                        </Button>
+                        <h3 className="text-xl font-bold tracking-tight text-[#1a1a18]">Failed to load dashboard data</h3>
+                        <p className="text-[13px] text-[#6b6860]">{stats?.error || "An unexpected error occurred."}</p>
+                        <Button onClick={() => window.location.reload()} className="mt-4 bg-[#1a9e6e] hover:bg-[#158a5e]">Try Again</Button>
                     </div>
                 </div>
             </div>
@@ -91,30 +66,10 @@ export default function ManagerDashboard() {
     }
 
     const kpiCards = [
-        {
-            title: "Pending Approvals",
-            value: stats.pendingApprovals,
-            icon: ClipboardCheck,
-            color: "#d97706",
-            bg: "#fef3c7",
-            link: "/approvals"
-        },
-        {
-            title: "Active Assignments",
-            value: stats.activeAssignments,
-            icon: Users,
-            color: "#1a9e6e",
-            bg: "#e8f7f1",
-            link: "/assignments"
-        },
-        {
-            title: "Completed This Month",
-            value: stats.completedThisMonth,
-            icon: CheckCircle2,
-            color: "#3b82f6",
-            bg: "#eff6ff",
-            link: "/approvals"
-        }
+        { title: "Pending Approvals", value: stats.pendingApprovals, icon: ClipboardCheck, color: "#d97706", bg: "#fef3c7", link: "/approvals" },
+        { title: "Active Assignments", value: stats.activeAssignments, icon: Users, color: "#1a9e6e", bg: "#e8f7f1", link: "/assignments" },
+        { title: "Completed This Month", value: stats.completedThisMonth, icon: CheckCircle2, color: "#3b82f6", bg: "#eff6ff", link: "/approvals" },
+        { title: "Overdue (>7 days)", value: stats.overdueInspections || 0, icon: AlertTriangle, color: "#dc2626", bg: "#fef2f2", link: "/approvals" },
     ]
 
     return (
@@ -132,48 +87,73 @@ export default function ManagerDashboard() {
                     <h1 className="text-[22px] font-semibold text-[#1a1a18] tracking-[-0.4px]">Manager Dashboard</h1>
                     <p className="text-[13px] text-[#6b6860] mt-[3px]">Monitor operations and review pending inspections</p>
                 </div>
-                <BulkImportInspectors />
+                <div className="flex items-center gap-3">
+                    <Link href="/manager/analytics" className="flex items-center gap-2 bg-white border border-[#e8e6e1] rounded-[10px] px-3 py-2 text-[13px] font-medium text-[#1a1a18] hover:bg-[#f9f8f5] transition-colors">
+                        <BarChart2 className="h-4 w-4 text-[#1a9e6e]" /> Analytics
+                    </Link>
+                    <BulkImportInspectors />
+                </div>
             </div>
-            {/* Mobile BulkImport */}
+
             <div className="md:hidden mb-4">
+                <div className="flex gap-2 mb-3">
+                    <Link href="/manager/analytics" className="flex items-center gap-2 bg-white border border-[#e8e6e1] rounded-[10px] px-3 py-2 text-[13px] font-medium text-[#1a1a18]">
+                        <BarChart2 className="h-4 w-4 text-[#1a9e6e]" /> Analytics
+                    </Link>
+                </div>
                 <BulkImportInspectors />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 md:mb-5">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 md:mb-5">
                 {kpiCards.map((card) => (
                     <Link key={card.title} href={card.link}>
-                        {/* Mobile horizontal card */}
-                        <div className="sm:hidden bg-white border border-[#e8e6e1] rounded-[14px] p-4 flex items-center gap-4 hover:shadow-md transition-shadow active:scale-[0.99]">
-                            <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: card.bg }}>
-                                <card.icon className="h-5 w-5" style={{ color: card.color }} />
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-[12px] text-[#6b6860]">{card.title}</p>
-                                <p className="text-[28px] font-bold text-[#1a1a18] tracking-[-1px] tabular-nums leading-none mt-0.5">{card.value}</p>
-                            </div>
-                        </div>
-                        {/* Desktop vertical card */}
-                        <div className="hidden sm:block bg-white border border-[#e8e6e1] rounded-[14px] p-5 hover:shadow-md transition-shadow">
+                        <div className="bg-white border border-[#e8e6e1] rounded-[14px] p-4 sm:p-5 hover:shadow-md transition-shadow">
                             <div className="w-9 h-9 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: card.bg }}>
-                                <card.icon className="h-5 w-5" style={{ color: card.color }} />
+                                <card.icon className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: card.color }} />
                             </div>
-                            <p className="text-[13px] text-[#6b6860] mb-1.5">{card.title}</p>
-                            <p className="text-[32px] font-bold text-[#1a1a18] tracking-[-1px] tabular-nums">{card.value}</p>
+                            <p className="text-[12px] sm:text-[13px] text-[#6b6860] mb-1">{card.title}</p>
+                            <p className="text-[26px] sm:text-[32px] font-bold text-[#1a1a18] tracking-[-1px] tabular-nums">{card.value}</p>
                         </div>
                     </Link>
                 ))}
             </div>
 
+            {/* Risk Alerts */}
+            {stats.riskAlerts && stats.riskAlerts.length > 0 && (
+                <div className="bg-white border border-[#fbbf24] rounded-[14px] overflow-hidden mb-4">
+                    <div className="p-4 border-b border-[#fef3c7] bg-[#fffbeb] flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-[#d97706]" />
+                        <span className="text-[13.5px] font-semibold text-[#92400e]">⚠️ Risk Alerts — High Defect Projects</span>
+                        <span className="ml-auto text-[11px] text-[#d97706]">{stats.riskAlerts.length} project{stats.riskAlerts.length !== 1 ? "s" : ""} at risk</span>
+                    </div>
+                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {stats.riskAlerts.map((alert: any) => (
+                            <div key={alert.projectId} className="bg-[#fef3c7] border border-[#fbbf24] rounded-[10px] p-3">
+                                <div className="flex items-start justify-between gap-2 mb-1">
+                                    <p className="text-[13px] font-semibold text-[#92400e] truncate">{alert.projectName}</p>
+                                    <span className="text-[11px] font-bold text-[#dc2626] shrink-0">{alert.rejectionRate}% rej.</span>
+                                </div>
+                                <p className="text-[11px] text-[#a16207]">{alert.companyName}</p>
+                                <div className="flex items-center gap-3 mt-2 text-[11px] text-[#92400e]">
+                                    <span>{alert.total} total inspections</span>
+                                    {alert.avgSentBack > 0 && <span>• {alert.avgSentBack}x avg sent back</span>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Pending Approvals */}
                 <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden">
                     <div className="p-4 border-b border-[#e8e6e1] flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-[#d97706]" />
                             <span className="text-[13.5px] font-semibold text-[#1a1a18]">Pending Approvals</span>
                         </div>
-                        <Link href="/approvals" className="text-[12.5px] font-medium text-[#1a9e6e] hover:underline">
-                            View All Pending →
-                        </Link>
+                        <Link href="/approvals" className="text-[12.5px] font-medium text-[#1a9e6e] hover:underline">View All →</Link>
                     </div>
                     <div className="p-5">
                         {stats.recentPending.length === 0 ? (
@@ -183,49 +163,43 @@ export default function ManagerDashboard() {
                             </div>
                         ) : (
                             stats.recentPending.map((i: any) => (
-                                <div key={i.id} className="flex items-center justify-between py-3 border-b border-[#e8e6e1] last:border-b-0">
-                                    <div className="min-w-0 pr-4">
-                                        <p className="text-[13px] font-medium text-[#1a1a18] truncate">{i.projectName}</p>
-                                        <div className="flex items-center gap-3 mt-1">
-                                            <span className="flex items-center gap-1 text-[12px] text-[#6b6860]">
-                                                <UserCircle2 className="h-3 w-3 text-[#9e9b95]" />
-                                                {i.inspectorName}
-                                            </span>
-                                            <span className="flex items-center gap-1 text-[12px] text-[#9e9b95]">
-                                                <Calendar className="h-3 w-3" />
-                                                {safeDistance(i.submittedAt)} ago
-                                            </span>
+                                <Link key={i.id} href={`/approvals/${i.id}`} className="block">
+                                    <div className="flex items-center justify-between py-3 border-b border-[#e8e6e1] last:border-b-0 hover:bg-[#f9f8f5] -mx-2 px-2 rounded-[8px] transition-colors">
+                                        <div className="min-w-0 pr-4">
+                                            <p className="text-[13px] font-medium text-[#1a1a18] truncate">{i.projectName}</p>
+                                            <div className="flex items-center gap-3 mt-1">
+                                                <span className="flex items-center gap-1 text-[12px] text-[#6b6860]">
+                                                    <UserCircle2 className="h-3 w-3 text-[#9e9b95]" />{i.inspectorName}
+                                                </span>
+                                                <span className="flex items-center gap-1 text-[12px] text-[#9e9b95]">
+                                                    <Calendar className="h-3 w-3" />{safeDistance(i.submittedAt)} ago
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <span className="text-[11px] bg-[#fef3c7] text-[#d97706] px-2 py-0.5 rounded-full font-medium">Pending</span>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        <button className="w-8 h-8 rounded-[8px] flex items-center justify-center bg-[#e8f7f1] text-[#0d6b4a] hover:bg-[#1a9e6e] hover:text-white transition-colors" title="Approve">
-                                            <ThumbsUp className="h-4 w-4" />
-                                        </button>
-                                        <button className="w-8 h-8 rounded-[8px] flex items-center justify-center bg-[#fef2f2] text-[#dc2626] hover:bg-[#dc2626] hover:text-white transition-colors" title="Reject">
-                                            <ThumbsDown className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                </div>
+                                </Link>
                             ))
                         )}
                     </div>
                 </div>
 
+                {/* Recent Assignments */}
                 <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden">
                     <div className="p-4 border-b border-[#e8e6e1] flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <ClipboardList className="h-4 w-4 text-[#6b6860]" />
                             <span className="text-[13.5px] font-semibold text-[#1a1a18]">Recent Assignments</span>
                         </div>
-                        <Link href="/assignments" className="text-[12.5px] font-medium text-[#1a9e6e] hover:underline">
-                            View All →
-                        </Link>
+                        <Link href="/assignments" className="text-[12.5px] font-medium text-[#1a9e6e] hover:underline">View All →</Link>
                     </div>
                     <div>
                         {stats.recentAssignments.length === 0 ? (
                             <div className="text-center py-10 px-5">
                                 <ClipboardList className="h-8 w-8 text-[#d4d1ca] mx-auto mb-3" />
-                                <p className="text-[13px] text-[#9e9b95]">No recent assignments found.</p>
+                                <p className="text-[13px] text-[#9e9b95]">No recent assignments.</p>
                             </div>
                         ) : (
                             stats.recentAssignments.map((a: any) => (
@@ -235,12 +209,10 @@ export default function ManagerDashboard() {
                                             <p className="text-[13.5px] font-semibold text-[#1a1a18] mb-1.5">{a.projectName}</p>
                                             <div className="flex items-center gap-3">
                                                 <span className="flex items-center gap-1 text-[12.5px] text-[#6b6860]">
-                                                    <Users className="h-3 w-3 text-[#9e9b95]" />
-                                                    {a.inspectorName}
+                                                    <Users className="h-3 w-3 text-[#9e9b95]" />{a.inspectorName}
                                                 </span>
                                                 <span className="flex items-center gap-1 text-[12.5px] text-[#9e9b95]">
-                                                    <Calendar className="h-3 w-3" />
-                                                    {safeFormat(a.createdAt, "MMM d, yyyy")}
+                                                    <Calendar className="h-3 w-3" />{safeFormat(a.createdAt, "MMM d, yyyy")}
                                                 </span>
                                             </div>
                                         </div>
@@ -258,6 +230,21 @@ export default function ManagerDashboard() {
                         )}
                     </div>
                 </div>
+            </div>
+
+            {/* Quick Links */}
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                    { label: "Performance Analytics", href: "/manager/analytics", icon: TrendingUp, color: "#1a9e6e" },
+                    { label: "All Reports", href: "/reports", icon: BarChart2, color: "#3b82f6" },
+                    { label: "All Approvals", href: "/approvals", icon: ClipboardCheck, color: "#d97706" },
+                    { label: "Assignments", href: "/assignments", icon: HardHat, color: "#6b6860" },
+                ].map(q => (
+                    <Link key={q.href} href={q.href} className="bg-white border border-[#e8e6e1] rounded-[12px] p-4 flex items-center gap-3 hover:shadow-md transition-shadow">
+                        <q.icon className="h-5 w-5 shrink-0" style={{ color: q.color }} />
+                        <span className="text-[12.5px] font-medium text-[#1a1a18]">{q.label}</span>
+                    </Link>
+                ))}
             </div>
         </div>
     )

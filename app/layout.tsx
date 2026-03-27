@@ -7,10 +7,20 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Growus Auto - Enterprise Portal",
-  description: "Inspection Management System",
+  title: "CIMS - Inspection Management",
+  description: "Quality Inspection Management System by Growus",
+  manifest: "/manifest.json",
   icons: {
     icon: "/favicon.svg",
+    apple: "/logo.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "CIMS",
+  },
+  formatDetection: {
+    telephone: false,
   },
 };
 

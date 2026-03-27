@@ -188,6 +188,11 @@ export default function ProjectsPage() {
                                                         <LayoutTemplate className="h-3 w-3 mr-1" /> Form Builder
                                                     </Link>
                                                 </Button>
+                                                <Button variant="outline" size="sm" asChild>
+                                                    <Link href={`/projects/${project.id}/report-config`}>
+                                                        ⚙️ Report Config
+                                                    </Link>
+                                                </Button>
                                                 <Button variant="ghost" size="sm" asChild>
                                                     <Link href={`/projects/${project.id}/edit`}>
                                                         <Pencil className="h-3 w-3 mr-1" /> Edit

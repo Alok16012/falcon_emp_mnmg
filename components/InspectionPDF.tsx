@@ -184,6 +184,11 @@ export const InspectionPDF: React.FC<InspectionPDFProps> = ({ inspection }) => {
                 <View>
                     {inspection.responses
                         .sort((a: any, b: any) => a.field.displayOrder - b.field.displayOrder)
+                        .filter((resp: any) => {
+                            const reportConfig = inspection.assignment?.project?.reportConfig
+                            if (!reportConfig?.fields || reportConfig.fields.length === 0) return true
+                            return reportConfig.fields.includes(resp.fieldId)
+                        })
                         .map((resp: any) => (
                             <View key={resp.id} style={styles.responseRow} wrap={false}>
                                 <Text style={styles.fieldLabel}>{resp.field.fieldLabel}</Text>

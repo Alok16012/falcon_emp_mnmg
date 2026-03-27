@@ -18,7 +18,8 @@ import {
     BarChart2,
     Users2,
     ChevronRight,
-    Sparkles
+    Sparkles,
+    TrendingUp
 } from "lucide-react"
 
 export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
@@ -64,10 +65,17 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
             ]
         },
         {
+            title: "ANALYTICS",
+            links: [
+                { name: "Analytics", href: "/manager/analytics", icon: TrendingUp, roles: ["ADMIN", "MANAGER"] },
+                { name: "Reports", href: "/reports", icon: BarChart2, roles: ["ADMIN", "MANAGER", "INSPECTION_BOY"] },
+            ]
+        },
+        {
             title: "CONFIGURATION",
             links: [
                 { name: "Users", href: "/admin/users", icon: Users, roles: ["ADMIN"] },
-                { name: "Reports", href: "/reports", icon: BarChart2, roles: ["ADMIN", "MANAGER", "CLIENT", "INSPECTION_BOY"] },
+                { name: "Reports", href: "/reports", icon: BarChart2, roles: ["CLIENT"] },
             ]
         }
     ]

@@ -43,18 +43,21 @@ export async function PUT(
         }
 
         const body = await req.json()
-        const { name, description } = body
+        const { name, description, reportConfig } = body
 
-        if (!name) return new NextResponse("Name is required", { status: 400 })
+        const updateData: any = {}
+        if (name !== undefined) {
+            if (!name) return new NextResponse("Name is required", { status: 400 })
+            updateData.name = name
+        }
+        if (description !== undefined) updateData.description = description
+        if (reportConfig !== undefined) updateData.reportConfig = reportConfig
 
         const project = await prisma.project.update({
             where: {
                 id: params.id,
             },
-            data: {
-                name,
-                description,
-            },
+            data: updateData,
         })
 
         return NextResponse.json(project)

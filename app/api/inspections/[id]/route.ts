@@ -35,7 +35,8 @@ export async function PATCH(
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
     try {
-        const { responses, status } = await req.json()
+        const body = await req.json()
+        const { responses, status, signature, gpsLocation, startedAt } = body
         const inspectionId = params.id
 
         const inspection = await prisma.inspection.findUnique({
@@ -71,6 +72,9 @@ export async function PATCH(
                 updateData.submittedAt = null
             }
         }
+        if (signature !== undefined) updateData.signature = signature
+        if (gpsLocation !== undefined) updateData.gpsLocation = gpsLocation
+        if (startedAt !== undefined) updateData.startedAt = new Date(startedAt)
 
         let validResponses = (responses || []).filter((r: any) => r.fieldId && r.fieldId !== "undefined")
 

@@ -1,0 +1,38 @@
+{
+  "name": "CIMS - Inspection Management",
+  "short_name": "CIMS",
+  "description": "Quality Inspection Management System by Growus",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f4f0",
+  "theme_color": "#1a9e6e",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["business", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Submit Inspection",
+      "url": "/inspection",
+      "description": "Go to your active inspections"
+    },
+    {
+      "name": "Approvals",
+      "url": "/approvals",
+      "description": "Review pending approvals"
+    }
+  ]
+}

@@ -63,7 +63,11 @@ export async function PATCH(
         const inspectionId = params.id
 
         const inspection = await prisma.inspection.findUnique({
-            where: { id: inspectionId }
+            where: { id: inspectionId },
+            include: {
+                submitter: true,
+                assignment: { include: { project: { include: { company: true } } } }
+            }
         })
 
         if (!inspection) {
@@ -74,8 +78,38 @@ export async function PATCH(
             return NextResponse.json({ error: "This inspection is not awaiting review" }, { status: 400 })
         }
 
-        if (action === "reject" && !reviewerNotes) {
-            return NextResponse.json({ error: "Please provide a reason for rejection" }, { status: 400 })
+        if ((action === "reject" || action === "send_back") && !reviewerNotes) {
+            return NextResponse.json({ error: "Please provide a reason" }, { status: 400 })
+        }
+
+        const projectName = inspection.assignment?.project?.name || "Project"
+        const companyName = inspection.assignment?.project?.company?.name || "Company"
+
+        if (action === "send_back") {
+            await prisma.$transaction(async (tx) => {
+                await tx.inspection.update({
+                    where: { id: inspectionId },
+                    data: {
+                        status: "draft",
+                        reviewerNotes,
+                        sentBackAt: new Date(),
+                        sentBackCount: { increment: 1 }
+                    }
+                })
+
+                // Notify inspector
+                await tx.notification.create({
+                    data: {
+                        userId: inspection.submittedBy,
+                        title: "Inspection Sent Back",
+                        message: `Your inspection for ${projectName} (${companyName}) was sent back for corrections. Notes: ${reviewerNotes}`,
+                        type: "send_back",
+                        link: `/inspection/${inspection.assignmentId}/form`
+                    }
+                })
+            })
+
+            return NextResponse.json({ message: "Inspection sent back for corrections" })
         }
 
         let updatedStatus = action === "approve" ? "approved" : "rejected"
@@ -86,6 +120,7 @@ export async function PATCH(
 
         if (action === "approve") {
             updateData.approvedAt = new Date()
+            updateData.approvedBy = session.user.id
         }
 
         const assignment = await prisma.assignment.findUnique({
@@ -104,6 +139,17 @@ export async function PATCH(
                     data: { status: "completed" }
                 })
 
+                // Notify inspector
+                await tx.notification.create({
+                    data: {
+                        userId: inspection.submittedBy,
+                        title: "Inspection Approved",
+                        message: `Your inspection for ${projectName} (${companyName}) has been approved.`,
+                        type: "report_approved",
+                        link: `/inspection/${inspection.assignmentId}/form`
+                    }
+                })
+
                 // Auto-create next recurring assignment
                 if (assignment && assignment.recurrenceType !== "none" && assignment.recurrenceActive) {
                     await tx.assignment.create({
@@ -117,6 +163,17 @@ export async function PATCH(
                         }
                     })
                 }
+            } else {
+                // Notify inspector of rejection
+                await tx.notification.create({
+                    data: {
+                        userId: inspection.submittedBy,
+                        title: "Inspection Rejected",
+                        message: `Your inspection for ${projectName} (${companyName}) was rejected. Notes: ${reviewerNotes || "No reason provided"}`,
+                        type: "report_rejected",
+                        link: `/inspection/${inspection.assignmentId}/form`
+                    }
+                })
             }
         })
 

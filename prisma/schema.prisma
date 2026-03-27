@@ -26,6 +26,7 @@ model User {
   company                  Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
   managedProjects          ProjectManager[] @relation("ProjectManagers")
   assignedProjects         ProjectManager[] @relation("ProjectManagerAssigner")
+  notifications            Notification[]
 }
 
 model Company {
@@ -42,17 +43,19 @@ model Company {
 }
 
 model Project {
-  id            String           @id @default(uuid())
-  companyId     String
-  name          String
-  description   String?
-  createdBy     String
-  createdAt     DateTime         @default(now())
-  assignments   Assignment[]
-  formTemplates FormTemplate[]
-  company       Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id              String           @id @default(uuid())
+  companyId       String
+  name            String
+  description     String?
+  createdBy       String
+  createdAt       DateTime         @default(now())
+  assignments     Assignment[]
+  formTemplates   FormTemplate[]
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
   projectManagers ProjectManager[]
-  defectColumns Json?
+  defectColumns   Json?
+  reportConfig    Json?
+  alertConfig     AlertConfig?
 }
 
 model Assignment {
@@ -81,12 +84,19 @@ model Inspection {
   submittedAt    DateTime?
   createdAt      DateTime         @default(now())
   approvedAt     DateTime?
+  approvedBy     String?
   reviewerNotes  String?
   submittedBy    String
   paperFormPhoto String?
+  sentBackAt     DateTime?
+  sentBackCount  Int              @default(0)
+  gpsLocation    String?
+  startedAt      DateTime?
+  signature      String?
   assignment     Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   submitter      User             @relation(fields: [submittedBy], references: [id])
   responses      InspectionData[]
+  shareableLink  ShareableLink?
 
   @@index([status])
   @@index([assignmentId])
@@ -135,6 +145,44 @@ model ProjectManager {
   assigner   User     @relation("ProjectManagerAssigner", fields: [assignedBy], references: [id])
 
   @@unique([projectId, managerId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model ShareableLink {
+  id           String     @id @default(uuid())
+  inspectionId String     @unique
+  token        String     @unique @default(uuid())
+  expiresAt    DateTime?
+  createdBy    String
+  viewCount    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  inspection   Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+}
+
+model AlertConfig {
+  id              String   @id @default(uuid())
+  projectId       String   @unique
+  defectThreshold Float    @default(5.0)
+  notifyManager   Boolean  @default(true)
+  notifyAdmin     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 enum Role {

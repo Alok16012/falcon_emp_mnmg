@@ -11,7 +11,9 @@ import {
     CheckCircle2,
     Upload,
     ExternalLink,
-    Camera
+    Camera,
+    MapPin,
+    Timer
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import CameraCapture from "@/components/CameraCapture"
@@ -33,9 +35,36 @@ export default function InspectionFormPage() {
     const [isDirty, setIsDirty] = useState(false)
     const [cameraFieldId, setCameraFieldId] = useState<string | null>(null)
     const [currentStep, setCurrentStep] = useState(0)
+    const [gpsLocation, setGpsLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null)
+    const [gpsStatus, setGpsStatus] = useState<"idle" | "loading" | "ok" | "denied">("idle")
+    const [startedAt] = useState<Date>(new Date())
+    const [elapsed, setElapsed] = useState(0)
 
     const isAdmin = session?.user?.role === "ADMIN"
     const canEdit = inspection?.status === "draft" || isAdmin
+
+    // Work timer
+    useEffect(() => {
+        if (canEdit) {
+            const timer = setInterval(() => setElapsed(Math.floor((Date.now() - startedAt.getTime()) / 1000)), 1000)
+            return () => clearInterval(timer)
+        }
+    }, [canEdit, startedAt])
+
+    // GPS capture on form load
+    useEffect(() => {
+        if (canEdit && "geolocation" in navigator) {
+            setGpsStatus("loading")
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    setGpsLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy })
+                    setGpsStatus("ok")
+                },
+                () => setGpsStatus("denied"),
+                { enableHighAccuracy: true, timeout: 10000 }
+            )
+        }
+    }, [canEdit])
 
     useEffect(() => {
         if (authStatus === "unauthenticated") {
@@ -275,13 +304,19 @@ export default function InspectionFormPage() {
                 value
             }))
 
+            const body: any = {
+                responses: resData,
+                status: effectiveStatus,
+                startedAt: startedAt.toISOString()
+            }
+            if (gpsLocation && effectiveStatus === "pending") {
+                body.gpsLocation = JSON.stringify(gpsLocation)
+            }
+
             const res = await fetch(`/api/inspections/${inspection.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    responses: resData,
-                    status: effectiveStatus
-                })
+                body: JSON.stringify(body)
             })
 
             if (res.ok) {
@@ -480,7 +515,23 @@ export default function InspectionFormPage() {
                 </div>
 
                 {!isSubmitted && (
-                    <div className="flex items-center gap-[8px]">
+                    <div className="flex items-center gap-[10px]">
+                        {/* GPS indicator */}
+                        <div className={cn(
+                            "hidden sm:flex items-center gap-1 text-[11px] px-2 py-1 rounded-full",
+                            gpsStatus === "ok" ? "bg-green-100 text-green-700" :
+                            gpsStatus === "loading" ? "bg-blue-50 text-blue-500" :
+                            gpsStatus === "denied" ? "bg-gray-100 text-gray-500" : "hidden"
+                        )}>
+                            <MapPin className="h-3 w-3" />
+                            {gpsStatus === "ok" ? "GPS" : gpsStatus === "loading" ? "Locating..." : "No GPS"}
+                        </div>
+                        {/* Timer */}
+                        <div className="hidden sm:flex items-center gap-1 text-[11px] bg-[#f9f8f5] border border-[#e8e6e1] px-2 py-1 rounded-full text-[#6b6860]">
+                            <Timer className="h-3 w-3" />
+                            {Math.floor(elapsed / 3600) > 0 && `${Math.floor(elapsed / 3600)}h `}
+                            {Math.floor((elapsed % 3600) / 60).toString().padStart(2, "0")}:{(elapsed % 60).toString().padStart(2, "0")}
+                        </div>
                         {saving ? (
                             <>
                                 <span className="relative flex h-[8px] w-[8px]">
@@ -508,6 +559,17 @@ export default function InspectionFormPage() {
 
             {/* FORM CONTENT */}
             <div className="w-full max-w-[660px] mx-auto p-[20px_20px_100px]">
+
+                {/* Reviewer sent-back notice */}
+                {inspection?.sentBackCount > 0 && inspection?.reviewerNotes && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-[12px] p-[14px_18px] mb-[20px]">
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-orange-600 bg-orange-100 px-2 py-0.5 rounded">Sent Back for Corrections</span>
+                            <span className="text-[11px] text-orange-500 ml-auto">{inspection.sentBackCount}x</span>
+                        </div>
+                        <p className="text-[13px] text-orange-800 italic">"{inspection.reviewerNotes}"</p>
+                    </div>
+                )}
 
                 {isSubmitted && !isAdmin && (
                     <div className="bg-[#f0fdf4] border border-[rgba(26,158,110,0.25)] rounded-[12px] p-[14px_18px] flex items-center gap-[12px] mb-[24px]">
