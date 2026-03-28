@@ -1,6 +1,6 @@
 "use client"
 // mobile-responsive
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { format, parseISO } from "date-fns"
 import {
@@ -111,6 +111,38 @@ function ProgressBar({ value, color }: { value: number; color: string }) {
     )
 }
 
+async function captureChartToImage(el: HTMLDivElement | null): Promise<string | null> {
+    if (!el) return null
+    const svg = el.querySelector('svg')
+    if (!svg) return null
+    const w = parseInt(svg.getAttribute('width') || '0') || svg.clientWidth
+    const h = parseInt(svg.getAttribute('height') || '0') || svg.clientHeight
+    if (!w || !h) return null
+    const clone = svg.cloneNode(true) as SVGSVGElement
+    clone.setAttribute('width', String(w))
+    clone.setAttribute('height', String(h))
+    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+    bg.setAttribute('width', String(w)); bg.setAttribute('height', String(h)); bg.setAttribute('fill', 'white')
+    clone.insertBefore(bg, clone.firstChild)
+    const svgStr = new XMLSerializer().serializeToString(clone)
+    const url = URL.createObjectURL(new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' }))
+    return new Promise(resolve => {
+        const img = new Image()
+        img.onload = () => {
+            const c = document.createElement('canvas')
+            c.width = w; c.height = h
+            const ctx = c.getContext('2d')
+            if (!ctx) { URL.revokeObjectURL(url); resolve(null); return }
+            ctx.fillStyle = 'white'; ctx.fillRect(0, 0, w, h)
+            ctx.drawImage(img, 0, 0, w, h)
+            URL.revokeObjectURL(url)
+            resolve(c.toDataURL('image/png'))
+        }
+        img.onerror = () => { URL.revokeObjectURL(url); resolve(null) }
+        img.src = url
+    })
+}
+
 export default function ReportsPage() {
     const { data: session } = useSession()
     const role = session?.user?.role
@@ -141,6 +173,13 @@ export default function ReportsPage() {
     const [exportingPdf, setExportingPdf] = useState(false)
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
     const [deleting, setDeleting] = useState(false)
+
+    // Chart capture refs (for PDF export)
+    const pieRef = useRef<HTMLDivElement>(null)
+    const trendRef = useRef<HTMLDivElement>(null)
+    const partWiseBarRef = useRef<HTMLDivElement>(null)
+    const locationBarRef = useRef<HTMLDivElement>(null)
+    const paretoRef = useRef<HTMLDivElement>(null)
 
     // Table features — sorting
     const [sortKey, setSortKey] = useState<string>("date")
@@ -331,6 +370,18 @@ export default function ReportsPage() {
         if (!data) return
         setExportingPdf(true)
         try {
+            // Wait briefly for hidden charts to render
+            await new Promise(r => setTimeout(r, 400))
+
+            // Capture all chart images from hidden capture zone
+            const [pieImg, trendImg, partWiseImg, locationImg, paretoImg] = await Promise.all([
+                captureChartToImage(pieRef.current),
+                captureChartToImage(trendRef.current),
+                captureChartToImage(partWiseBarRef.current),
+                captureChartToImage(locationBarRef.current),
+                captureChartToImage(paretoRef.current),
+            ])
+
             const [{ pdf }, { ReportDocument }] = await Promise.all([
                 import("@react-pdf/renderer"),
                 import("./ReportPDF")
@@ -339,7 +390,6 @@ export default function ReportsPage() {
             const period = `${MONTHS[selectedMonth - 1]} ${selectedYear}`
             const project = projects.find(p => p.id === selectedProjectId)?.name || "All Projects"
             const inspector = inspectors.find(i => i.id === selectedInspectorId)?.name || "All Inspectors"
-
             const logoUrl = `${window.location.origin}/logo.png`
 
             const blob = await pdf(
@@ -350,6 +400,7 @@ export default function ReportsPage() {
                     project={project}
                     inspector={inspector}
                     logoUrl={logoUrl}
+                    chartImages={{ pie: pieImg, trend: trendImg, partWise: partWiseImg, location: locationImg, pareto: paretoImg }}
                 />
             ).toBlob()
 
@@ -363,6 +414,7 @@ export default function ReportsPage() {
             URL.revokeObjectURL(url)
         } catch (err) {
             console.error("PDF generation failed", err)
+            toast.error("PDF generation failed. Please try again.")
         } finally {
             setExportingPdf(false)
         }
@@ -1075,6 +1127,66 @@ export default function ReportsPage() {
                     </div>
                 )}
             </div>
+
+            {/* Hidden Chart Capture Zone — always in DOM for PDF export */}
+            {data && (
+                <div style={{ position: 'fixed', left: -3000, top: 0, pointerEvents: 'none', zIndex: -1 }}>
+                    {/* Pie Chart */}
+                    <div ref={pieRef} style={{ width: 500, height: 280, backgroundColor: 'white' }}>
+                        <PieChart width={500} height={280}>
+                            <Pie data={pieData} cx={250} cy={130} innerRadius={80} outerRadius={110} paddingAngle={4} dataKey="value" stroke="none">
+                                {pieData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                            </Pie>
+                        </PieChart>
+                    </div>
+                    {/* Trend Area Chart */}
+                    <div ref={trendRef} style={{ width: 700, height: 260, backgroundColor: 'white' }}>
+                        <AreaChart width={700} height={260} data={areaData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="capAccepted" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={THEME.success} stopOpacity={0.15} /><stop offset="95%" stopColor={THEME.success} stopOpacity={0} /></linearGradient>
+                                <linearGradient id="capInspected" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={THEME.primary} stopOpacity={0.15} /><stop offset="95%" stopColor={THEME.primary} stopOpacity={0} /></linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9e9b95" }} dy={6} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9e9b95" }} />
+                            <Area type="monotone" dataKey="totalInspected" name="Inspected" stroke={THEME.primary} strokeWidth={2} fillOpacity={1} fill="url(#capInspected)" />
+                            <Area type="monotone" dataKey="totalAccepted" name="Accepted" stroke={THEME.success} strokeWidth={2} fillOpacity={1} fill="url(#capAccepted)" />
+                            <Line type="monotone" dataKey="totalRejected" name="Rejected" stroke={THEME.danger} strokeWidth={2} dot={{ r: 3, fill: THEME.danger, stroke: 'white', strokeWidth: 2 }} />
+                        </AreaChart>
+                    </div>
+                    {/* Part-wise Bar Chart */}
+                    <div ref={partWiseBarRef} style={{ width: 700, height: 320, backgroundColor: 'white' }}>
+                        <BarChart width={700} height={320} data={data.partWise} layout="vertical" margin={{ left: 10, right: 10 }}>
+                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
+                            <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9e9b95" }} />
+                            <YAxis dataKey="partName" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#6b6860" }} width={100} />
+                            <Bar dataKey="totalAccepted" name="Accepted" stackId="a" fill={THEME.success} />
+                            <Bar dataKey="totalRework" name="Rework" stackId="a" fill={THEME.warning} />
+                            <Bar dataKey="totalRejected" name="Rejected" stackId="a" fill={THEME.danger} radius={[0, 3, 3, 0]} />
+                        </BarChart>
+                    </div>
+                    {/* Location Bar Chart */}
+                    <div ref={locationBarRef} style={{ width: 700, height: 260, backgroundColor: 'white' }}>
+                        <BarChart width={700} height={260} data={data.locationWise} margin={{ left: 0, right: 10 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                            <XAxis dataKey="location" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#6b6860" }} dy={8} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9e9b95" }} />
+                            <Bar dataKey="totalInspected" name="Inspected" fill={THEME.info} radius={[4, 4, 0, 0]} barSize={40} />
+                        </BarChart>
+                    </div>
+                    {/* Pareto Chart */}
+                    <div ref={paretoRef} style={{ width: 700, height: 340, backgroundColor: 'white' }}>
+                        <ComposedChart width={700} height={340} data={paretoData} margin={{ top: 10, right: 40, left: 0, bottom: 60 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                            <XAxis dataKey="defectName" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#6b6860" }} angle={-35} textAnchor="end" height={80} dy={16} />
+                            <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9e9b95" }} />
+                            <YAxis yAxisId="right" orientation="right" domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9e9b95" }} unit="%" />
+                            <Bar yAxisId="left" dataKey="count" name="Frequency" fill={THEME.danger} radius={[4, 4, 0, 0]} barSize={40} />
+                            <Line yAxisId="right" type="monotone" dataKey="cumulative" name="Cumulative %" stroke={THEME.warning} strokeWidth={3} dot={{ r: 4, fill: THEME.warning, stroke: 'white', strokeWidth: 2 }} />
+                        </ComposedChart>
+                    </div>
+                </div>
+            )}
 
             {/* Delete Confirmation Modal */}
             {deleteConfirmId && (

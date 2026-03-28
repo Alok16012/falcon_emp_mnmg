@@ -38,8 +38,9 @@ const styles = StyleSheet.create({
     pageNum: { position: "absolute", bottom: 22, right: 36, fontSize: 8, color: "#9e9b95" },
 })
 
-export function ReportDocument({ data, companyName, period, project, inspector, logoUrl }: {
-    data: any, companyName: string, period: string, project: string, inspector: string, logoUrl?: string
+export function ReportDocument({ data, companyName, period, project, inspector, logoUrl, chartImages }: {
+    data: any, companyName: string, period: string, project: string, inspector: string, logoUrl?: string,
+    chartImages?: { pie?: string | null, trend?: string | null, partWise?: string | null, location?: string | null, pareto?: string | null }
 }) {
     const s = data?.summary
     const topDefects: any[] = (data?.topDefects || []).slice(0, 5)
@@ -124,7 +125,59 @@ export function ReportDocument({ data, companyName, period, project, inspector, 
                     </View>
                 </View>
 
-                {/* Section 2: Top Defects */}
+                {/* Section 2: Performance Charts */}
+                {(chartImages?.pie || chartImages?.trend) && (
+                    <>
+                        <Text style={styles.sectionTitle}>Performance Overview</Text>
+                        <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
+                            {chartImages?.pie && (
+                                <View style={{ flex: 1, borderWidth: 1, borderColor: "#e8e6e1", borderRadius: 6, padding: 6 }}>
+                                    <Text style={{ fontSize: 7, color: "#9e9b95", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>Overall Quality Status</Text>
+                                    <Image src={chartImages.pie} style={{ width: "100%", height: 120 }} />
+                                </View>
+                            )}
+                            {chartImages?.trend && (
+                                <View style={{ flex: 1.6, borderWidth: 1, borderColor: "#e8e6e1", borderRadius: 6, padding: 6 }}>
+                                    <Text style={{ fontSize: 7, color: "#9e9b95", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>Daily Performance Trend</Text>
+                                    <Image src={chartImages.trend} style={{ width: "100%", height: 120 }} />
+                                </View>
+                            )}
+                        </View>
+                    </>
+                )}
+
+                {/* Section 3: Pareto Analysis */}
+                {chartImages?.pareto && (
+                    <>
+                        <Text style={styles.sectionTitle}>Pareto Analysis — Defect Frequency</Text>
+                        <View style={{ borderWidth: 1, borderColor: "#e8e6e1", borderRadius: 6, padding: 6, marginBottom: 8 }}>
+                            <Image src={chartImages.pareto} style={{ width: "100%", height: 160 }} />
+                        </View>
+                    </>
+                )}
+
+                {/* Section 4: Part & Location Charts */}
+                {(chartImages?.partWise || chartImages?.location) && (
+                    <>
+                        <Text style={styles.sectionTitle}>Component & Location Analysis</Text>
+                        <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
+                            {chartImages?.partWise && (
+                                <View style={{ flex: 1, borderWidth: 1, borderColor: "#e8e6e1", borderRadius: 6, padding: 6 }}>
+                                    <Text style={{ fontSize: 7, color: "#9e9b95", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>Part-Wise Quality Split</Text>
+                                    <Image src={chartImages.partWise} style={{ width: "100%", height: 150 }} />
+                                </View>
+                            )}
+                            {chartImages?.location && (
+                                <View style={{ flex: 1, borderWidth: 1, borderColor: "#e8e6e1", borderRadius: 6, padding: 6 }}>
+                                    <Text style={{ fontSize: 7, color: "#9e9b95", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>Inspection by Location</Text>
+                                    <Image src={chartImages.location} style={{ width: "100%", height: 150 }} />
+                                </View>
+                            )}
+                        </View>
+                    </>
+                )}
+
+                {/* Section 5: Top Defects */}
                 {topDefects.length > 0 && (
                     <>
                         <Text style={styles.sectionTitle}>Top 5 Defects</Text>
