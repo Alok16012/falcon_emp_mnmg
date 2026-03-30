@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { Role } from "@prisma/client"
+import { sendApprovalEmail } from "@/lib/email"
 
 export async function GET(
     req: Request,
@@ -177,6 +178,56 @@ export async function PATCH(
                 })
             }
         })
+
+        // After transaction: auto-create share link + email clients on approval
+        if (action === "approve") {
+            try {
+                const companyId = inspection.assignment?.project?.companyId
+
+                // Auto-create shareable link
+                const shareLink = await prisma.shareableLink.upsert({
+                    where: { inspectionId: inspectionId },
+                    create: { inspectionId, createdBy: session.user.id },
+                    update: {}
+                })
+
+                const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://cims-sooty.vercel.app"
+                const shareUrl = `${appUrl}/share/${shareLink.token}`
+
+                // Find all active CLIENT users for this company
+                const clients = companyId
+                    ? await prisma.user.findMany({
+                        where: {
+                            role: Role.CLIENT,
+                            companyId,
+                            isActive: true,
+                            email: { not: null }
+                        },
+                        select: { email: true, name: true }
+                    })
+                    : []
+
+                if (clients.length > 0) {
+                    const toEmails = clients.map(c => c.email).filter(Boolean) as string[]
+                    const clientNames = clients.map(c => c.name || "Client")
+
+                    await sendApprovalEmail({
+                        toEmails,
+                        clientNames,
+                        projectName,
+                        companyName,
+                        inspectorName: inspection.submitter?.name || "Inspector",
+                        approvedAt: new Date(),
+                        reviewerNotes: reviewerNotes || null,
+                        shareUrl,
+                        approvedByName: session.user.name || session.user.email || "Manager"
+                    })
+                }
+            } catch (emailErr) {
+                // Email failure should NOT fail the approval
+                console.error("EMAIL_SEND_ERROR", emailErr)
+            }
+        }
 
         return NextResponse.json({ message: `Inspection ${updatedStatus} successfully` })
     } catch (error) {
