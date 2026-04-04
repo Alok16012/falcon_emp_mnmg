@@ -27,6 +27,9 @@ model User {
   managedProjects          ProjectManager[] @relation("ProjectManagers")
   assignedProjects         ProjectManager[] @relation("ProjectManagerAssigner")
   notifications            Notification[]
+  leadsAssigned            Lead[]           @relation("LeadAssignee")
+  leadsCreated             Lead[]           @relation("LeadCreator")
+  leadActivities           LeadActivity[]   @relation("LeadActivityUser")
 }
 
 model Company {
@@ -190,4 +193,66 @@ enum Role {
   MANAGER
   INSPECTION_BOY
   CLIENT
+}
+
+enum LeadStatus {
+  APPLIED
+  SCREENING
+  INTERVIEW_SCHEDULED
+  INTERVIEW_DONE
+  SELECTED
+  ONBOARDED
+  REJECTED
+}
+
+enum LeadPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+model Lead {
+  id             String        @id @default(uuid())
+  candidateName  String
+  phone          String
+  email          String?
+  city           String?
+  position       String        // Role applied for e.g. Inspector, Security Guard, Supervisor
+  experience     Float?        // Years of experience
+  currentCompany String?       // Previous/current employer
+  qualification  String?       // 10th, 12th, Graduate, ITI, Diploma, etc.
+  skills         String?       // Driving License, Forklift, First Aid, etc.
+  expectedSalary Float?
+  currentSalary  Float?
+  interviewDate  DateTime?
+  interviewMode  String?       // In-person, Phone, Video
+  source         String        // Walk-in, LinkedIn, Naukri, Referral, WhatsApp, Agency, Indeed
+  status         LeadStatus    @default(APPLIED)
+  priority       LeadPriority  @default(MEDIUM)
+  assignedTo     String?
+  notes          String?
+  nextFollowUp   DateTime?
+  createdBy      String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  assignee       User?         @relation("LeadAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
+  creator        User          @relation("LeadCreator", fields: [createdBy], references: [id])
+  activities     LeadActivity[]
+
+  @@index([status])
+  @@index([assignedTo])
+  @@index([createdAt])
+}
+
+model LeadActivity {
+  id        String   @id @default(uuid())
+  leadId    String
+  userId    String
+  type      String   // note, call, email, meeting, whatsapp, status_change
+  content   String
+  createdAt DateTime @default(now())
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user      User     @relation("LeadActivityUser", fields: [userId], references: [id])
+
+  @@index([leadId])
 }
