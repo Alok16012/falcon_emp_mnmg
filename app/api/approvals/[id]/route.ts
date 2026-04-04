@@ -201,7 +201,7 @@ export async function PATCH(
                             role: Role.CLIENT,
                             companyId,
                             isActive: true,
-                            email: { not: null }
+                            email: { not: undefined }
                         },
                         select: { email: true, name: true }
                     })
