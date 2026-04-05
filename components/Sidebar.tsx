@@ -29,7 +29,8 @@ import {
     ClipboardList,
     Star,
     LogOut,
-    Package
+    Package,
+    Headphones
 } from "lucide-react"
 
 export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
@@ -92,6 +93,12 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
                 { name: "Onboarding", href: "/onboarding", icon: ClipboardList, roles: ["ADMIN", "MANAGER"] },
                 { name: "Performance", href: "/performance", icon: Star, roles: ["ADMIN", "MANAGER"] },
                 { name: "Exit", href: "/exit", icon: LogOut, roles: ["ADMIN", "MANAGER"] },
+            ]
+        },
+        {
+            title: "SUPPORT",
+            links: [
+                { name: "Helpdesk", href: "/helpdesk", icon: Headphones, roles: ["ADMIN", "MANAGER"] },
             ]
         },
         {

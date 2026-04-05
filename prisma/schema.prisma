@@ -258,6 +258,58 @@ model LeadActivity {
   @@index([leadId])
 }
 
+// ─── HELPDESK / TICKETING ─────────────────────────────────────────────────────
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Ticket {
+  id          String         @id @default(uuid())
+  ticketNo    String         @unique
+  title       String
+  description String
+  category    String
+  priority    TicketPriority @default(MEDIUM)
+  status      TicketStatus   @default(OPEN)
+  raisedBy    String
+  assignedTo  String?
+  employeeId  String?
+  resolvedAt  DateTime?
+  closedAt    DateTime?
+  dueDate     DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  comments    TicketComment[]
+
+  @@index([status])
+  @@index([raisedBy])
+  @@index([assignedTo])
+  @@index([createdAt])
+}
+
+model TicketComment {
+  id         String   @id @default(uuid())
+  ticketId   String
+  userId     String
+  content    String
+  isInternal Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+}
+
 model Branch {
   id          String       @id @default(uuid())
   name        String
