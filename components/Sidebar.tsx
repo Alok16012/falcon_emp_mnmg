@@ -25,7 +25,10 @@ import {
     MapPin,
     Clock,
     CalendarOff,
-    Wallet
+    Wallet,
+    ClipboardList,
+    Star,
+    LogOut
 } from "lucide-react"
 
 export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
@@ -79,6 +82,14 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
                 { name: "Attendance", href: "/attendance", icon: Clock, roles: ["ADMIN", "MANAGER"] },
                 { name: "Leaves", href: "/leaves", icon: CalendarOff, roles: ["ADMIN", "MANAGER"] },
                 { name: "Payroll", href: "/payroll", icon: Wallet, roles: ["ADMIN", "MANAGER"] },
+            ]
+        },
+        {
+            title: "PEOPLE OPS",
+            links: [
+                { name: "Onboarding", href: "/onboarding", icon: ClipboardList, roles: ["ADMIN", "MANAGER"] },
+                { name: "Performance", href: "/performance", icon: Star, roles: ["ADMIN", "MANAGER"] },
+                { name: "Exit", href: "/exit", icon: LogOut, roles: ["ADMIN", "MANAGER"] },
             ]
         },
         {
