@@ -28,7 +28,8 @@ import {
     Wallet,
     ClipboardList,
     Star,
-    LogOut
+    LogOut,
+    Package
 } from "lucide-react"
 
 export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
@@ -82,6 +83,7 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
                 { name: "Attendance", href: "/attendance", icon: Clock, roles: ["ADMIN", "MANAGER"] },
                 { name: "Leaves", href: "/leaves", icon: CalendarOff, roles: ["ADMIN", "MANAGER"] },
                 { name: "Payroll", href: "/payroll", icon: Wallet, roles: ["ADMIN", "MANAGER"] },
+                { name: "Assets", href: "/assets", icon: Package, roles: ["ADMIN", "MANAGER"] },
             ]
         },
         {
