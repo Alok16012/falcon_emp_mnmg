@@ -43,6 +43,7 @@ model Company {
   createdAt     DateTime  @default(now())
   projects      Project[]
   clients       User[]
+  branches      Branch[]
 }
 
 model Project {
@@ -255,4 +256,225 @@ model LeadActivity {
   user      User     @relation("LeadActivityUser", fields: [userId], references: [id])
 
   @@index([leadId])
+}
+
+model Branch {
+  id          String       @id @default(uuid())
+  name        String
+  address     String?
+  city        String?
+  state       String?
+  companyId   String
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  departments Department[]
+  employees   Employee[]
+  sites       Site[]
+}
+
+model Department {
+  id        String     @id @default(uuid())
+  name      String
+  branchId  String
+  createdAt DateTime   @default(now())
+  branch    Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  employees Employee[]
+}
+
+model Site {
+  id          String       @id @default(uuid())
+  name        String
+  address     String?
+  city        String?
+  branchId    String
+  latitude    Float?
+  longitude   Float?
+  radius      Float        @default(100)
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  branch      Branch       @relation(fields: [branchId], references: [id])
+  deployments Deployment[]
+  attendances Attendance[]
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+  RESIGNED
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum PayrollStatus {
+  DRAFT
+  PROCESSED
+  PAID
+}
+
+model Employee {
+  id                String             @id @default(uuid())
+  employeeId        String             @unique
+  firstName         String
+  lastName          String
+  email             String?
+  phone             String
+  alternatePhone    String?
+  dateOfBirth       DateTime?
+  gender            String?
+  address           String?
+  city              String?
+  state             String?
+  pincode           String?
+  aadharNumber      String?
+  panNumber         String?
+  bankAccountNumber String?
+  bankIFSC          String?
+  bankName          String?
+  photo             String?
+  designation       String?
+  departmentId      String?
+  branchId          String
+  dateOfJoining     DateTime?
+  status            EmployeeStatus     @default(ACTIVE)
+  employmentType    String             @default("Full-time")
+  basicSalary       Float              @default(0)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  branch            Branch             @relation(fields: [branchId], references: [id])
+  department        Department?        @relation(fields: [departmentId], references: [id])
+  deployments       Deployment[]
+  attendances       Attendance[]
+  leaves            Leave[]
+  payrolls          Payroll[]
+  assets            EmployeeAsset[]
+  documents         EmployeeDocument[]
+
+  @@index([branchId])
+  @@index([status])
+}
+
+model EmployeeDocument {
+  id         String   @id @default(uuid())
+  employeeId String
+  type       String
+  fileName   String
+  fileUrl    String
+  uploadedAt DateTime @default(now())
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+}
+
+model Deployment {
+  id         String    @id @default(uuid())
+  employeeId String
+  siteId     String
+  startDate  DateTime
+  endDate    DateTime?
+  shift      String?
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  employee   Employee  @relation(fields: [employeeId], references: [id])
+  site       Site      @relation(fields: [siteId], references: [id])
+
+  @@index([employeeId])
+  @@index([siteId])
+}
+
+model Attendance {
+  id          String    @id @default(uuid())
+  employeeId  String
+  siteId      String?
+  date        DateTime
+  checkIn     DateTime?
+  checkOut    DateTime?
+  checkInLat  Float?
+  checkInLng  Float?
+  checkOutLat Float?
+  checkOutLng Float?
+  status      String    @default("PRESENT")
+  overtimeHrs Float     @default(0)
+  remarks     String?
+  createdAt   DateTime  @default(now())
+  employee    Employee  @relation(fields: [employeeId], references: [id])
+  site        Site?     @relation(fields: [siteId], references: [id])
+
+  @@index([employeeId])
+  @@index([date])
+}
+
+model Leave {
+  id         String      @id @default(uuid())
+  employeeId String
+  type       String
+  startDate  DateTime
+  endDate    DateTime
+  days       Float
+  reason     String?
+  status     LeaveStatus @default(PENDING)
+  approvedBy String?
+  approvedAt DateTime?
+  createdAt  DateTime    @default(now())
+  employee   Employee    @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId])
+  @@index([status])
+}
+
+model Payroll {
+  id              String        @id @default(uuid())
+  employeeId      String
+  month           Int
+  year            Int
+  basicSalary     Float
+  hra             Float         @default(0)
+  allowances      Float         @default(0)
+  overtimePay     Float         @default(0)
+  grossSalary     Float
+  pfEmployee      Float         @default(0)
+  esiEmployee     Float         @default(0)
+  tds             Float         @default(0)
+  otherDeductions Float         @default(0)
+  netSalary       Float
+  workingDays     Int           @default(26)
+  presentDays     Int           @default(0)
+  status          PayrollStatus @default(DRAFT)
+  processedAt     DateTime?
+  createdAt       DateTime      @default(now())
+  employee        Employee      @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, month, year])
+  @@index([month, year])
+}
+
+model Asset {
+  id           String          @id @default(uuid())
+  name         String
+  category     String
+  serialNo     String?
+  totalQty     Int             @default(1)
+  availableQty Int             @default(1)
+  createdAt    DateTime        @default(now())
+  assignments  EmployeeAsset[]
+}
+
+model EmployeeAsset {
+  id         String    @id @default(uuid())
+  employeeId String
+  assetId    String
+  issuedAt   DateTime  @default(now())
+  returnedAt DateTime?
+  remarks    String?
+  employee   Employee  @relation(fields: [employeeId], references: [id])
+  asset      Asset     @relation(fields: [assetId], references: [id])
+
+  @@index([employeeId])
 }

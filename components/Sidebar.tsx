@@ -20,7 +20,12 @@ import {
     ChevronRight,
     Sparkles,
     TrendingUp,
-    Target
+    Target,
+    UserCheck,
+    MapPin,
+    Clock,
+    CalendarOff,
+    Wallet
 } from "lucide-react"
 
 export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
@@ -63,7 +68,17 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
                 { name: "Assignments", href: "/assignments", icon: HardHat, roles: ["ADMIN", "MANAGER"] },
                 { name: "Groups", href: "/groups", icon: Users2, roles: ["ADMIN", "MANAGER"] },
                 { name: "Recruitment", href: "/recruitment", icon: Target, roles: ["ADMIN", "MANAGER"] },
+                { name: "Employees", href: "/employees", icon: UserCheck, roles: ["ADMIN", "MANAGER"] },
+                { name: "Sites", href: "/sites", icon: MapPin, roles: ["ADMIN", "MANAGER"] },
                 { name: "Approvals", href: "/approvals", icon: ClipboardCheck, roles: ["ADMIN", "MANAGER"], badge: true },
+            ]
+        },
+        {
+            title: "HR OPERATIONS",
+            links: [
+                { name: "Attendance", href: "/attendance", icon: Clock, roles: ["ADMIN", "MANAGER"] },
+                { name: "Leaves", href: "/leaves", icon: CalendarOff, roles: ["ADMIN", "MANAGER"] },
+                { name: "Payroll", href: "/payroll", icon: Wallet, roles: ["ADMIN", "MANAGER"] },
             ]
         },
         {
