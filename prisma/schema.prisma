@@ -465,31 +465,40 @@ model Attendance {
   checkOutLng Float?
   status      String    @default("PRESENT")
   overtimeHrs Float     @default(0)
+  workingHrs  Float     @default(0)
   remarks     String?
+  markedBy    String?
   createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   employee    Employee  @relation(fields: [employeeId], references: [id])
   site        Site?     @relation(fields: [siteId], references: [id])
 
+  @@unique([employeeId, date])
   @@index([employeeId])
   @@index([date])
+  @@index([status])
 }
 
 model Leave {
-  id         String      @id @default(uuid())
-  employeeId String
-  type       String
-  startDate  DateTime
-  endDate    DateTime
-  days       Float
-  reason     String?
-  status     LeaveStatus @default(PENDING)
-  approvedBy String?
-  approvedAt DateTime?
-  createdAt  DateTime    @default(now())
-  employee   Employee    @relation(fields: [employeeId], references: [id])
+  id              String      @id @default(uuid())
+  employeeId      String
+  type            String
+  startDate       DateTime
+  endDate         DateTime
+  days            Float
+  reason          String?
+  status          LeaveStatus @default(PENDING)
+  approvedBy      String?
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  employee        Employee    @relation(fields: [employeeId], references: [id])
 
   @@index([employeeId])
   @@index([status])
+  @@index([startDate])
 }
 
 model Payroll {

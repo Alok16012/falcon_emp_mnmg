@@ -14,26 +14,39 @@ export async function GET(req: Request) {
         const { searchParams } = new URL(req.url)
         const employeeId = searchParams.get("employeeId")
         const dateStr = searchParams.get("date")
-        const month = searchParams.get("month")
-        const year = searchParams.get("year")
+        const monthParam = searchParams.get("month") // YYYY-MM or numeric
+        const month = searchParams.get("month")?.includes("-") ? searchParams.get("month")!.split("-")[1] : searchParams.get("month")
+        const year = searchParams.get("month")?.includes("-") ? searchParams.get("month")!.split("-")[0] : searchParams.get("year")
         const branchId = searchParams.get("branchId")
+        const status = searchParams.get("status")
+        const search = searchParams.get("search")
 
         const where: Record<string, unknown> = {}
         if (employeeId) where.employeeId = employeeId
+        if (status) where.status = status
 
         if (dateStr) {
             const date = new Date(dateStr)
             const nextDay = new Date(date)
             nextDay.setDate(nextDay.getDate() + 1)
             where.date = { gte: date, lt: nextDay }
-        } else if (month && year) {
+        } else if (monthParam && month && year) {
             const startDate = new Date(parseInt(year), parseInt(month) - 1, 1)
             const endDate = new Date(parseInt(year), parseInt(month), 1)
             where.date = { gte: startDate, lt: endDate }
         }
 
-        if (branchId) {
-            where.employee = { branchId }
+        const employeeWhere: Record<string, unknown> = {}
+        if (branchId) employeeWhere.branchId = branchId
+        if (search) {
+            employeeWhere.OR = [
+                { firstName: { contains: search, mode: "insensitive" } },
+                { lastName: { contains: search, mode: "insensitive" } },
+                { employeeId: { contains: search, mode: "insensitive" } },
+            ]
+        }
+        if (Object.keys(employeeWhere).length > 0) {
+            where.employee = employeeWhere
         }
 
         const attendances = await prisma.attendance.findMany({
@@ -84,6 +97,13 @@ export async function POST(req: Request) {
         const nextDay = new Date(attendanceDate)
         nextDay.setDate(nextDay.getDate() + 1)
 
+        // Calculate working hours
+        let workingHrs = 0
+        if (checkIn && checkOut) {
+            const diff = new Date(checkOut).getTime() - new Date(checkIn).getTime()
+            if (diff > 0) workingHrs = Math.round((diff / (1000 * 60 * 60)) * 100) / 100
+        }
+
         // Upsert: update existing or create new
         const existing = await prisma.attendance.findFirst({
             where: {
@@ -103,7 +123,9 @@ export async function POST(req: Request) {
                     checkInLat, checkInLng, checkOutLat, checkOutLng,
                     status: status || "PRESENT",
                     overtimeHrs: overtimeHrs || 0,
+                    workingHrs,
                     remarks,
+                    markedBy: session.user.id,
                 },
             })
         } else {
@@ -117,7 +139,9 @@ export async function POST(req: Request) {
                     checkInLat, checkInLng, checkOutLat, checkOutLng,
                     status: status || "PRESENT",
                     overtimeHrs: overtimeHrs || 0,
+                    workingHrs,
                     remarks,
+                    markedBy: session.user.id,
                 },
             })
         }

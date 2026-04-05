@@ -14,10 +14,32 @@ export async function GET(req: Request) {
         const { searchParams } = new URL(req.url)
         const employeeId = searchParams.get("employeeId")
         const status = searchParams.get("status")
+        const monthParam = searchParams.get("month") // YYYY-MM
+        const search = searchParams.get("search")
+        const leaveType = searchParams.get("type")
 
         const where: Record<string, unknown> = {}
         if (employeeId) where.employeeId = employeeId
         if (status) where.status = status
+        if (leaveType) where.type = leaveType
+
+        if (monthParam && monthParam.includes("-")) {
+            const [yr, mo] = monthParam.split("-").map(Number)
+            where.startDate = {
+                gte: new Date(yr, mo - 1, 1),
+                lt: new Date(yr, mo, 1),
+            }
+        }
+
+        if (search) {
+            where.employee = {
+                OR: [
+                    { firstName: { contains: search, mode: "insensitive" } },
+                    { lastName: { contains: search, mode: "insensitive" } },
+                    { employeeId: { contains: search, mode: "insensitive" } },
+                ],
+            }
+        }
 
         const leaves = await prisma.leave.findMany({
             where,
