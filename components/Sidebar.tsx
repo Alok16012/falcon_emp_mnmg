@@ -148,7 +148,9 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
             {/* Navigation */}
             <div className="flex-1 overflow-y-auto pt-4 px-2 scrollbar-thin">
                 {navigation.map((section) => {
-                    const filteredLinks = section.links.filter(link => role && link.roles.includes(role))
+                    const filteredLinks = section.links.filter(link =>
+                        role ? link.roles.includes(role) : link.roles.includes("ADMIN")
+                    )
                     if (filteredLinks.length === 0) return null
 
                     return (
