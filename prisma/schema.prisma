@@ -436,6 +436,8 @@ model Employee {
   reviews           PerformanceReview[]
   exitRequest       ExitRequest?
   enrollments       CourseEnrollment[]
+  fieldTasks        FieldTask[]
+  checkIns          FieldCheckIn[]
 
   @@index([branchId])
   @@index([status])
@@ -811,6 +813,63 @@ model ExitClearanceTask {
   exitRequest  ExitRequest @relation(fields: [exitId], references: [id], onDelete: Cascade)
 
   @@index([exitId])
+}
+
+// ─── FIELD WORKFORCE ──────────────────────────────────────────────────────────
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum FieldTaskStatus {
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  MISSED
+  CANCELLED
+}
+
+model FieldTask {
+  id            String          @id @default(uuid())
+  taskNo        String          @unique   // FT-0001
+  title         String
+  description   String?
+  employeeId    String
+  siteId        String?
+  priority      TaskPriority    @default(MEDIUM)
+  status        FieldTaskStatus @default(ASSIGNED)
+  dueDate       DateTime
+  dueTime       String?         // "09:00", "18:00" etc
+  completedAt   DateTime?
+  completedNote String?
+  assignedBy    String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  employee      Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model FieldCheckIn {
+  id               String    @id @default(uuid())
+  employeeId       String
+  siteId           String?
+  latitude         Float
+  longitude        Float
+  accuracy         Float?
+  checkedInAt      DateTime  @default(now())
+  notes            String?
+  isGeofenced      Boolean   @default(false)
+  distanceFromSite Float?
+  employee         Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([checkedInAt])
 }
 
 // ─── LMS ──────────────────────────────────────────────────────────────────────
