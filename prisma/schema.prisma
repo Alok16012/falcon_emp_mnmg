@@ -576,28 +576,56 @@ model Payroll {
   @@index([employeeId])
 }
 
+enum AssetCondition {
+  NEW
+  GOOD
+  FAIR
+  DAMAGED
+  LOST
+}
+
 model Asset {
-  id           String          @id @default(uuid())
+  id           String         @id @default(uuid())
+  assetCode    String         @unique
   name         String
   category     String
+  description  String?
   serialNo     String?
-  totalQty     Int             @default(1)
-  availableQty Int             @default(1)
-  createdAt    DateTime        @default(now())
+  quantity     Int            @default(1)
+  available    Int            @default(1)
+  condition    AssetCondition @default(NEW)
+  purchaseDate DateTime?
+  purchaseCost Float?
+  vendor       String?
+  location     String?
+  isActive     Boolean        @default(true)
+  createdBy    String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
   assignments  EmployeeAsset[]
+
+  @@index([category])
+  @@index([isActive])
 }
 
 model EmployeeAsset {
-  id         String    @id @default(uuid())
-  employeeId String
-  assetId    String
-  issuedAt   DateTime  @default(now())
-  returnedAt DateTime?
-  remarks    String?
-  employee   Employee  @relation(fields: [employeeId], references: [id])
-  asset      Asset     @relation(fields: [assetId], references: [id])
+  id              String          @id @default(uuid())
+  employeeId      String
+  assetId         String
+  issuedAt        DateTime        @default(now())
+  issuedBy        String?
+  returnedAt      DateTime?
+  returnedTo      String?
+  condition       AssetCondition  @default(GOOD)
+  returnCondition AssetCondition?
+  notes           String?
+  isActive        Boolean         @default(true)
+  employee        Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  asset           Asset           @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   @@index([employeeId])
+  @@index([assetId])
+  @@index([isActive])
 }
 
 // ─── ONBOARDING ───────────────────────────────────────────────────────────────

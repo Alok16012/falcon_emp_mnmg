@@ -14,12 +14,17 @@ export async function GET(req: Request) {
         const { searchParams } = new URL(req.url)
         const search = searchParams.get("search")
         const category = searchParams.get("category")
+        const isActiveParam = searchParams.get("isActive")
 
         const where: Record<string, unknown> = {}
         if (category && category !== "All") where.category = category
+        if (isActiveParam !== null && isActiveParam !== "") {
+            where.isActive = isActiveParam === "true"
+        }
         if (search) {
             where.OR = [
                 { name: { contains: search, mode: "insensitive" } },
+                { assetCode: { contains: search, mode: "insensitive" } },
                 { serialNo: { contains: search, mode: "insensitive" } },
             ]
         }
@@ -27,6 +32,11 @@ export async function GET(req: Request) {
         const assets = await prisma.asset.findMany({
             where,
             orderBy: { createdAt: "desc" },
+            include: {
+                _count: {
+                    select: { assignments: { where: { isActive: true } } }
+                }
+            }
         })
 
         return NextResponse.json(assets)
@@ -45,24 +55,44 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json()
-        const { name, category, serialNo, totalQty } = body
+        const { name, category, description, serialNo, quantity, condition, purchaseDate, purchaseCost, vendor, location } = body
 
-        if (!name || !category || !totalQty) {
-            return new NextResponse("name, category, and totalQty are required", { status: 400 })
+        if (!name || !category) {
+            return new NextResponse("name and category are required", { status: 400 })
         }
 
-        const qty = parseInt(totalQty)
+        const qty = parseInt(quantity ?? "1")
         if (isNaN(qty) || qty < 1) {
-            return new NextResponse("totalQty must be a positive integer", { status: 400 })
+            return new NextResponse("quantity must be a positive integer", { status: 400 })
         }
+
+        // Auto-generate assetCode AST-NNNN
+        const lastAsset = await prisma.asset.findFirst({
+            orderBy: { assetCode: "desc" },
+            select: { assetCode: true }
+        })
+        let nextNum = 1
+        if (lastAsset?.assetCode) {
+            const match = lastAsset.assetCode.match(/AST-(\d+)/)
+            if (match) nextNum = parseInt(match[1]) + 1
+        }
+        const assetCode = `AST-${String(nextNum).padStart(4, "0")}`
 
         const asset = await prisma.asset.create({
             data: {
+                assetCode,
                 name,
                 category,
+                description: description || null,
                 serialNo: serialNo || null,
-                totalQty: qty,
-                availableQty: qty,
+                quantity: qty,
+                available: qty,
+                condition: condition || "NEW",
+                purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
+                purchaseCost: purchaseCost ? parseFloat(purchaseCost) : null,
+                vendor: vendor || null,
+                location: location || null,
+                createdBy: session.user.id,
             },
         })
 

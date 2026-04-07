@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
 
-export async function PUT(
+export async function POST(
     req: Request,
     { params }: { params: { id: string } }
 ) {
@@ -14,18 +14,35 @@ export async function PUT(
             return new NextResponse("Forbidden", { status: 403 })
         }
 
-        const existing = await prisma.employeeAsset.findUnique({
-            where: { id: params.id },
-        })
-        if (!existing) return new NextResponse("Assignment not found", { status: 404 })
-        if (!existing.isActive) {
-            return new NextResponse("Asset has already been returned", { status: 400 })
+        const body = await req.json()
+        const { employeeId, condition, notes, issuedAt } = body
+
+        if (!employeeId) {
+            return new NextResponse("employeeId is required", { status: 400 })
         }
 
+        // Check asset availability
+        const asset = await prisma.asset.findUnique({ where: { id: params.id } })
+        if (!asset) return new NextResponse("Asset not found", { status: 404 })
+        if (asset.available < 1) {
+            return new NextResponse("No available stock for this asset", { status: 400 })
+        }
+
+        // Check employee exists
+        const employee = await prisma.employee.findUnique({ where: { id: employeeId } })
+        if (!employee) return new NextResponse("Employee not found", { status: 404 })
+
         const [assignment] = await prisma.$transaction([
-            prisma.employeeAsset.update({
-                where: { id: params.id },
-                data: { returnedAt: new Date(), isActive: false },
+            prisma.employeeAsset.create({
+                data: {
+                    employeeId,
+                    assetId: params.id,
+                    issuedBy: session.user.id,
+                    condition: condition || "GOOD",
+                    notes: notes || null,
+                    isActive: true,
+                    issuedAt: issuedAt ? new Date(issuedAt) : new Date(),
+                },
                 include: {
                     employee: {
                         select: {
@@ -49,14 +66,14 @@ export async function PUT(
                 },
             }),
             prisma.asset.update({
-                where: { id: existing.assetId },
-                data: { available: { increment: 1 } },
+                where: { id: params.id },
+                data: { available: { decrement: 1 } },
             }),
         ])
 
         return NextResponse.json(assignment)
     } catch (error) {
-        console.error("[ASSET_RETURN_PUT]", error)
+        console.error("[ASSET_ASSIGN_POST]", error)
         return new NextResponse("Internal Error", { status: 500 })
     }
 }

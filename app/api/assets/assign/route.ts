@@ -13,16 +13,32 @@ export async function GET(req: Request) {
 
         const { searchParams } = new URL(req.url)
         const search = searchParams.get("search")
+        const isActiveParam = searchParams.get("isActive")
 
         const where: Record<string, unknown> = {}
+        if (isActiveParam !== null && isActiveParam !== "") {
+            where.isActive = isActiveParam === "true"
+        }
         if (search) {
-            where.employee = {
-                OR: [
-                    { firstName: { contains: search, mode: "insensitive" } },
-                    { lastName: { contains: search, mode: "insensitive" } },
-                    { employeeId: { contains: search, mode: "insensitive" } },
-                ],
-            }
+            where.OR = [
+                {
+                    employee: {
+                        OR: [
+                            { firstName: { contains: search, mode: "insensitive" } },
+                            { lastName: { contains: search, mode: "insensitive" } },
+                            { employeeId: { contains: search, mode: "insensitive" } },
+                        ],
+                    },
+                },
+                {
+                    asset: {
+                        OR: [
+                            { name: { contains: search, mode: "insensitive" } },
+                            { assetCode: { contains: search, mode: "insensitive" } },
+                        ],
+                    },
+                },
+            ]
         }
 
         const assignments = await prisma.employeeAsset.findMany({
@@ -41,6 +57,7 @@ export async function GET(req: Request) {
                 asset: {
                     select: {
                         id: true,
+                        assetCode: true,
                         name: true,
                         category: true,
                         serialNo: true,
@@ -66,7 +83,7 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json()
-        const { employeeId, assetId, remarks } = body
+        const { employeeId, assetId, condition, notes } = body
 
         if (!employeeId || !assetId) {
             return new NextResponse("employeeId and assetId are required", { status: 400 })
@@ -75,21 +92,23 @@ export async function POST(req: Request) {
         // Check asset availability
         const asset = await prisma.asset.findUnique({ where: { id: assetId } })
         if (!asset) return new NextResponse("Asset not found", { status: 404 })
-        if (asset.availableQty < 1) {
-            return new NextResponse("No available quantity for this asset", { status: 400 })
+        if (asset.available < 1) {
+            return new NextResponse("No available stock for this asset", { status: 400 })
         }
 
         // Check employee exists
         const employee = await prisma.employee.findUnique({ where: { id: employeeId } })
         if (!employee) return new NextResponse("Employee not found", { status: 404 })
 
-        // Create assignment and decrement available qty in a transaction
         const [assignment] = await prisma.$transaction([
             prisma.employeeAsset.create({
                 data: {
                     employeeId,
                     assetId,
-                    remarks: remarks || null,
+                    issuedBy: session.user.id,
+                    condition: condition || "GOOD",
+                    notes: notes || null,
+                    isActive: true,
                 },
                 include: {
                     employee: {
@@ -105,6 +124,7 @@ export async function POST(req: Request) {
                     asset: {
                         select: {
                             id: true,
+                            assetCode: true,
                             name: true,
                             category: true,
                             serialNo: true,
@@ -114,7 +134,7 @@ export async function POST(req: Request) {
             }),
             prisma.asset.update({
                 where: { id: assetId },
-                data: { availableQty: { decrement: 1 } },
+                data: { available: { decrement: 1 } },
             }),
         ])
 
