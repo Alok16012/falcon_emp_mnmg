@@ -338,19 +338,34 @@ model Department {
 }
 
 model Site {
-  id          String       @id @default(uuid())
-  name        String
-  address     String?
-  city        String?
-  branchId    String
-  latitude    Float?
-  longitude   Float?
-  radius      Float        @default(100)
-  isActive    Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  branch      Branch       @relation(fields: [branchId], references: [id])
-  deployments Deployment[]
-  attendances Attendance[]
+  id               String       @id @default(uuid())
+  name             String
+  code             String?      @unique
+  address          String
+  city             String?
+  state            String?
+  pincode          String?
+  clientName       String?
+  clientId         String?
+  branchId         String
+  latitude         Float?
+  longitude        Float?
+  radius           Float        @default(100)
+  manpowerRequired Int          @default(1)
+  contactPerson    String?
+  contactPhone     String?
+  siteType         String?
+  shift            String?
+  isActive         Boolean      @default(true)
+  createdBy        String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  branch           Branch       @relation(fields: [branchId], references: [id])
+  deployments      Deployment[]
+  attendances      Attendance[]
+
+  @@index([isActive])
+  @@index([clientId])
 }
 
 enum EmployeeStatus {
@@ -438,19 +453,25 @@ model EmployeeDocument {
 }
 
 model Deployment {
-  id         String    @id @default(uuid())
-  employeeId String
-  siteId     String
-  startDate  DateTime
-  endDate    DateTime?
-  shift      String?
-  isActive   Boolean   @default(true)
-  createdAt  DateTime  @default(now())
-  employee   Employee  @relation(fields: [employeeId], references: [id])
-  site       Site      @relation(fields: [siteId], references: [id])
+  id          String    @id @default(uuid())
+  employeeId  String
+  siteId      String
+  startDate   DateTime
+  endDate     DateTime?
+  shift       String?
+  role        String?
+  isActive    Boolean   @default(true)
+  relievedAt  DateTime?
+  notes       String?
+  createdBy   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  site        Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@index([employeeId])
   @@index([siteId])
+  @@index([isActive])
 }
 
 model Attendance {
