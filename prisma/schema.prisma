@@ -435,6 +435,7 @@ model Employee {
   onboardingTasks   OnboardingTask[]
   reviews           PerformanceReview[]
   exitRequest       ExitRequest?
+  enrollments       CourseEnrollment[]
 
   @@index([branchId])
   @@index([status])
@@ -810,6 +811,80 @@ model ExitClearanceTask {
   exitRequest  ExitRequest @relation(fields: [exitId], references: [id], onDelete: Cascade)
 
   @@index([exitId])
+}
+
+// ─── LMS ──────────────────────────────────────────────────────────────────────
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum EnrollmentStatus {
+  ENROLLED
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  DROPPED
+}
+
+model Course {
+  id           String       @id @default(uuid())
+  courseCode   String       @unique
+  title        String
+  description  String?
+  category     String
+  duration     Int          @default(60)
+  passingScore Int          @default(70)
+  isMandatory  Boolean      @default(false)
+  status       CourseStatus @default(DRAFT)
+  createdBy    String?
+  thumbnail    String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  modules      CourseModule[]
+  enrollments  CourseEnrollment[]
+
+  @@index([status])
+  @@index([category])
+}
+
+model CourseModule {
+  id          String   @id @default(uuid())
+  courseId    String
+  title       String
+  content     String?
+  videoUrl    String?
+  duration    Int      @default(15)
+  order       Int      @default(0)
+  isRequired  Boolean  @default(true)
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId])
+}
+
+model CourseEnrollment {
+  id           String           @id @default(uuid())
+  courseId     String
+  employeeId   String
+  enrolledAt   DateTime         @default(now())
+  enrolledBy   String?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  dueDate      DateTime?
+  score        Float?
+  status       EnrollmentStatus @default(ENROLLED)
+  attempts     Int              @default(0)
+  certificate  String?
+  progress     Int              @default(0)
+  course       Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  employee     Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, employeeId])
+  @@index([employeeId])
+  @@index([courseId])
+  @@index([status])
 }
 
 // ─── BILLING / INVOICING ──────────────────────────────────────────────────────
