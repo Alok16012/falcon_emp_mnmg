@@ -712,7 +712,7 @@ export default function AssetsPage() {
         } finally { setLoadingAssets(false) }
     }, [categoryFilter, search, showInactive])
 
-    useEffect(() => { if (status === "authenticated") fetchAssets() }, [fetchAssets, status])
+    useEffect(() => { if (status !== "unauthenticated") fetchAssets() }, [fetchAssets, status])
 
     // Fetch assignments
     const fetchAssignments = useCallback(async () => {
@@ -726,7 +726,7 @@ export default function AssetsPage() {
         } finally { setLoadingAssignments(false) }
     }, [activeOnly, assignSearch])
 
-    useEffect(() => { if (status === "authenticated") fetchAssignments() }, [fetchAssignments, status])
+    useEffect(() => { if (status !== "unauthenticated") fetchAssignments() }, [fetchAssignments, status])
 
     // Stats
     const totalAssets = assets.length
@@ -742,13 +742,6 @@ export default function AssetsPage() {
         fetchAssets()
     }
 
-    if (status === "loading" || !session) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <Loader2 size={28} className="animate-spin text-[var(--accent)]" />
-            </div>
-        )
-    }
 
     return (
         <div className="flex flex-col h-full">
