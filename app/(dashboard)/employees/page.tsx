@@ -564,6 +564,36 @@ function EmployeeModal({
     )
 }
 
+// ─── Document Types Config ────────────────────────────────────────────────────
+
+const DOC_TYPE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+    AADHAAR: { label: "Aadhaar", color: "#1d4ed8", bg: "#dbeafe" },
+    PAN: { label: "PAN", color: "#b45309", bg: "#fef3c7" },
+    RESUME: { label: "Resume", color: "#7c3aed", bg: "#ede9fe" },
+    PHOTO: { label: "Photo", color: "#15803d", bg: "#dcfce7" },
+    CERTIFICATE: { label: "Certificate", color: "#0f766e", bg: "#ccfbf1" },
+    OFFER_LETTER: { label: "Offer Letter", color: "#9333ea", bg: "#f3e8ff" },
+    OTHER: { label: "Other", color: "#6b7280", bg: "#f3f4f6" },
+}
+
+const DOC_STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
+    PENDING: { label: "Pending", color: "#92400e", bg: "#fffbeb", border: "#fde68a" },
+    VERIFIED: { label: "Verified", color: "#14532d", bg: "#dcfce7", border: "#86efac" },
+    REJECTED: { label: "Rejected", color: "#991b1b", bg: "#fef2f2", border: "#fecaca" },
+}
+
+type EmployeeDocument = {
+    id: string
+    employeeId: string
+    type: string
+    fileName: string
+    fileUrl: string
+    status: string
+    rejectionReason?: string | null
+    verifiedBy?: string | null
+    uploadedAt: string
+}
+
 // ─── Employee Detail Drawer ────────────────────────────────────────────────────
 
 function EmployeeDrawer({
@@ -575,11 +605,85 @@ function EmployeeDrawer({
     onStatusChange: (id: string, status: string) => void
     isAdmin: boolean
 }) {
-    const [activeTab, setActiveTab] = useState<"personal" | "employment" | "bank">("personal")
+    const [activeTab, setActiveTab] = useState<"personal" | "employment" | "bank" | "documents">("personal")
     const [detail, setDetail] = useState<Record<string, unknown> | null>(null)
     const [loadingDetail, setLoadingDetail] = useState(false)
     const [statusMenuOpen, setStatusMenuOpen] = useState(false)
     const statusRef = useRef<HTMLDivElement>(null)
+
+    // Documents tab state
+    const [documents, setDocuments] = useState<EmployeeDocument[]>([])
+    const [docsLoading, setDocsLoading] = useState(false)
+    const [showUploadForm, setShowUploadForm] = useState(false)
+    const [uploadForm, setUploadForm] = useState({ type: "RESUME", fileName: "", fileUrl: "" })
+    const [uploadSaving, setUploadSaving] = useState(false)
+    const [actionLoading, setActionLoading] = useState<string | null>(null)
+
+    const fetchDocuments = async (empId: string) => {
+        setDocsLoading(true)
+        try {
+            const r = await fetch(`/api/employees/${empId}/documents`)
+            if (r.ok) setDocuments(await r.json())
+        } catch { /* ignore */ }
+        finally { setDocsLoading(false) }
+    }
+
+    const handleVerify = async (docId: string) => {
+        if (!employee) return
+        setActionLoading(docId + "_verify")
+        try {
+            const r = await fetch(`/api/employees/${employee.id}/documents/${docId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "VERIFIED" }),
+            })
+            if (r.ok) { toast.success("Document verified"); fetchDocuments(employee.id) }
+            else toast.error("Failed to verify")
+        } catch { toast.error("Failed to verify") }
+        finally { setActionLoading(null) }
+    }
+
+    const handleReject = async (docId: string) => {
+        if (!employee) return
+        const reason = prompt("Rejection reason (required):")
+        if (!reason?.trim()) return
+        setActionLoading(docId + "_reject")
+        try {
+            const r = await fetch(`/api/employees/${employee.id}/documents/${docId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "REJECTED", rejectionReason: reason.trim() }),
+            })
+            if (r.ok) { toast.success("Document rejected"); fetchDocuments(employee.id) }
+            else toast.error("Failed to reject")
+        } catch { toast.error("Failed to reject") }
+        finally { setActionLoading(null) }
+    }
+
+    const handleUpload = async () => {
+        if (!employee) return
+        if (!uploadForm.fileName.trim() || !uploadForm.fileUrl.trim()) {
+            toast.error("File name and URL are required")
+            return
+        }
+        setUploadSaving(true)
+        try {
+            const r = await fetch(`/api/employees/${employee.id}/documents`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(uploadForm),
+            })
+            if (r.ok) {
+                toast.success("Document uploaded")
+                setShowUploadForm(false)
+                setUploadForm({ type: "RESUME", fileName: "", fileUrl: "" })
+                fetchDocuments(employee.id)
+            } else {
+                toast.error(await r.text())
+            }
+        } catch { toast.error("Failed to upload") }
+        finally { setUploadSaving(false) }
+    }
 
     useEffect(() => {
         function handleOutside(e: MouseEvent) {
@@ -596,6 +700,8 @@ function EmployeeDrawer({
             setLoadingDetail(true)
             setActiveTab("personal")
             setDetail(null)
+            setDocuments([])
+            setShowUploadForm(false)
             fetch(`/api/employees/${employee.id}`)
                 .then(r => r.json())
                 .then(setDetail)
@@ -610,7 +716,7 @@ function EmployeeDrawer({
     const emp = (detail as Employee | null) || employee
 
     const tabCls = (t: string) =>
-        `px-3 py-3 text-[12px] font-medium border-b-2 -mb-px transition-colors ${activeTab === t
+        `px-3 py-3 text-[12px] font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${activeTab === t
             ? "border-[var(--accent)] text-[var(--accent-text)]"
             : "border-transparent text-[var(--text3)] hover:text-[var(--text)]"
         }`
@@ -671,10 +777,15 @@ function EmployeeDrawer({
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-[var(--border)] px-5">
-                    {(["personal", "employment", "bank"] as const).map(t => (
-                        <button key={t} onClick={() => setActiveTab(t)} className={tabCls(t)}>
-                            {t === "personal" ? "Personal" : t === "employment" ? "Employment" : "Bank"}
+                <div className="flex border-b border-[var(--border)] px-5 overflow-x-auto">
+                    {(["personal", "employment", "bank", "documents"] as const).map(t => (
+                        <button key={t} onClick={() => {
+                            setActiveTab(t)
+                            if (t === "documents" && employee && documents.length === 0 && !docsLoading) {
+                                fetchDocuments(employee.id)
+                            }
+                        }} className={tabCls(t)}>
+                            {t === "personal" ? "Personal" : t === "employment" ? "Employment" : t === "bank" ? "Bank" : "Documents"}
                         </button>
                     ))}
                 </div>
@@ -725,7 +836,7 @@ function EmployeeDrawer({
                                 </div>
                             )}
                         </div>
-                    ) : (
+                    ) : activeTab === "bank" ? (
                         <div className="space-y-2">
                             <div className="grid grid-cols-2 gap-2">
                                 <InfoItem label="Bank Name" value={emp.bankName || "—"} icon={<CreditCard size={13} />} />
@@ -735,6 +846,140 @@ function EmployeeDrawer({
                             <div className="mt-3 p-3 rounded-[10px] bg-[#fffbeb] border border-[#fde68a]">
                                 <p className="text-[11px] text-[#92400e]">Account number is partially masked for security. Edit employee to update bank details.</p>
                             </div>
+                        </div>
+                    ) : (
+                        /* Documents Tab */
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                            {/* Upload button */}
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text3)", textTransform: "uppercase", letterSpacing: "0.4px" }}>Documents</p>
+                                <button
+                                    onClick={() => setShowUploadForm(v => !v)}
+                                    style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, background: "var(--accent)", color: "#fff", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
+                                >
+                                    <Plus size={13} /> Upload Document
+                                </button>
+                            </div>
+
+                            {/* Upload Form */}
+                            {showUploadForm && (
+                                <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+                                    <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", margin: 0 }}>Upload Document</p>
+                                    <div>
+                                        <label style={{ fontSize: 11, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>Document Type</label>
+                                        <select
+                                            value={uploadForm.type}
+                                            onChange={e => setUploadForm(f => ({ ...f, type: e.target.value }))}
+                                            style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--surface)", color: "var(--text)", boxSizing: "border-box" }}
+                                        >
+                                            {Object.entries(DOC_TYPE_CONFIG).map(([k, v]) => (
+                                                <option key={k} value={k}>{v.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: 11, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>File Name</label>
+                                        <input
+                                            value={uploadForm.fileName}
+                                            onChange={e => setUploadForm(f => ({ ...f, fileName: e.target.value }))}
+                                            placeholder="e.g. Aadhaar Card"
+                                            style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--surface)", color: "var(--text)", boxSizing: "border-box" }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: 11, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>File URL</label>
+                                        <input
+                                            value={uploadForm.fileUrl}
+                                            onChange={e => setUploadForm(f => ({ ...f, fileUrl: e.target.value }))}
+                                            placeholder="https://..."
+                                            style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--surface)", color: "var(--text)", boxSizing: "border-box" }}
+                                        />
+                                        <p style={{ fontSize: 11, color: "var(--text3)", marginTop: 4 }}>Tip: Upload file to Supabase Storage and paste URL here</p>
+                                    </div>
+                                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                                        <button
+                                            onClick={() => { setShowUploadForm(false); setUploadForm({ type: "RESUME", fileName: "", fileUrl: "" }) }}
+                                            style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "none", cursor: "pointer", fontSize: 12, color: "var(--text)" }}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleUpload}
+                                            disabled={uploadSaving}
+                                            style={{ padding: "7px 14px", borderRadius: 8, background: "var(--accent)", color: "#fff", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, opacity: uploadSaving ? 0.6 : 1 }}
+                                        >
+                                            {uploadSaving ? "Saving..." : "Save"}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Documents List */}
+                            {docsLoading ? (
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 0" }}>
+                                    <Loader2 size={22} className="animate-spin" style={{ color: "var(--accent)" }} />
+                                </div>
+                            ) : documents.length === 0 ? (
+                                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 0", gap: 8 }}>
+                                    <FileText size={32} style={{ color: "var(--text3)" }} />
+                                    <p style={{ fontSize: 13, color: "var(--text3)", margin: 0 }}>No documents uploaded yet</p>
+                                </div>
+                            ) : (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                    {documents.map(doc => {
+                                        const typeConf = DOC_TYPE_CONFIG[doc.type] || DOC_TYPE_CONFIG.OTHER
+                                        const statusConf = DOC_STATUS_CONFIG[doc.status] || DOC_STATUS_CONFIG.PENDING
+                                        return (
+                                            <div key={doc.id} style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px", background: "var(--surface)", display: "flex", flexDirection: "column", gap: 8 }}>
+                                                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                                        <span style={{ fontSize: 11, fontWeight: 600, color: typeConf.color, background: typeConf.bg, padding: "2px 8px", borderRadius: 20 }}>
+                                                            {typeConf.label}
+                                                        </span>
+                                                        <span style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{doc.fileName}</span>
+                                                    </div>
+                                                    <span style={{ fontSize: 11, fontWeight: 600, color: statusConf.color, background: statusConf.bg, border: `1px solid ${statusConf.border}`, padding: "2px 8px", borderRadius: 20, whiteSpace: "nowrap", flexShrink: 0 }}>
+                                                        {statusConf.label}
+                                                    </span>
+                                                </div>
+                                                {doc.rejectionReason && (
+                                                    <p style={{ fontSize: 11, color: "#991b1b", margin: 0, background: "#fef2f2", padding: "4px 8px", borderRadius: 6 }}>
+                                                        Reason: {doc.rejectionReason}
+                                                    </p>
+                                                )}
+                                                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                                    <a
+                                                        href={doc.fileUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        style={{ fontSize: 12, color: "var(--accent)", textDecoration: "underline", display: "inline-flex", alignItems: "center", gap: 4 }}
+                                                    >
+                                                        <FileText size={12} /> Download
+                                                    </a>
+                                                    {isAdmin && doc.status !== "VERIFIED" && (
+                                                        <button
+                                                            onClick={() => handleVerify(doc.id)}
+                                                            disabled={actionLoading === doc.id + "_verify"}
+                                                            style={{ fontSize: 11, fontWeight: 600, color: "#14532d", background: "#dcfce7", border: "1px solid #86efac", padding: "3px 10px", borderRadius: 6, cursor: "pointer", opacity: actionLoading === doc.id + "_verify" ? 0.6 : 1 }}
+                                                        >
+                                                            {actionLoading === doc.id + "_verify" ? "..." : "Verify"}
+                                                        </button>
+                                                    )}
+                                                    {isAdmin && doc.status !== "REJECTED" && (
+                                                        <button
+                                                            onClick={() => handleReject(doc.id)}
+                                                            disabled={actionLoading === doc.id + "_reject"}
+                                                            style={{ fontSize: 11, fontWeight: 600, color: "#991b1b", background: "#fef2f2", border: "1px solid #fecaca", padding: "3px 10px", borderRadius: 6, cursor: "pointer", opacity: actionLoading === doc.id + "_reject" ? 0.6 : 1 }}
+                                                        >
+                                                            {actionLoading === doc.id + "_reject" ? "..." : "Reject"}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
