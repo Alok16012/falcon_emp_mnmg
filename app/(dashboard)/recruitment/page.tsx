@@ -1,34 +1,49 @@
 "use client"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import {
     Plus, Search, Phone, Mail, MapPin, Calendar, Users,
-    Target, Trophy, X, ChevronRight, Briefcase,
-    MessageSquare, PhoneCall, Send, Star, Clock, Filter,
-    Edit2, Trash2, CheckCircle, AlertCircle, Loader2,
-    StickyNote, MoreVertical, ArrowRight, GraduationCap,
-    Award, UserCheck, UserX, Banknote, Building2, Wrench,
-    Video, ChevronDown
+    Target, X, ChevronRight, Briefcase,
+    MessageSquare, PhoneCall, Send, Clock, Filter,
+    Edit2, Trash2, CheckCircle, Loader2,
+    StickyNote, ArrowRight,
+    UserCheck, Banknote, Building2, Wrench,
+    FileText, GraduationCap, Award, BarChart2,
+    Flame, Droplet, Thermometer, CheckSquare, AlertCircle,
+    TrendingUp
 } from "lucide-react"
 import { format, formatDistanceToNow, parseISO } from "date-fns"
+import {
+    BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+    PieChart, Pie, Cell, Legend
+} from "recharts"
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const STATUSES = [
-    { key: "APPLIED",              label: "Applied",             color: "#3b82f6", bg: "#eff6ff", border: "#bfdbfe" },
-    { key: "SCREENING",            label: "Screening",           color: "#8b5cf6", bg: "#f5f3ff", border: "#ddd6fe" },
-    { key: "INTERVIEW_SCHEDULED",  label: "Interview Scheduled", color: "#f59e0b", bg: "#fffbeb", border: "#fde68a" },
-    { key: "INTERVIEW_DONE",       label: "Interview Done",      color: "#06b6d4", bg: "#ecfeff", border: "#a5f3fc" },
-    { key: "SELECTED",             label: "Selected",            color: "#1a9e6e", bg: "#e8f7f1", border: "#6ee7b7" },
-    { key: "ONBOARDED",            label: "Onboarded ✓",         color: "#15803d", bg: "#f0fdf4", border: "#86efac" },
-    { key: "REJECTED",             label: "Rejected",            color: "#6b7280", bg: "#f9fafb", border: "#e5e7eb" },
+    { key: "NEW_LEAD",            label: "New Lead",            color: "#6b7280", bg: "#f9fafb", border: "#e5e7eb" },
+    { key: "CONTACTED",           label: "Contacted",           color: "#3b82f6", bg: "#eff6ff", border: "#bfdbfe" },
+    { key: "INTERESTED",          label: "Interested",          color: "#8b5cf6", bg: "#f5f3ff", border: "#ddd6fe" },
+    { key: "INTERVIEW_SCHEDULED", label: "Interview Scheduled", color: "#f59e0b", bg: "#fffbeb", border: "#fde68a" },
+    { key: "INTERVIEW_DONE",      label: "Interview Done",      color: "#06b6d4", bg: "#ecfeff", border: "#a5f3fc" },
+    { key: "SELECTED",            label: "Selected",            color: "#1a9e6e", bg: "#e8f7f1", border: "#6ee7b7" },
+    { key: "OFFERED",             label: "Offered",             color: "#65a30d", bg: "#f7fee7", border: "#bef264" },
+    { key: "JOINED",              label: "Joined ✓",            color: "#047857", bg: "#ecfdf5", border: "#6ee7b7" },
+    { key: "REJECTED",            label: "Rejected",            color: "#9ca3af", bg: "#f9fafb", border: "#e5e7eb" },
+    { key: "DROPPED",             label: "Dropped",             color: "#9ca3af", bg: "#f3f4f6", border: "#d1d5db" },
 ]
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
     HIGH:   { label: "High",   color: "#dc2626", dot: "bg-[#dc2626]" },
     MEDIUM: { label: "Medium", color: "#f59e0b", dot: "bg-[#f59e0b]" },
     LOW:    { label: "Low",    color: "#1a9e6e", dot: "bg-[#1a9e6e]" },
+}
+
+const SCORE_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
+    HOT:  { label: "Hot",  color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
+    WARM: { label: "Warm", color: "#ea580c", bg: "#fff7ed", border: "#fdba74" },
+    COLD: { label: "Cold", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe" },
 }
 
 const ACTIVITY_TYPES = [
@@ -50,10 +65,11 @@ const POSITIONS = [
 ]
 
 const SOURCES = ["Walk-in", "LinkedIn", "Naukri", "Indeed", "Referral", "WhatsApp", "Agency", "Newspaper Ad", "Other"]
-
 const QUALIFICATIONS = ["8th Pass", "10th Pass", "12th Pass", "ITI", "Diploma", "Graduate", "Post Graduate", "Other"]
-
 const INTERVIEW_MODES = ["In-person", "Phone", "Video Call", "WhatsApp Video"]
+const DOC_TYPES = ["RESUME", "AADHAAR", "PAN", "CERTIFICATE", "OTHER"]
+const FOLLOWUP_TYPES = ["CALL", "INTERVIEW", "DOCUMENT", "OTHER"]
+const PIE_COLORS = ["#3b82f6", "#8b5cf6", "#f59e0b", "#06b6d4", "#1a9e6e", "#dc2626", "#65a30d", "#ea580c", "#6b7280"]
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -72,9 +88,13 @@ interface Lead {
     currentSalary?: number
     interviewDate?: string
     interviewMode?: string
+    interviewerId?: string
+    interviewFeedback?: string
+    interviewResult?: string
     source: string
     status: string
     priority: string
+    score: string
     assignedTo?: string
     notes?: string
     nextFollowUp?: string
@@ -83,7 +103,9 @@ interface Lead {
     assignee?: { id: string; name: string; email: string }
     creator?: { id: string; name: string }
     activities?: Activity[]
-    _count?: { activities: number }
+    documents?: LeadDocument[]
+    followUps?: LeadFollowUp[]
+    _count?: { activities: number; documents: number; followUps: number }
 }
 
 interface Activity {
@@ -94,11 +116,47 @@ interface Activity {
     user: { id: string; name: string }
 }
 
-interface User {
+interface LeadDocument {
+    id: string
+    docType: string
+    fileName: string
+    url: string
+    verified: string
+    createdAt: string
+    uploader: { id: string; name: string }
+}
+
+interface LeadFollowUp {
+    id: string
+    type: string
+    note?: string
+    scheduledAt: string
+    completedAt?: string
+    status: string
+    createdAt: string
+    creator: { id: string; name: string }
+}
+
+interface AppUser {
     id: string
     name: string
     email: string
     role: string
+}
+
+interface AnalyticsData {
+    summary: {
+        total: number
+        todayLeads: number
+        activeLeads: number
+        interviews: number
+        offers: number
+        joinings: number
+        dropped: number
+    }
+    funnelData: { stage: string; count: number; conversion: number }[]
+    sourceBreakdown: { name: string; value: number }[]
+    recruiterPerformance: { id: string; name: string; leads: number; interviews: number; joinings: number; conversion: number }[]
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -124,6 +182,22 @@ function StatusBadge({ status }: { status: string }) {
     )
 }
 
+function ScoreBadge({ score }: { score: string }) {
+    const s = SCORE_CONFIG[score] ?? SCORE_CONFIG.WARM
+    const icons: Record<string, React.ReactNode> = {
+        HOT:  <Flame size={10} />,
+        WARM: <Thermometer size={10} />,
+        COLD: <Droplet size={10} />,
+    }
+    return (
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold border"
+            style={{ color: s.color, background: s.bg, borderColor: s.border }}>
+            {icons[score] ?? null}
+            {s.label}
+        </span>
+    )
+}
+
 function PriorityDot({ priority }: { priority: string }) {
     const p = PRIORITY_CONFIG[priority] ?? PRIORITY_CONFIG.MEDIUM
     return <span className={`inline-block w-2 h-2 rounded-full ${p.dot}`} title={p.label} />
@@ -131,15 +205,17 @@ function PriorityDot({ priority }: { priority: string }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function LeadsPage() {
-    const { data: session } = useSession()
+export default function RecruitmentPage() {
+    const { data: session, status } = useSession()
     const [leads, setLeads] = useState<Lead[]>([])
-    const [users, setUsers] = useState<User[]>([])
+    const [users, setUsers] = useState<AppUser[]>([])
     const [loading, setLoading] = useState(true)
+    const [activeTab, setActiveTab] = useState<"pipeline" | "analytics" | "documents">("pipeline")
     const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban")
     const [searchQ, setSearchQ] = useState("")
     const [filterStatus, setFilterStatus] = useState("ALL")
     const [filterPriority, setFilterPriority] = useState("ALL")
+    const [filterScore, setFilterScore] = useState("ALL")
     const [showForm, setShowForm] = useState(false)
     const [editLead, setEditLead] = useState<Lead | null>(null)
     const [detailLead, setDetailLead] = useState<Lead | null>(null)
@@ -147,13 +223,16 @@ export default function LeadsPage() {
     const [activityContent, setActivityContent] = useState("")
     const [activityType, setActivityType] = useState("note")
     const [savingActivity, setSavingActivity] = useState(false)
+    const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
+    const [analyticsLoading, setAnalyticsLoading] = useState(false)
+    const [duplicateWarning, setDuplicateWarning] = useState("")
 
     const emptyForm = {
         candidateName: "", phone: "", email: "", city: "",
         position: "", experience: "", currentCompany: "", qualification: "",
         skills: "", expectedSalary: "", currentSalary: "",
         interviewDate: "", interviewMode: "", source: "", priority: "MEDIUM",
-        assignedTo: "", notes: "", nextFollowUp: ""
+        score: "WARM", assignedTo: "", notes: "", nextFollowUp: ""
     }
     const [form, setForm] = useState(emptyForm)
 
@@ -164,8 +243,9 @@ export default function LeadsPage() {
             const params = new URLSearchParams()
             if (filterStatus !== "ALL") params.set("status", filterStatus)
             if (filterPriority !== "ALL") params.set("priority", filterPriority)
+            if (filterScore !== "ALL") params.set("score", filterScore)
             if (searchQ) params.set("search", searchQ)
-            const res = await fetch(`/api/leads?${params}`)
+            const res = await fetch(`/api/recruitment?${params}`)
             if (!res.ok) throw new Error()
             setLeads(await res.json())
         } catch {
@@ -178,31 +258,75 @@ export default function LeadsPage() {
             const res = await fetch("/api/admin/users")
             if (!res.ok) return
             const data = await res.json()
-            setUsers((data.users ?? data).filter((u: User) => u.role === "ADMIN" || u.role === "MANAGER"))
+            setUsers((data.users ?? data).filter((u: AppUser) => u.role === "ADMIN" || u.role === "MANAGER"))
         } catch {}
     }
 
-    useEffect(() => { fetchLeads() }, [filterStatus, filterPriority, searchQ])
-    useEffect(() => { fetchUsers() }, [])
+    async function fetchAnalytics() {
+        setAnalyticsLoading(true)
+        try {
+            const res = await fetch("/api/recruitment/analytics")
+            if (!res.ok) throw new Error()
+            setAnalytics(await res.json())
+        } catch {
+            toast.error("Failed to load analytics")
+        } finally { setAnalyticsLoading(false) }
+    }
+
+    useEffect(() => {
+        if (status !== "unauthenticated") {
+            fetchLeads()
+        }
+    }, [filterStatus, filterPriority, filterScore, searchQ, status])
+
+    useEffect(() => {
+        if (status !== "unauthenticated") {
+            fetchUsers()
+        }
+    }, [status])
+
+    useEffect(() => {
+        if (activeTab === "analytics" && status !== "unauthenticated") {
+            fetchAnalytics()
+        }
+    }, [activeTab, status])
+
+    // Duplicate phone check
+    const checkDuplicate = useCallback(async (phone: string) => {
+        if (phone.length < 6) { setDuplicateWarning(""); return }
+        try {
+            const res = await fetch(`/api/recruitment?search=${encodeURIComponent(phone)}`)
+            if (!res.ok) return
+            const results: Lead[] = await res.json()
+            const match = results.find(l => l.phone === phone && (!editLead || l.id !== editLead.id))
+            if (match) {
+                setDuplicateWarning(`Duplicate: ${match.candidateName} already exists with this phone`)
+            } else {
+                setDuplicateWarning("")
+            }
+        } catch {}
+    }, [editLead])
 
     // ── Stats ──────────────────────────────────────────────────────────────────
     const stats = useMemo(() => {
         const total = leads.length
-        const selected = leads.filter(l => l.status === "SELECTED" || l.status === "ONBOARDED").length
-        const onboarded = leads.filter(l => l.status === "ONBOARDED").length
+        const selected = leads.filter(l => ["SELECTED", "OFFERED", "JOINED"].includes(l.status)).length
+        const joined = leads.filter(l => l.status === "JOINED").length
         const interviews = leads.filter(l => l.status === "INTERVIEW_SCHEDULED").length
-        return { total, selected, onboarded, interviews }
+        return { total, selected, joined, interviews }
     }, [leads])
 
     // ── Form Handlers ──────────────────────────────────────────────────────────
     function openAddForm() {
         setEditLead(null)
         setForm(emptyForm)
+        setDuplicateWarning("")
         setShowForm(true)
     }
 
     function openEditForm(lead: Lead) {
         setEditLead(lead)
+        setDuplicateWarning("")
         setForm({
             candidateName: lead.candidateName ?? "",
             phone: lead.phone ?? "",
@@ -219,6 +343,7 @@ export default function LeadsPage() {
             interviewMode: lead.interviewMode ?? "",
             source: lead.source ?? "",
             priority: lead.priority ?? "MEDIUM",
+            score: lead.score ?? "WARM",
             assignedTo: lead.assignedTo ?? "",
             notes: lead.notes ?? "",
             nextFollowUp: lead.nextFollowUp ? lead.nextFollowUp.slice(0, 10) : "",
@@ -228,9 +353,13 @@ export default function LeadsPage() {
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
+        if (!editLead && duplicateWarning) {
+            toast.error(duplicateWarning)
+            return
+        }
         setSaving(true)
         try {
-            const url = editLead ? `/api/leads/${editLead.id}` : "/api/leads"
+            const url = editLead ? `/api/recruitment/${editLead.id}` : "/api/recruitment"
             const method = editLead ? "PATCH" : "POST"
             const res = await fetch(url, {
                 method,
@@ -256,12 +385,12 @@ export default function LeadsPage() {
         } finally { setSaving(false) }
     }
 
-    async function handleStatusChange(leadId: string, status: string) {
+    async function handleStatusChange(leadId: string, newStatus: string) {
         try {
-            const res = await fetch(`/api/leads/${leadId}`, {
+            const res = await fetch(`/api/recruitment/${leadId}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status })
+                body: JSON.stringify({ status: newStatus })
             })
             if (!res.ok) throw new Error()
             const updated = await res.json()
@@ -276,7 +405,7 @@ export default function LeadsPage() {
     async function handleDelete(leadId: string) {
         if (!confirm("Delete this candidate?")) return
         try {
-            const res = await fetch(`/api/leads/${leadId}`, { method: "DELETE" })
+            const res = await fetch(`/api/recruitment/${leadId}`, { method: "DELETE" })
             if (!res.ok) throw new Error()
             setLeads(prev => prev.filter(l => l.id !== leadId))
             if (detailLead?.id === leadId) setDetailLead(null)
@@ -290,7 +419,7 @@ export default function LeadsPage() {
         if (!activityContent.trim() || !detailLead) return
         setSavingActivity(true)
         try {
-            const res = await fetch(`/api/leads/${detailLead.id}/activity`, {
+            const res = await fetch(`/api/recruitment/${detailLead.id}/activities`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ type: activityType, content: activityContent.trim() })
@@ -299,15 +428,15 @@ export default function LeadsPage() {
             const act = await res.json()
             setDetailLead(prev => prev ? { ...prev, activities: [act, ...(prev.activities ?? [])] } : prev)
             setActivityContent("")
-            toast.success("Note added")
+            toast.success("Activity logged")
         } catch {
-            toast.error("Failed to add note")
+            toast.error("Failed to add activity")
         } finally { setSavingActivity(false) }
     }
 
     async function openDetail(lead: Lead) {
         try {
-            const res = await fetch(`/api/leads/${lead.id}`)
+            const res = await fetch(`/api/recruitment/${lead.id}`)
             if (!res.ok) throw new Error()
             setDetailLead(await res.json())
         } catch {
@@ -315,12 +444,17 @@ export default function LeadsPage() {
         }
     }
 
-    // ── Filtered leads per status (for kanban) ─────────────────────────────────
+    // ── Kanban grouped leads ────────────────────────────────────────────────────
     const leadsByStatus = useMemo(() => {
         const map: Record<string, Lead[]> = {}
         STATUSES.forEach(s => { map[s.key] = [] })
         leads.forEach(l => { if (map[l.status]) map[l.status].push(l) })
         return map
+    }, [leads])
+
+    // All documents across all leads for Documents tab
+    const allDocuments = useMemo(() => {
+        return leads.flatMap(l => (l.documents ?? []).map(d => ({ ...d, lead: l })))
     }, [leads])
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -332,7 +466,7 @@ export default function LeadsPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                         <h1 className="text-[22px] font-bold text-[var(--text)] tracking-tight">Candidate Pipeline</h1>
-                        <p className="text-[13px] text-[var(--text2)] mt-0.5">Track candidates from application to onboarding</p>
+                        <p className="text-[13px] text-[var(--text2)] mt-0.5">Track candidates from lead to joining</p>
                     </div>
                     <button
                         onClick={openAddForm}
@@ -343,13 +477,13 @@ export default function LeadsPage() {
                     </button>
                 </div>
 
-                {/* Stats */}
+                {/* Quick Stats */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
                     {[
                         { label: "TOTAL CANDIDATES", value: stats.total, icon: Users, color: "#3b82f6" },
-                        { label: "INTERVIEWS TODAY", value: stats.interviews, icon: Calendar, color: "#f59e0b" },
-                        { label: "SELECTED", value: stats.selected, icon: UserCheck, color: "#1a9e6e" },
-                        { label: "ONBOARDED", value: stats.onboarded, icon: Award, color: "#15803d" },
+                        { label: "INTERVIEWS", value: stats.interviews, icon: Calendar, color: "#f59e0b" },
+                        { label: "SELECTED / OFFERED", value: stats.selected, icon: UserCheck, color: "#1a9e6e" },
+                        { label: "JOINED", value: stats.joined, icon: Award, color: "#047857" },
                     ].map(s => (
                         <div key={s.label} className="bg-white border border-[var(--border)] rounded-[12px] p-4">
                             <p className="text-[10px] font-semibold text-[var(--text3)] tracking-wider uppercase">{s.label}</p>
@@ -357,67 +491,125 @@ export default function LeadsPage() {
                         </div>
                     ))}
                 </div>
-            </div>
 
-            {/* ── Toolbar ── */}
-            <div className="px-4 pb-3 lg:px-0 flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
-                <div className="flex items-center gap-2 flex-wrap">
-                    {/* View toggle */}
-                    <div className="flex bg-[var(--surface2)] rounded-[8px] p-0.5 border border-[var(--border)]">
-                        {(["kanban", "list"] as const).map(v => (
-                            <button key={v} onClick={() => setViewMode(v)}
-                                className={`px-3 py-1.5 text-[12px] font-medium rounded-[6px] transition-all capitalize ${viewMode === v ? "bg-white text-[var(--text)] shadow-sm" : "text-[var(--text3)]"}`}>
-                                {v === "kanban" ? "Board" : "List"}
+                {/* Tabs */}
+                <div className="flex gap-1 mt-4 border-b border-[var(--border)]">
+                    {([
+                        { key: "pipeline", label: "Pipeline", icon: ArrowRight },
+                        { key: "analytics", label: "Analytics", icon: BarChart2 },
+                        { key: "documents", label: "Documents", icon: FileText },
+                    ] as const).map(tab => {
+                        const Icon = tab.icon
+                        return (
+                            <button
+                                key={tab.key}
+                                onClick={() => setActiveTab(tab.key)}
+                                className={`flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors -mb-px ${
+                                    activeTab === tab.key
+                                        ? "border-[var(--accent)] text-[var(--accent)]"
+                                        : "border-transparent text-[var(--text2)] hover:text-[var(--text)]"
+                                }`}
+                            >
+                                <Icon size={14} />
+                                {tab.label}
                             </button>
-                        ))}
-                    </div>
-
-                    {/* Status filter */}
-                    <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-                        className="h-8 px-2 text-[12px] border border-[var(--border)] rounded-[7px] bg-white text-[var(--text2)] focus:outline-none">
-                        <option value="ALL">All Stages</option>
-                        {STATUSES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-                    </select>
-
-                    {/* Priority filter */}
-                    <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)}
-                        className="h-8 px-2 text-[12px] border border-[var(--border)] rounded-[7px] bg-white text-[var(--text2)] focus:outline-none">
-                        <option value="ALL">All Priority</option>
-                        <option value="HIGH">High</option>
-                        <option value="MEDIUM">Medium</option>
-                        <option value="LOW">Low</option>
-                    </select>
-                </div>
-
-                {/* Search */}
-                <div className="relative w-full sm:w-56">
-                    <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
-                    <input
-                        value={searchQ}
-                        onChange={e => setSearchQ(e.target.value)}
-                        placeholder="Search candidates..."
-                        className="w-full h-8 pl-8 pr-3 text-[12px] border border-[var(--border)] rounded-[7px] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] bg-white"
-                    />
+                        )
+                    })}
                 </div>
             </div>
 
-            {/* ── Content ── */}
-            {loading ? (
-                <div className="flex items-center justify-center flex-1 py-24">
-                    <Loader2 size={32} className="animate-spin text-[var(--accent)]" />
-                </div>
-            ) : leads.length === 0 ? (
-                <div className="flex flex-col items-center justify-center flex-1 py-24 gap-3">
-                    <div className="w-14 h-14 bg-[var(--surface2)] rounded-full flex items-center justify-center">
-                        <Users size={24} className="text-[var(--text3)]" />
+            {/* ── PIPELINE TAB ── */}
+            {activeTab === "pipeline" && (
+                <>
+                    {/* Toolbar */}
+                    <div className="px-4 pb-3 lg:px-0 flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {/* View toggle */}
+                            <div className="flex bg-[var(--surface2)] rounded-[8px] p-0.5 border border-[var(--border)]">
+                                {(["kanban", "list"] as const).map(v => (
+                                    <button key={v} onClick={() => setViewMode(v)}
+                                        className={`px-3 py-1.5 text-[12px] font-medium rounded-[6px] transition-all capitalize ${viewMode === v ? "bg-white text-[var(--text)] shadow-sm" : "text-[var(--text3)]"}`}>
+                                        {v === "kanban" ? "Board" : "List"}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+                                className="h-8 px-2 text-[12px] border border-[var(--border)] rounded-[7px] bg-white text-[var(--text2)] focus:outline-none">
+                                <option value="ALL">All Stages</option>
+                                {STATUSES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                            </select>
+
+                            <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)}
+                                className="h-8 px-2 text-[12px] border border-[var(--border)] rounded-[7px] bg-white text-[var(--text2)] focus:outline-none">
+                                <option value="ALL">All Priority</option>
+                                <option value="HIGH">High</option>
+                                <option value="MEDIUM">Medium</option>
+                                <option value="LOW">Low</option>
+                            </select>
+
+                            <select value={filterScore} onChange={e => setFilterScore(e.target.value)}
+                                className="h-8 px-2 text-[12px] border border-[var(--border)] rounded-[7px] bg-white text-[var(--text2)] focus:outline-none">
+                                <option value="ALL">All Score</option>
+                                <option value="HOT">Hot</option>
+                                <option value="WARM">Warm</option>
+                                <option value="COLD">Cold</option>
+                            </select>
+                        </div>
+
+                        <div className="relative w-full sm:w-56">
+                            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
+                            <input
+                                value={searchQ}
+                                onChange={e => setSearchQ(e.target.value)}
+                                placeholder="Search candidates..."
+                                className="w-full h-8 pl-8 pr-3 text-[12px] border border-[var(--border)] rounded-[7px] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] bg-white"
+                            />
+                        </div>
                     </div>
-                    <p className="text-[14px] font-medium text-[var(--text2)]">No candidates yet</p>
-                    <button onClick={openAddForm} className="text-[13px] text-[var(--accent)] hover:underline">Add first candidate</button>
+
+                    {loading ? (
+                        <div className="flex items-center justify-center flex-1 py-24">
+                            <Loader2 size={32} className="animate-spin text-[var(--accent)]" />
+                        </div>
+                    ) : leads.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center flex-1 py-24 gap-3">
+                            <div className="w-14 h-14 bg-[var(--surface2)] rounded-full flex items-center justify-center">
+                                <Users size={24} className="text-[var(--text3)]" />
+                            </div>
+                            <p className="text-[14px] font-medium text-[var(--text2)]">No candidates yet</p>
+                            <button onClick={openAddForm} className="text-[13px] text-[var(--accent)] hover:underline">Add first candidate</button>
+                        </div>
+                    ) : viewMode === "kanban" ? (
+                        <KanbanView leads={leadsByStatus} onCard={openDetail} onStatusChange={handleStatusChange} />
+                    ) : (
+                        <ListView leads={leads} onCard={openDetail} onEdit={openEditForm} onDelete={handleDelete} session={session} />
+                    )}
+                </>
+            )}
+
+            {/* ── ANALYTICS TAB ── */}
+            {activeTab === "analytics" && (
+                <div className="px-4 lg:px-0 pb-6">
+                    {analyticsLoading ? (
+                        <div className="flex items-center justify-center py-24">
+                            <Loader2 size={32} className="animate-spin text-[var(--accent)]" />
+                        </div>
+                    ) : analytics ? (
+                        <AnalyticsView data={analytics} />
+                    ) : (
+                        <div className="flex items-center justify-center py-24">
+                            <p className="text-[14px] text-[var(--text3)]">No analytics data</p>
+                        </div>
+                    )}
                 </div>
-            ) : viewMode === "kanban" ? (
-                <KanbanView leads={leadsByStatus} onCard={openDetail} onStatusChange={handleStatusChange} />
-            ) : (
-                <ListView leads={leads} onCard={openDetail} onEdit={openEditForm} onDelete={handleDelete} session={session} />
+            )}
+
+            {/* ── DOCUMENTS TAB ── */}
+            {activeTab === "documents" && (
+                <div className="px-4 lg:px-0 pb-6">
+                    <DocumentsTabView leads={leads} onLeadClick={openDetail} />
+                </div>
             )}
 
             {/* ── Add/Edit Modal ── */}
@@ -433,8 +625,20 @@ export default function LeadsPage() {
                                         placeholder="Full name" className={inputCls} />
                                 </Field>
                                 <Field label="Phone *">
-                                    <input required value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
-                                        placeholder="Mobile number" className={inputCls} />
+                                    <div className="flex flex-col gap-1">
+                                        <input required value={form.phone}
+                                            onChange={e => {
+                                                setForm(p => ({ ...p, phone: e.target.value }))
+                                                checkDuplicate(e.target.value)
+                                            }}
+                                            placeholder="Mobile number" className={inputCls} />
+                                        {duplicateWarning && (
+                                            <p className="text-[11px] text-amber-600 flex items-center gap-1">
+                                                <AlertCircle size={11} />
+                                                {duplicateWarning}
+                                            </p>
+                                        )}
+                                    </div>
                                 </Field>
                                 <Field label="Email">
                                     <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
@@ -454,7 +658,7 @@ export default function LeadsPage() {
                                 <Field label="Position Applied For *">
                                     <select required value={form.position} onChange={e => setForm(p => ({ ...p, position: e.target.value }))} className={inputCls}>
                                         <option value="">Select position</option>
-                                        {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                                        {POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
                                     </select>
                                 </Field>
                                 <Field label="Experience (Years)">
@@ -509,15 +713,22 @@ export default function LeadsPage() {
                             </div>
                         </div>
 
-                        {/* Assignment & Follow-up */}
+                        {/* Assignment & Score */}
                         <div>
-                            <p className="text-[11px] font-semibold text-[var(--text3)] uppercase tracking-wider mb-2">Assignment & Follow-up</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <p className="text-[11px] font-semibold text-[var(--text3)] uppercase tracking-wider mb-2">Assignment & Scoring</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <Field label="Priority">
                                     <select value={form.priority} onChange={e => setForm(p => ({ ...p, priority: e.target.value }))} className={inputCls}>
                                         <option value="HIGH">High</option>
                                         <option value="MEDIUM">Medium</option>
                                         <option value="LOW">Low</option>
+                                    </select>
+                                </Field>
+                                <Field label="Lead Score">
+                                    <select value={form.score} onChange={e => setForm(p => ({ ...p, score: e.target.value }))} className={inputCls}>
+                                        <option value="HOT">🔥 Hot</option>
+                                        <option value="WARM">🌡 Warm</option>
+                                        <option value="COLD">💧 Cold</option>
                                     </select>
                                 </Field>
                                 <Field label="Assign To">
@@ -526,6 +737,8 @@ export default function LeadsPage() {
                                         {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                                     </select>
                                 </Field>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                                 <Field label="Next Follow-up Date">
                                     <input type="date" value={form.nextFollowUp} onChange={e => setForm(p => ({ ...p, nextFollowUp: e.target.value }))}
                                         className={inputCls} />
@@ -533,11 +746,10 @@ export default function LeadsPage() {
                             </div>
                         </div>
 
-                        {/* Notes */}
                         <Field label="Notes">
                             <textarea rows={3} value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
                                 placeholder="Any remarks about the candidate..."
-                                className={`${inputCls} resize-none`} />
+                                className={`${inputCls} !h-auto resize-none`} />
                         </Field>
 
                         <div className="flex gap-2 justify-end pt-1 border-t border-[var(--border)]">
@@ -571,16 +783,19 @@ export default function LeadsPage() {
                     onActivityTypeChange={setActivityType}
                     onActivityContentChange={setActivityContent}
                     onAddActivity={handleAddActivity}
+                    onLeadUpdate={(updated) => {
+                        setDetailLead(updated)
+                        setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))
+                    }}
                 />
             )}
         </div>
     )
 }
 
-// ─── Input CSS ────────────────────────────────────────────────────────────────
+// ─── Shared CSS ────────────────────────────────────────────────────────────────
 const inputCls = "w-full h-9 px-3 text-[13px] border border-[var(--border)] rounded-[7px] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] bg-white text-[var(--text)]"
 
-// ─── Field Wrapper ────────────────────────────────────────────────────────────
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
     return (
         <div className="flex flex-col gap-1.5">
@@ -590,7 +805,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     )
 }
 
-// ─── Modal ────────────────────────────────────────────────────────────────────
 function Modal({ children, onClose, title, wide }: { children: React.ReactNode; onClose: () => void; title: string; wide?: boolean }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -620,7 +834,6 @@ function KanbanView({
         <div className="flex gap-3 overflow-x-auto pb-4 px-4 lg:px-0 flex-1">
             {STATUSES.map(status => (
                 <div key={status.key} className="flex flex-col shrink-0 w-[240px]">
-                    {/* Column header */}
                     <div className="flex items-center gap-2 px-3 py-2 mb-2 rounded-[8px]"
                         style={{ background: status.bg, border: `1px solid ${status.border}` }}>
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: status.color }} />
@@ -629,7 +842,6 @@ function KanbanView({
                             {leads[status.key]?.length ?? 0}
                         </span>
                     </div>
-                    {/* Cards */}
                     <div className="flex flex-col gap-2">
                         {(leads[status.key] ?? []).map(lead => (
                             <KanbanCard key={lead.id} lead={lead} onCard={onCard} statusColor={status.color} />
@@ -650,17 +862,20 @@ function KanbanCard({ lead, onCard, statusColor }: { lead: Lead; onCard: (l: Lea
     return (
         <div onClick={() => onCard(lead)}
             className="bg-white border border-[var(--border)] rounded-[10px] p-3 cursor-pointer hover:shadow-md hover:border-[var(--accent)] transition-all group">
-            {/* Name + priority */}
             <div className="flex items-start justify-between gap-1 mb-1">
                 <p className="text-[13px] font-semibold text-[var(--text)] leading-tight line-clamp-1">{lead.candidateName}</p>
-                <PriorityDot priority={lead.priority} />
+                <div className="flex items-center gap-1 shrink-0">
+                    <PriorityDot priority={lead.priority} />
+                </div>
             </div>
-            {/* Position */}
-            <div className="flex items-center gap-1 text-[11px] text-[var(--text2)] mb-2">
+            <div className="flex items-center gap-1 text-[11px] text-[var(--text2)] mb-1.5">
                 <Briefcase size={10} className="shrink-0" />
                 <span className="truncate">{lead.position}</span>
             </div>
-            {/* Details */}
+            {/* Score badge */}
+            <div className="mb-2">
+                <ScoreBadge score={lead.score} />
+            </div>
             <div className="flex flex-col gap-1">
                 {lead.experience != null && (
                     <span className="text-[11px] text-[var(--text3)]">{lead.experience}y exp</span>
@@ -684,15 +899,20 @@ function KanbanCard({ lead, onCard, statusColor }: { lead: Lead; onCard: (l: Lea
                     </div>
                 )}
             </div>
-            {/* Footer */}
             <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border)]">
                 <span className="text-[10px] text-[var(--text3)] bg-[var(--surface2)] px-1.5 py-0.5 rounded-full">{lead.source}</span>
-                {lead._count?.activities ? (
-                    <span className="text-[10px] text-[var(--text3)] flex items-center gap-0.5">
-                        <MessageSquare size={9} />
-                        {lead._count.activities}
-                    </span>
-                ) : null}
+                <div className="flex items-center gap-1.5">
+                    {lead._count?.documents ? (
+                        <span className="text-[10px] text-[var(--text3)] flex items-center gap-0.5">
+                            <FileText size={9} />{lead._count.documents}
+                        </span>
+                    ) : null}
+                    {lead._count?.activities ? (
+                        <span className="text-[10px] text-[var(--text3)] flex items-center gap-0.5">
+                            <MessageSquare size={9} />{lead._count.activities}
+                        </span>
+                    ) : null}
+                </div>
             </div>
         </div>
     )
@@ -711,15 +931,14 @@ function ListView({ leads, onCard, onEdit, onDelete, session }: {
             {leads.map(lead => (
                 <div key={lead.id} onClick={() => onCard(lead)}
                     className="bg-white border border-[var(--border)] rounded-[12px] p-4 cursor-pointer hover:shadow-sm hover:border-[var(--accent)] transition-all flex items-center gap-4">
-                    {/* Avatar */}
                     <div className="w-10 h-10 rounded-full bg-[var(--accent-light)] flex items-center justify-center shrink-0 text-[var(--accent)] font-bold text-[14px]">
                         {lead.candidateName.charAt(0).toUpperCase()}
                     </div>
-                    {/* Main info */}
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                             <p className="text-[14px] font-semibold text-[var(--text)] truncate">{lead.candidateName}</p>
                             <PriorityDot priority={lead.priority} />
+                            <ScoreBadge score={lead.score} />
                         </div>
                         <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                             <span className="text-[12px] text-[var(--text2)] flex items-center gap-1">
@@ -740,10 +959,9 @@ function ListView({ leads, onCard, onEdit, onDelete, session }: {
                             )}
                         </div>
                     </div>
-                    {/* Status + meta */}
                     <div className="flex items-center gap-3 shrink-0">
                         {lead.interviewDate && (
-                            <span className="text-[11px] text-[#f59e0b] flex items-center gap-1 hidden sm:flex">
+                            <span className="text-[11px] text-[#f59e0b] hidden sm:flex items-center gap-1">
                                 <Calendar size={11} />{fmt(lead.interviewDate)}
                             </span>
                         )}
@@ -766,12 +984,191 @@ function ListView({ leads, onCard, onEdit, onDelete, session }: {
     )
 }
 
+// ─── Analytics View ───────────────────────────────────────────────────────────
+function AnalyticsView({ data }: { data: AnalyticsData }) {
+    const { summary, funnelData, sourceBreakdown, recruiterPerformance } = data
+    const summaryCards = [
+        { label: "Total Leads", value: summary.total, color: "#3b82f6" },
+        { label: "Today's Leads", value: summary.todayLeads, color: "#8b5cf6" },
+        { label: "Active Leads", value: summary.activeLeads, color: "#f59e0b" },
+        { label: "Interviews", value: summary.interviews, color: "#06b6d4" },
+        { label: "Offers", value: summary.offers, color: "#65a30d" },
+        { label: "Joinings", value: summary.joinings, color: "#047857" },
+        { label: "Dropped", value: summary.dropped, color: "#9ca3af" },
+    ]
+
+    const stageLabels: Record<string, string> = {
+        NEW_LEAD: "New", CONTACTED: "Contacted", INTERESTED: "Interested",
+        INTERVIEW_SCHEDULED: "Scheduled", INTERVIEW_DONE: "Done",
+        SELECTED: "Selected", OFFERED: "Offered", JOINED: "Joined",
+        REJECTED: "Rejected", DROPPED: "Dropped",
+    }
+
+    return (
+        <div className="flex flex-col gap-6 mt-4">
+            {/* Summary cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                {summaryCards.map(c => (
+                    <div key={c.label} className="bg-white border border-[var(--border)] rounded-[12px] p-4">
+                        <p className="text-[10px] font-semibold text-[var(--text3)] uppercase tracking-wide">{c.label}</p>
+                        <p className="text-[24px] font-bold mt-1" style={{ color: c.color }}>{c.value}</p>
+                    </div>
+                ))}
+            </div>
+
+            {/* Funnel + Source */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Funnel */}
+                <div className="bg-white border border-[var(--border)] rounded-[14px] p-5">
+                    <h3 className="text-[14px] font-bold text-[var(--text)] mb-4 flex items-center gap-2">
+                        <TrendingUp size={16} className="text-[var(--accent)]" />
+                        Recruitment Funnel
+                    </h3>
+                    <ResponsiveContainer width="100%" height={280}>
+                        <BarChart data={funnelData.filter(d => d.count > 0 || ["NEW_LEAD","CONTACTED","INTERESTED"].includes(d.stage))} layout="vertical"
+                            margin={{ left: 10, right: 40, top: 0, bottom: 0 }}>
+                            <XAxis type="number" tick={{ fontSize: 11 }} />
+                            <YAxis type="category" dataKey="stage" width={90}
+                                tickFormatter={(v: string) => stageLabels[v] ?? v}
+                                tick={{ fontSize: 11 }} />
+                            <Tooltip
+                                formatter={(val: number | string | undefined) => [val ?? 0, "Count"]}
+                                labelFormatter={(label: any) => stageLabels[String(label)] ?? String(label)}
+                            />
+                            <Bar dataKey="count" fill="var(--accent)" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+
+                {/* Source pie */}
+                <div className="bg-white border border-[var(--border)] rounded-[14px] p-5">
+                    <h3 className="text-[14px] font-bold text-[var(--text)] mb-4 flex items-center gap-2">
+                        <Target size={16} className="text-[var(--accent)]" />
+                        Source Breakdown
+                    </h3>
+                    {sourceBreakdown.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={280}>
+                            <PieChart>
+                                <Pie data={sourceBreakdown} cx="50%" cy="50%" outerRadius={100}
+                                    dataKey="value" nameKey="name" label={({ name, percent }: { name?: string; percent?: number }) => `${name ?? ""} (${((percent ?? 0) * 100).toFixed(0)}%)`}
+                                    labelLine={false}>
+                                    {sourceBreakdown.map((_, i) => (
+                                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <p className="text-[13px] text-[var(--text3)] text-center py-16">No source data</p>
+                    )}
+                </div>
+            </div>
+
+            {/* Recruiter performance */}
+            <div className="bg-white border border-[var(--border)] rounded-[14px] p-5">
+                <h3 className="text-[14px] font-bold text-[var(--text)] mb-4 flex items-center gap-2">
+                    <Users size={16} className="text-[var(--accent)]" />
+                    Recruiter Performance
+                </h3>
+                {recruiterPerformance.length > 0 ? (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-[13px]">
+                            <thead>
+                                <tr className="border-b border-[var(--border)]">
+                                    {["Recruiter", "Leads", "Interviews", "Joinings", "Conversion"].map(h => (
+                                        <th key={h} className="text-left pb-2 pr-4 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-wide">{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {recruiterPerformance.map(r => (
+                                    <tr key={r.id} className="border-b border-[var(--border)] last:border-0">
+                                        <td className="py-2.5 pr-4 font-medium text-[var(--text)]">{r.name}</td>
+                                        <td className="py-2.5 pr-4 text-[var(--text2)]">{r.leads}</td>
+                                        <td className="py-2.5 pr-4 text-[var(--text2)]">{r.interviews}</td>
+                                        <td className="py-2.5 pr-4 text-[var(--text2)]">{r.joinings}</td>
+                                        <td className="py-2.5">
+                                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${r.conversion >= 50 ? "bg-green-100 text-green-700" : r.conversion >= 20 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
+                                                {r.conversion}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <p className="text-[13px] text-[var(--text3)] text-center py-8">No recruiter data — assign leads to recruiters to see performance</p>
+                )}
+            </div>
+        </div>
+    )
+}
+
+// ─── Documents Tab View ───────────────────────────────────────────────────────
+function DocumentsTabView({ leads, onLeadClick }: { leads: Lead[]; onLeadClick: (l: Lead) => void }) {
+    const allDocs = leads.flatMap(l => (l.documents ?? []).map(d => ({ ...d, leadName: l.candidateName, lead: l })))
+
+    const verifiedColor: Record<string, string> = {
+        PENDING: "#f59e0b",
+        APPROVED: "#1a9e6e",
+        REJECTED: "#dc2626",
+    }
+
+    if (allDocs.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center py-24 gap-3">
+                <div className="w-14 h-14 bg-[var(--surface2)] rounded-full flex items-center justify-center">
+                    <FileText size={24} className="text-[var(--text3)]" />
+                </div>
+                <p className="text-[14px] font-medium text-[var(--text2)]">No documents yet</p>
+                <p className="text-[12px] text-[var(--text3)]">Open a lead and add documents from the Documents tab</p>
+            </div>
+        )
+    }
+
+    return (
+        <div className="mt-4 flex flex-col gap-2">
+            {allDocs.map(doc => (
+                <div key={doc.id} className="bg-white border border-[var(--border)] rounded-[12px] p-4 flex items-center gap-4 hover:shadow-sm transition-all">
+                    <div className="w-10 h-10 rounded-[10px] bg-[var(--surface2)] flex items-center justify-center shrink-0">
+                        <FileText size={18} className="text-[var(--text3)]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-semibold text-[var(--text)] truncate">{doc.fileName}</p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <span className="text-[11px] text-[var(--text3)] bg-[var(--surface2)] px-1.5 py-0.5 rounded-full">{doc.docType}</span>
+                            <button onClick={() => onLeadClick(doc.lead)} className="text-[11px] text-[var(--accent)] hover:underline">{doc.leadName}</button>
+                            <span className="text-[11px] text-[var(--text3)]">by {doc.uploader.name}</span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full border"
+                            style={{ color: verifiedColor[doc.verified] ?? "#6b7280", borderColor: verifiedColor[doc.verified] ?? "#6b7280", background: (verifiedColor[doc.verified] ?? "#6b7280") + "15" }}>
+                            {doc.verified}
+                        </span>
+                        <a href={doc.url} target="_blank" rel="noopener noreferrer"
+                            className="text-[12px] text-[var(--accent)] hover:underline" onClick={e => e.stopPropagation()}>
+                            View
+                        </a>
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
+}
+
 // ─── Detail Drawer ────────────────────────────────────────────────────────────
-function DetailDrawer({ lead, session, users, activityContent, activityType, savingActivity,
-    onClose, onEdit, onDelete, onStatusChange, onActivityTypeChange, onActivityContentChange, onAddActivity }: {
+function DetailDrawer({
+    lead, session, users, activityContent, activityType, savingActivity,
+    onClose, onEdit, onDelete, onStatusChange, onActivityTypeChange, onActivityContentChange, onAddActivity,
+    onLeadUpdate
+}: {
     lead: Lead
     session: any
-    users: User[]
+    users: AppUser[]
     activityContent: string
     activityType: string
     savingActivity: boolean
@@ -782,20 +1179,153 @@ function DetailDrawer({ lead, session, users, activityContent, activityType, sav
     onActivityTypeChange: (t: string) => void
     onActivityContentChange: (c: string) => void
     onAddActivity: () => void
+    onLeadUpdate: (l: Lead) => void
 }) {
+    const [drawerTab, setDrawerTab] = useState<"overview" | "activities" | "interview" | "documents" | "followups">("overview")
+    const [interviewForm, setInterviewForm] = useState({
+        interviewerId: lead.interviewerId ?? "",
+        interviewFeedback: lead.interviewFeedback ?? "",
+        interviewResult: lead.interviewResult ?? "",
+    })
+    const [savingInterview, setSavingInterview] = useState(false)
+
+    // Document form
+    const [showDocForm, setShowDocForm] = useState(false)
+    const [docForm, setDocForm] = useState({ docType: "RESUME", fileName: "", url: "" })
+    const [savingDoc, setSavingDoc] = useState(false)
+
+    // Follow-up form
+    const [showFollowUpForm, setShowFollowUpForm] = useState(false)
+    const [followUpForm, setFollowUpForm] = useState({ type: "CALL", note: "", scheduledAt: "" })
+    const [savingFollowUp, setSavingFollowUp] = useState(false)
+
+    async function saveInterviewDetails() {
+        setSavingInterview(true)
+        try {
+            const res = await fetch(`/api/recruitment/${lead.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(interviewForm)
+            })
+            if (!res.ok) throw new Error()
+            const updated = await res.json()
+            onLeadUpdate(updated)
+            toast.success("Interview details saved")
+        } catch {
+            toast.error("Failed to save interview details")
+        } finally { setSavingInterview(false) }
+    }
+
+    async function addDocument(e: React.FormEvent) {
+        e.preventDefault()
+        setSavingDoc(true)
+        try {
+            const res = await fetch(`/api/recruitment/${lead.id}/documents`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(docForm)
+            })
+            if (!res.ok) throw new Error()
+            const doc = await res.json()
+            onLeadUpdate({ ...lead, documents: [doc, ...(lead.documents ?? [])] })
+            setDocForm({ docType: "RESUME", fileName: "", url: "" })
+            setShowDocForm(false)
+            toast.success("Document added")
+        } catch {
+            toast.error("Failed to add document")
+        } finally { setSavingDoc(false) }
+    }
+
+    async function updateDocVerification(docId: string, verified: string) {
+        try {
+            const res = await fetch(`/api/recruitment/${lead.id}/documents`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ docId, verified })
+            })
+            if (!res.ok) throw new Error()
+            const updated = await res.json()
+            onLeadUpdate({
+                ...lead,
+                documents: (lead.documents ?? []).map(d => d.id === docId ? updated : d)
+            })
+            toast.success("Verification updated")
+        } catch {
+            toast.error("Failed to update verification")
+        }
+    }
+
+    async function addFollowUp(e: React.FormEvent) {
+        e.preventDefault()
+        setSavingFollowUp(true)
+        try {
+            const res = await fetch(`/api/recruitment/${lead.id}/followups`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(followUpForm)
+            })
+            if (!res.ok) throw new Error()
+            const fu = await res.json()
+            onLeadUpdate({ ...lead, followUps: [...(lead.followUps ?? []), fu] })
+            setFollowUpForm({ type: "CALL", note: "", scheduledAt: "" })
+            setShowFollowUpForm(false)
+            toast.success("Follow-up scheduled")
+        } catch {
+            toast.error("Failed to schedule follow-up")
+        } finally { setSavingFollowUp(false) }
+    }
+
+    async function updateFollowUpStatus(followUpId: string, status: string) {
+        try {
+            const res = await fetch(`/api/recruitment/${lead.id}/followups`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ followUpId, status })
+            })
+            if (!res.ok) throw new Error()
+            const updated = await res.json()
+            onLeadUpdate({
+                ...lead,
+                followUps: (lead.followUps ?? []).map(f => f.id === followUpId ? updated : f)
+            })
+            toast.success("Follow-up updated")
+        } catch {
+            toast.error("Failed to update follow-up")
+        }
+    }
+
+    const DRAWER_TABS = [
+        { key: "overview" as const,   label: "Overview" },
+        { key: "activities" as const, label: "Activities" },
+        { key: "interview" as const,  label: "Interview" },
+        { key: "documents" as const,  label: `Docs${(lead.documents ?? []).length > 0 ? ` (${lead.documents!.length})` : ""}` },
+        { key: "followups" as const,  label: `Follow-ups${(lead.followUps ?? []).length > 0 ? ` (${lead.followUps!.length})` : ""}` },
+    ]
+
+    const verifiedBadge = (v: string) => {
+        const colors: Record<string, string> = { PENDING: "#f59e0b", APPROVED: "#1a9e6e", REJECTED: "#dc2626" }
+        return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border"
+            style={{ color: colors[v] ?? "#6b7280", borderColor: colors[v] ?? "#6b7280", background: (colors[v] ?? "#6b7280") + "15" }}>
+            {v}
+        </span>
+    }
+
     return (
         <div className="fixed inset-0 z-50 flex">
             <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-            <div className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl flex flex-col">
+            <div className="w-full max-w-[480px] bg-white h-full shadow-2xl flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] sticky top-0 bg-white z-10">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] sticky top-0 bg-white z-10 shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-[var(--accent-light)] flex items-center justify-center text-[var(--accent)] font-bold text-[15px]">
                             {lead.candidateName.charAt(0).toUpperCase()}
                         </div>
                         <div>
                             <p className="text-[15px] font-bold text-[var(--text)]">{lead.candidateName}</p>
-                            <p className="text-[12px] text-[var(--text2)]">{lead.position}</p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                                <p className="text-[12px] text-[var(--text2)]">{lead.position}</p>
+                                <ScoreBadge score={lead.score} />
+                            </div>
                         </div>
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -813,123 +1343,350 @@ function DetailDrawer({ lead, session, users, activityContent, activityType, sav
                     </div>
                 </div>
 
+                {/* Stage selector */}
+                <div className="px-5 py-3 border-b border-[var(--border)] shrink-0">
+                    <div className="flex flex-wrap gap-1.5">
+                        {STATUSES.map(s => (
+                            <button key={s.key} onClick={() => onStatusChange(s.key)}
+                                className="px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all"
+                                style={lead.status === s.key
+                                    ? { background: s.color, color: "#fff", borderColor: s.color }
+                                    : { background: s.bg, color: s.color, borderColor: s.border }
+                                }>
+                                {s.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Drawer tabs */}
+                <div className="flex gap-0 border-b border-[var(--border)] shrink-0 overflow-x-auto">
+                    {DRAWER_TABS.map(t => (
+                        <button key={t.key} onClick={() => setDrawerTab(t.key)}
+                            className={`px-3 py-2.5 text-[12px] font-medium whitespace-nowrap border-b-2 transition-colors ${
+                                drawerTab === t.key
+                                    ? "border-[var(--accent)] text-[var(--accent)]"
+                                    : "border-transparent text-[var(--text3)] hover:text-[var(--text)]"
+                            }`}>
+                            {t.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Tab content */}
                 <div className="flex-1 overflow-y-auto">
-                    {/* Status pipeline */}
-                    <div className="px-5 py-4 border-b border-[var(--border)]">
-                        <p className="text-[11px] font-semibold text-[var(--text3)] uppercase tracking-wider mb-3">Recruitment Stage</p>
-                        <div className="flex flex-wrap gap-1.5">
-                            {STATUSES.map(s => (
-                                <button key={s.key} onClick={() => onStatusChange(s.key)}
-                                    className="px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all"
-                                    style={lead.status === s.key
-                                        ? { background: s.color, color: "#fff", borderColor: s.color }
-                                        : { background: s.bg, color: s.color, borderColor: s.border }
-                                    }>
-                                    {s.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
 
-                    {/* Info grid */}
-                    <div className="px-5 py-4 border-b border-[var(--border)]">
-                        <p className="text-[11px] font-semibold text-[var(--text3)] uppercase tracking-wider mb-3">Candidate Details</p>
-                        <div className="grid grid-cols-2 gap-y-3 gap-x-4">
-                            <InfoRow icon={Phone} label="Phone" value={lead.phone} />
-                            {lead.email && <InfoRow icon={Mail} label="Email" value={lead.email} />}
-                            {lead.city && <InfoRow icon={MapPin} label="City" value={lead.city} />}
-                            {lead.experience != null && <InfoRow icon={Clock} label="Experience" value={`${lead.experience} years`} />}
-                            {lead.currentCompany && <InfoRow icon={Building2} label="Prev Company" value={lead.currentCompany} />}
-                            {lead.qualification && <InfoRow icon={GraduationCap} label="Qualification" value={lead.qualification} />}
-                            {lead.skills && <InfoRow icon={Wrench} label="Skills" value={lead.skills} />}
-                            <InfoRow icon={Target} label="Source" value={lead.source} />
-                            {lead.currentSalary && <InfoRow icon={Banknote} label="Current CTC" value={fmtSalary(lead.currentSalary) ?? ""} />}
-                            {lead.expectedSalary && <InfoRow icon={Banknote} label="Expected CTC" value={fmtSalary(lead.expectedSalary) ?? ""} />}
-                            {lead.interviewDate && <InfoRow icon={Calendar} label="Interview" value={`${fmt(lead.interviewDate)}${lead.interviewMode ? ` · ${lead.interviewMode}` : ""}`} />}
-                            {lead.nextFollowUp && <InfoRow icon={Clock} label="Follow-up" value={fmt(lead.nextFollowUp)} />}
-                            {lead.assignee && <InfoRow icon={UserCheck} label="Assigned To" value={lead.assignee.name} />}
-                        </div>
-                        {lead.notes && (
-                            <div className="mt-3 p-3 bg-[var(--surface2)] rounded-[8px]">
-                                <p className="text-[11px] font-semibold text-[var(--text3)] mb-1">Notes</p>
-                                <p className="text-[12px] text-[var(--text2)]">{lead.notes}</p>
+                    {/* OVERVIEW TAB */}
+                    {drawerTab === "overview" && (
+                        <div className="px-5 py-4">
+                            <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+                                <InfoRow icon={Phone} label="Phone" value={lead.phone} />
+                                {lead.email && <InfoRow icon={Mail} label="Email" value={lead.email} />}
+                                {lead.city && <InfoRow icon={MapPin} label="City" value={lead.city} />}
+                                {lead.experience != null && <InfoRow icon={Clock} label="Experience" value={`${lead.experience} years`} />}
+                                {lead.currentCompany && <InfoRow icon={Building2} label="Prev Company" value={lead.currentCompany} />}
+                                {lead.qualification && <InfoRow icon={GraduationCap} label="Qualification" value={lead.qualification} />}
+                                {lead.skills && <InfoRow icon={Wrench} label="Skills" value={lead.skills} />}
+                                <InfoRow icon={Target} label="Source" value={lead.source} />
+                                {lead.currentSalary && <InfoRow icon={Banknote} label="Current CTC" value={fmtSalary(lead.currentSalary) ?? ""} />}
+                                {lead.expectedSalary && <InfoRow icon={Banknote} label="Expected CTC" value={fmtSalary(lead.expectedSalary) ?? ""} />}
+                                {lead.interviewDate && <InfoRow icon={Calendar} label="Interview" value={`${fmt(lead.interviewDate)}${lead.interviewMode ? ` · ${lead.interviewMode}` : ""}`} />}
+                                {lead.nextFollowUp && <InfoRow icon={Clock} label="Follow-up" value={fmt(lead.nextFollowUp)} />}
+                                {lead.assignee && <InfoRow icon={UserCheck} label="Assigned To" value={lead.assignee.name} />}
                             </div>
-                        )}
-                    </div>
+                            {lead.notes && (
+                                <div className="mt-4 p-3 bg-[var(--surface2)] rounded-[8px]">
+                                    <p className="text-[11px] font-semibold text-[var(--text3)] mb-1">Notes</p>
+                                    <p className="text-[12px] text-[var(--text2)]">{lead.notes}</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
-                    {/* Activity log */}
-                    <div className="px-5 py-4">
-                        <p className="text-[11px] font-semibold text-[var(--text3)] uppercase tracking-wider mb-3">Activity Log</p>
+                    {/* ACTIVITIES TAB */}
+                    {drawerTab === "activities" && (
+                        <div className="px-5 py-4">
+                            <div className="border border-[var(--border)] rounded-[10px] p-3 mb-4 bg-[var(--surface2)]">
+                                <div className="flex gap-1.5 mb-2 flex-wrap">
+                                    {ACTIVITY_TYPES.map(t => {
+                                        const Icon = t.icon
+                                        return (
+                                            <button key={t.key} onClick={() => onActivityTypeChange(t.key)}
+                                                className="flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-medium border transition-all"
+                                                style={activityType === t.key
+                                                    ? { background: t.color, color: "#fff", borderColor: t.color }
+                                                    : { background: "#fff", color: t.color, borderColor: t.color + "55" }
+                                                }>
+                                                <Icon size={10} />
+                                                {t.label}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                                <textarea
+                                    rows={2}
+                                    value={activityContent}
+                                    onChange={e => onActivityContentChange(e.target.value)}
+                                    placeholder="Add a note, call summary, interview feedback..."
+                                    className="w-full text-[12px] border border-[var(--border)] rounded-[7px] px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-[var(--accent)] bg-white"
+                                />
+                                <div className="flex justify-end mt-2">
+                                    <button onClick={onAddActivity} disabled={savingActivity || !activityContent.trim()}
+                                        className="flex items-center gap-1.5 h-8 px-3 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-[12px] font-semibold rounded-[6px] disabled:opacity-50 transition-colors">
+                                        {savingActivity ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                                        Log
+                                    </button>
+                                </div>
+                            </div>
 
-                        {/* Add activity */}
-                        <div className="border border-[var(--border)] rounded-[10px] p-3 mb-4 bg-[var(--surface2)]">
-                            <div className="flex gap-1.5 mb-2 flex-wrap">
-                                {ACTIVITY_TYPES.map(t => {
-                                    const Icon = t.icon
+                            <div className="flex flex-col gap-3">
+                                {(lead.activities ?? []).length === 0 && (
+                                    <p className="text-[12px] text-[var(--text3)] text-center py-4">No activity yet</p>
+                                )}
+                                {(lead.activities ?? []).map(act => {
+                                    const typeConf = ACTIVITY_TYPES.find(t => t.key === act.type) ?? ACTIVITY_TYPES[0]
+                                    const Icon = typeConf.icon
                                     return (
-                                        <button key={t.key} onClick={() => onActivityTypeChange(t.key)}
-                                            className="flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-medium border transition-all"
-                                            style={activityType === t.key
-                                                ? { background: t.color, color: "#fff", borderColor: t.color }
-                                                : { background: "#fff", color: t.color, borderColor: t.color + "55" }
-                                            }>
-                                            <Icon size={10} />
-                                            {t.label}
-                                        </button>
+                                        <div key={act.id} className="flex gap-3 items-start">
+                                            <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                                                style={{ background: typeConf.color + "20", color: typeConf.color }}>
+                                                <Icon size={12} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[12px] font-semibold text-[var(--text)]">{act.user.name}</span>
+                                                    <span className="text-[10px] text-[var(--text3)]">
+                                                        {formatDistanceToNow(parseISO(act.createdAt), { addSuffix: true })}
+                                                    </span>
+                                                </div>
+                                                <p className="text-[12px] text-[var(--text2)] mt-0.5">{act.content}</p>
+                                            </div>
+                                        </div>
                                     )
                                 })}
                             </div>
-                            <textarea
-                                rows={2}
-                                value={activityContent}
-                                onChange={e => onActivityContentChange(e.target.value)}
-                                placeholder="Add a note, call summary, interview feedback..."
-                                className="w-full text-[12px] border border-[var(--border)] rounded-[7px] px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-[var(--accent)] bg-white"
-                            />
-                            <div className="flex justify-end mt-2">
-                                <button onClick={onAddActivity} disabled={savingActivity || !activityContent.trim()}
-                                    className="flex items-center gap-1.5 h-8 px-3 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-[12px] font-semibold rounded-[6px] disabled:opacity-50 transition-colors">
-                                    {savingActivity ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
-                                    Log
+                        </div>
+                    )}
+
+                    {/* INTERVIEW TAB */}
+                    {drawerTab === "interview" && (
+                        <div className="px-5 py-4 flex flex-col gap-4">
+                            <p className="text-[11px] font-semibold text-[var(--text3)] uppercase tracking-wider">Interview Details</p>
+                            <Field label="Interviewer Name / ID">
+                                <input
+                                    value={interviewForm.interviewerId}
+                                    onChange={e => setInterviewForm(p => ({ ...p, interviewerId: e.target.value }))}
+                                    placeholder="Who will conduct the interview"
+                                    className={inputCls}
+                                />
+                            </Field>
+                            <Field label="Feedback">
+                                <textarea
+                                    rows={4}
+                                    value={interviewForm.interviewFeedback}
+                                    onChange={e => setInterviewForm(p => ({ ...p, interviewFeedback: e.target.value }))}
+                                    placeholder="Interview notes and observations..."
+                                    className={`${inputCls} !h-auto resize-none`}
+                                />
+                            </Field>
+                            <Field label="Result">
+                                <div className="flex gap-2">
+                                    {["PASS", "FAIL", "HOLD"].map(r => (
+                                        <button key={r} type="button"
+                                            onClick={() => setInterviewForm(p => ({ ...p, interviewResult: r }))}
+                                            className={`flex-1 h-9 rounded-[7px] text-[13px] font-semibold border transition-all ${
+                                                interviewForm.interviewResult === r
+                                                    ? r === "PASS" ? "bg-green-500 text-white border-green-500"
+                                                    : r === "FAIL" ? "bg-red-500 text-white border-red-500"
+                                                    : "bg-amber-500 text-white border-amber-500"
+                                                    : "bg-white text-[var(--text2)] border-[var(--border)] hover:bg-[var(--surface2)]"
+                                            }`}>
+                                            {r}
+                                        </button>
+                                    ))}
+                                </div>
+                            </Field>
+                            {lead.interviewDate && (
+                                <div className="p-3 bg-[var(--surface2)] rounded-[8px] text-[12px] text-[var(--text2)]">
+                                    <span className="font-semibold text-[var(--text3)]">Scheduled: </span>
+                                    {fmt(lead.interviewDate)}{lead.interviewMode ? ` · ${lead.interviewMode}` : ""}
+                                </div>
+                            )}
+                            <button onClick={saveInterviewDetails} disabled={savingInterview}
+                                className="flex items-center justify-center gap-2 h-9 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-[13px] font-semibold rounded-[7px] transition-colors disabled:opacity-60">
+                                {savingInterview ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+                                Save Interview Details
+                            </button>
+                        </div>
+                    )}
+
+                    {/* DOCUMENTS TAB */}
+                    {drawerTab === "documents" && (
+                        <div className="px-5 py-4">
+                            <div className="flex items-center justify-between mb-4">
+                                <p className="text-[11px] font-semibold text-[var(--text3)] uppercase tracking-wider">Documents</p>
+                                <button onClick={() => setShowDocForm(v => !v)}
+                                    className="flex items-center gap-1 h-7 px-2.5 text-[12px] font-medium text-[var(--accent)] border border-[var(--accent)] rounded-[6px] hover:bg-[var(--accent-light)] transition-colors">
+                                    <Plus size={12} />
+                                    Add Document
                                 </button>
                             </div>
-                        </div>
 
-                        {/* Activities list */}
-                        <div className="flex flex-col gap-2">
-                            {(lead.activities ?? []).length === 0 && (
-                                <p className="text-[12px] text-[var(--text3)] text-center py-4">No activity yet</p>
+                            {showDocForm && (
+                                <form onSubmit={addDocument} className="border border-[var(--border)] rounded-[10px] p-4 mb-4 flex flex-col gap-3 bg-[var(--surface2)]">
+                                    <Field label="Document Type">
+                                        <select value={docForm.docType} onChange={e => setDocForm(p => ({ ...p, docType: e.target.value }))} className={inputCls}>
+                                            {DOC_TYPES.map(d => <option key={d} value={d}>{d}</option>)}
+                                        </select>
+                                    </Field>
+                                    <Field label="File Name">
+                                        <input required value={docForm.fileName} onChange={e => setDocForm(p => ({ ...p, fileName: e.target.value }))}
+                                            placeholder="e.g. resume_john.pdf" className={inputCls} />
+                                    </Field>
+                                    <Field label="URL / Link">
+                                        <input required value={docForm.url} onChange={e => setDocForm(p => ({ ...p, url: e.target.value }))}
+                                            placeholder="https://..." className={inputCls} />
+                                    </Field>
+                                    <div className="flex gap-2 justify-end">
+                                        <button type="button" onClick={() => setShowDocForm(false)}
+                                            className="h-8 px-3 text-[12px] text-[var(--text2)] border border-[var(--border)] rounded-[6px] hover:bg-white transition-colors">
+                                            Cancel
+                                        </button>
+                                        <button type="submit" disabled={savingDoc}
+                                            className="h-8 px-3 text-[12px] font-semibold bg-[var(--accent)] text-white rounded-[6px] flex items-center gap-1 disabled:opacity-60">
+                                            {savingDoc && <Loader2 size={12} className="animate-spin" />}
+                                            Save
+                                        </button>
+                                    </div>
+                                </form>
                             )}
-                            {(lead.activities ?? []).map(act => {
-                                const typeConf = ACTIVITY_TYPES.find(t => t.key === act.type) ?? ACTIVITY_TYPES[0]
-                                const Icon = typeConf.icon
-                                return (
-                                    <div key={act.id} className="flex gap-3 items-start">
-                                        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5"
-                                            style={{ background: typeConf.color + "20", color: typeConf.color }}>
-                                            <Icon size={12} />
-                                        </div>
+
+                            <div className="flex flex-col gap-2">
+                                {(lead.documents ?? []).length === 0 && !showDocForm && (
+                                    <p className="text-[12px] text-[var(--text3)] text-center py-8">No documents uploaded</p>
+                                )}
+                                {(lead.documents ?? []).map(doc => (
+                                    <div key={doc.id} className="border border-[var(--border)] rounded-[10px] p-3 flex items-center gap-3 bg-white">
+                                        <FileText size={16} className="text-[var(--text3)] shrink-0" />
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[12px] font-semibold text-[var(--text)]">{act.user.name}</span>
-                                                <span className="text-[10px] text-[var(--text3)]">
-                                                    {formatDistanceToNow(parseISO(act.createdAt), { addSuffix: true })}
-                                                </span>
+                                            <p className="text-[13px] font-medium text-[var(--text)] truncate">{doc.fileName}</p>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <span className="text-[10px] text-[var(--text3)] bg-[var(--surface2)] px-1.5 py-0.5 rounded-full">{doc.docType}</span>
+                                                {verifiedBadge(doc.verified)}
                                             </div>
-                                            <p className="text-[12px] text-[var(--text2)] mt-0.5">{act.content}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <select
+                                                value={doc.verified}
+                                                onChange={e => updateDocVerification(doc.id, e.target.value)}
+                                                className="h-7 px-1.5 text-[11px] border border-[var(--border)] rounded-[5px] bg-white text-[var(--text2)] focus:outline-none"
+                                                onClick={e => e.stopPropagation()}
+                                            >
+                                                <option value="PENDING">Pending</option>
+                                                <option value="APPROVED">Approved</option>
+                                                <option value="REJECTED">Rejected</option>
+                                            </select>
+                                            <a href={doc.url} target="_blank" rel="noopener noreferrer"
+                                                className="text-[12px] text-[var(--accent)] hover:underline" onClick={e => e.stopPropagation()}>
+                                                View
+                                            </a>
                                         </div>
                                     </div>
-                                )
-                            })}
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
+
+                    {/* FOLLOW-UPS TAB */}
+                    {drawerTab === "followups" && (
+                        <div className="px-5 py-4">
+                            <div className="flex items-center justify-between mb-4">
+                                <p className="text-[11px] font-semibold text-[var(--text3)] uppercase tracking-wider">Follow-ups</p>
+                                <button onClick={() => setShowFollowUpForm(v => !v)}
+                                    className="flex items-center gap-1 h-7 px-2.5 text-[12px] font-medium text-[var(--accent)] border border-[var(--accent)] rounded-[6px] hover:bg-[var(--accent-light)] transition-colors">
+                                    <Plus size={12} />
+                                    Add Follow-up
+                                </button>
+                            </div>
+
+                            {showFollowUpForm && (
+                                <form onSubmit={addFollowUp} className="border border-[var(--border)] rounded-[10px] p-4 mb-4 flex flex-col gap-3 bg-[var(--surface2)]">
+                                    <Field label="Type">
+                                        <select value={followUpForm.type} onChange={e => setFollowUpForm(p => ({ ...p, type: e.target.value }))} className={inputCls}>
+                                            {FOLLOWUP_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                                        </select>
+                                    </Field>
+                                    <Field label="Scheduled At *">
+                                        <input required type="datetime-local" value={followUpForm.scheduledAt}
+                                            onChange={e => setFollowUpForm(p => ({ ...p, scheduledAt: e.target.value }))}
+                                            className={inputCls} />
+                                    </Field>
+                                    <Field label="Note">
+                                        <input value={followUpForm.note} onChange={e => setFollowUpForm(p => ({ ...p, note: e.target.value }))}
+                                            placeholder="Optional note..." className={inputCls} />
+                                    </Field>
+                                    <div className="flex gap-2 justify-end">
+                                        <button type="button" onClick={() => setShowFollowUpForm(false)}
+                                            className="h-8 px-3 text-[12px] text-[var(--text2)] border border-[var(--border)] rounded-[6px] hover:bg-white transition-colors">
+                                            Cancel
+                                        </button>
+                                        <button type="submit" disabled={savingFollowUp}
+                                            className="h-8 px-3 text-[12px] font-semibold bg-[var(--accent)] text-white rounded-[6px] flex items-center gap-1 disabled:opacity-60">
+                                            {savingFollowUp && <Loader2 size={12} className="animate-spin" />}
+                                            Schedule
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+
+                            <div className="flex flex-col gap-2">
+                                {(lead.followUps ?? []).length === 0 && !showFollowUpForm && (
+                                    <p className="text-[12px] text-[var(--text3)] text-center py-8">No follow-ups scheduled</p>
+                                )}
+                                {(lead.followUps ?? []).map(fu => {
+                                    const statusColors: Record<string, string> = { PENDING: "#f59e0b", DONE: "#1a9e6e", SNOOZED: "#6b7280" }
+                                    return (
+                                        <div key={fu.id} className="border border-[var(--border)] rounded-[10px] p-3 bg-white">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[12px] font-semibold text-[var(--text)]">{fu.type}</span>
+                                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border"
+                                                        style={{ color: statusColors[fu.status] ?? "#6b7280", borderColor: statusColors[fu.status] ?? "#6b7280", background: (statusColors[fu.status] ?? "#6b7280") + "15" }}>
+                                                        {fu.status}
+                                                    </span>
+                                                </div>
+                                                {fu.status === "PENDING" && (
+                                                    <div className="flex items-center gap-1">
+                                                        <button onClick={() => updateFollowUpStatus(fu.id, "DONE")}
+                                                            className="h-6 px-2 text-[11px] bg-green-500 text-white rounded-[5px] hover:bg-green-600 transition-colors flex items-center gap-1">
+                                                            <CheckCircle size={10} /> Done
+                                                        </button>
+                                                        <button onClick={() => updateFollowUpStatus(fu.id, "SNOOZED")}
+                                                            className="h-6 px-2 text-[11px] bg-[var(--surface2)] text-[var(--text2)] border border-[var(--border)] rounded-[5px] hover:bg-[var(--border)] transition-colors">
+                                                            Snooze
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <p className="text-[11px] text-[var(--text3)]">
+                                                <Clock size={10} className="inline mr-1" />
+                                                {fmt(fu.scheduledAt)}
+                                            </p>
+                                            {fu.note && <p className="text-[12px] text-[var(--text2)] mt-1">{fu.note}</p>}
+                                            <p className="text-[10px] text-[var(--text3)] mt-1">by {fu.creator.name}</p>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
     )
 }
 
-function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
+function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
     return (
         <div className="flex flex-col gap-0.5">
             <span className="text-[10px] text-[var(--text3)] uppercase tracking-wide font-medium">{label}</span>

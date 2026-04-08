@@ -30,6 +30,8 @@ model User {
   leadsAssigned            Lead[]           @relation("LeadAssignee")
   leadsCreated             Lead[]           @relation("LeadCreator")
   leadActivities           LeadActivity[]   @relation("LeadActivityUser")
+  leadDocsUploaded         LeadDocument[]   @relation("LeadDocUploader")
+  leadFollowUpsCreated     LeadFollowUp[]   @relation("LeadFollowUpCreator")
 }
 
 model Company {
@@ -197,13 +199,22 @@ enum Role {
 }
 
 enum LeadStatus {
-  APPLIED
-  SCREENING
+  NEW_LEAD
+  CONTACTED
+  INTERESTED
   INTERVIEW_SCHEDULED
   INTERVIEW_DONE
   SELECTED
-  ONBOARDED
+  OFFERED
+  JOINED
   REJECTED
+  DROPPED
+}
+
+enum LeadScore {
+  HOT
+  WARM
+  COLD
 }
 
 enum LeadPriority {
@@ -213,36 +224,72 @@ enum LeadPriority {
 }
 
 model Lead {
-  id             String        @id @default(uuid())
-  candidateName  String
-  phone          String
-  email          String?
-  city           String?
-  position       String        // Role applied for e.g. Inspector, Security Guard, Supervisor
-  experience     Float?        // Years of experience
-  currentCompany String?       // Previous/current employer
-  qualification  String?       // 10th, 12th, Graduate, ITI, Diploma, etc.
-  skills         String?       // Driving License, Forklift, First Aid, etc.
-  expectedSalary Float?
-  currentSalary  Float?
-  interviewDate  DateTime?
-  interviewMode  String?       // In-person, Phone, Video
-  source         String        // Walk-in, LinkedIn, Naukri, Referral, WhatsApp, Agency, Indeed
-  status         LeadStatus    @default(APPLIED)
-  priority       LeadPriority  @default(MEDIUM)
-  assignedTo     String?
-  notes          String?
-  nextFollowUp   DateTime?
-  createdBy      String
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  assignee       User?         @relation("LeadAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
-  creator        User          @relation("LeadCreator", fields: [createdBy], references: [id])
-  activities     LeadActivity[]
+  id                String        @id @default(uuid())
+  candidateName     String
+  phone             String
+  email             String?
+  city              String?
+  position          String        // Role applied for e.g. Inspector, Security Guard, Supervisor
+  experience        Float?        // Years of experience
+  currentCompany    String?       // Previous/current employer
+  qualification     String?       // 10th, 12th, Graduate, ITI, Diploma, etc.
+  skills            String?       // Driving License, Forklift, First Aid, etc.
+  expectedSalary    Float?
+  currentSalary     Float?
+  interviewDate     DateTime?
+  interviewMode     String?       // In-person, Phone, Video
+  source            String        // Walk-in, LinkedIn, Naukri, Referral, WhatsApp, Agency, Indeed
+  status            LeadStatus    @default(NEW_LEAD)
+  priority          LeadPriority  @default(MEDIUM)
+  score             LeadScore     @default(WARM)
+  interviewerId     String?
+  interviewFeedback String?
+  interviewResult   String?       // PASS / FAIL / HOLD
+  assignedTo        String?
+  notes             String?
+  nextFollowUp      DateTime?
+  createdBy         String
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  assignee          User?         @relation("LeadAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
+  creator           User          @relation("LeadCreator", fields: [createdBy], references: [id])
+  activities        LeadActivity[]
+  documents         LeadDocument[]
+  followUps         LeadFollowUp[]
 
   @@index([status])
   @@index([assignedTo])
   @@index([createdAt])
+}
+
+model LeadDocument {
+  id         String   @id @default(uuid())
+  leadId     String
+  docType    String   // RESUME, AADHAAR, PAN, CERTIFICATE, OTHER
+  fileName   String
+  url        String
+  verified   String   @default("PENDING") // PENDING / APPROVED / REJECTED
+  uploadedBy String
+  createdAt  DateTime @default(now())
+  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  uploader   User     @relation("LeadDocUploader", fields: [uploadedBy], references: [id])
+  @@index([leadId])
+}
+
+model LeadFollowUp {
+  id          String   @id @default(uuid())
+  leadId      String
+  type        String   // CALL / INTERVIEW / DOCUMENT / OTHER
+  note        String?
+  scheduledAt DateTime
+  completedAt DateTime?
+  status      String   @default("PENDING") // PENDING / DONE / SNOOZED
+  createdBy   String
+  createdAt   DateTime @default(now())
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  creator     User     @relation("LeadFollowUpCreator", fields: [createdBy], references: [id])
+  @@index([leadId])
+  @@index([scheduledAt])
 }
 
 model LeadActivity {
