@@ -6,9 +6,10 @@ import { toast } from "sonner"
 import {
     Plus, Loader2, X, Search, Users,
     CheckCircle2, Clock, AlertCircle, PauseCircle,
-    ChevronDown, Trash2, CalendarDays
+    ChevronDown, Trash2, CalendarDays, Upload
 } from "lucide-react"
 import { format } from "date-fns"
+import * as XLSX from "xlsx"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -52,6 +53,7 @@ type OnboardingRecord = {
     employee: {
         id: string
         firstName: string
+        middleName?: string | null
         lastName: string
         employeeId: string
         designation?: string | null
@@ -60,12 +62,78 @@ type OnboardingRecord = {
         branch: { name: string }
         isKycVerified?: boolean
         kycRejectionNote?: string | null
+        // Identity
+        nameAsPerAadhar?: string | null
+        fathersName?: string | null
+        dateOfBirth?: string | null
+        gender?: string | null
+        bloodGroup?: string | null
+        maritalStatus?: string | null
+        nationality?: string | null
+        religion?: string | null
+        caste?: string | null
+        // Contact
+        phone?: string | null
+        alternatePhone?: string | null
+        email?: string | null
+        emergencyContact1Name?: string | null
+        emergencyContact1Phone?: string | null
+        emergencyContact2Name?: string | null
+        emergencyContact2Phone?: string | null
+        // Address
+        address?: string | null
+        city?: string | null
+        state?: string | null
+        pincode?: string | null
+        permanentAddress?: string | null
+        permanentCity?: string | null
+        permanentState?: string | null
+        permanentPincode?: string | null
+        // Contract
+        contractFrom?: string | null
+        contractPeriodDays?: number | null
+        contractorCode?: string | null
+        workOrderNumber?: string | null
+        workOrderFrom?: string | null
+        workOrderTo?: string | null
+        workSkill?: string | null
+        natureOfWork?: string | null
+        categoryCode?: string | null
+        // Statutory
         aadharNumber?: string | null
         panNumber?: string | null
+        uan?: string | null
+        pfNumber?: string | null
+        esiNumber?: string | null
+        labourCardNo?: string | null
+        labourCardExpDate?: string | null
+        // Bank
         bankAccountNumber?: string | null
         bankIFSC?: string | null
         bankName?: string | null
-        documents?: any[]
+        bankBranch?: string | null
+        // Background & Medical
+        isBackgroundChecked?: boolean
+        backgroundCheckRemark?: string | null
+        isMedicalDone?: boolean
+        medicalRemark?: string | null
+        // Safety
+        safetyGoggles?: boolean
+        safetyGogglesDate?: string | null
+        safetyGloves?: boolean
+        safetyGlovesDate?: string | null
+        safetyHelmet?: boolean
+        safetyHelmetDate?: string | null
+        safetyMask?: boolean
+        safetyMaskDate?: string | null
+        safetyJacket?: boolean
+        safetyJacketDate?: string | null
+        safetyEarMuffs?: boolean
+        safetyEarMuffsDate?: string | null
+        safetyShoes?: boolean
+        safetyShoesDate?: string | null
+        documents?: unknown[]
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         employeeSalary?: any
     }
     tasks: OnboardingTask[]
@@ -78,7 +146,7 @@ type UserOption = { id: string; name: string }
 
 const AVATAR_COLORS = ["#1a9e6e", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4", "#f97316"]
 
-const CATEGORIES = ["All Tasks", "Verification", "Documents", "Welcome Kit", "Training", "Compliance", "IT Setup", "Orientation"]
+const CATEGORIES = ["All Tasks", "Employee Details", "Verification", "Documents", "Welcome Kit", "Training", "Compliance", "IT Setup", "Orientation"]
 
 const CATEGORY_STYLE: Record<string, { bg: string; color: string }> = {
     "Verification": { bg: "#fef2f2", color: "#dc2626" },
@@ -918,7 +986,9 @@ function OnboardingDrawer({ record, onClose, onUpdated }: {
 
                 {/* Task List / Content View */}
                 <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-                    {activeTab === "Verification" ? (
+                    {activeTab === "Employee Details" ? (
+                        <EmployeeDetailsPanel emp={record.employee} />
+                    ) : activeTab === "Verification" ? (
                         <VerificationPanel record={record} onUpdated={onUpdated} />
                     ) : (
                         <>
@@ -1061,6 +1131,232 @@ function OnboardingCard({ record, onClick }: { record: OnboardingRecord; onClick
     )
 }
 
+// ─── Employee Details Panel ───────────────────────────────────────────────────
+
+function EmployeeDetailsPanel({ emp }: { emp: OnboardingRecord["employee"] }) {
+    const fullName = [emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(" ")
+    const fmtBool = (v?: boolean) => v ? "Yes" : "No"
+    const fmtD = (d?: string | null) => { if (!d) return "—"; try { return format(new Date(d), "dd MMM yyyy") } catch { return "—" } }
+
+    const Section = ({ title }: { title: string }) => (
+        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid var(--border)", paddingBottom: 6, marginBottom: 10, marginTop: 16 }}>{title}</div>
+    )
+    const Field = ({ label, value }: { label: string; value?: string | null }) => (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <span style={{ fontSize: 10.5, color: "var(--text3)", fontWeight: 600 }}>{label}</span>
+            <span style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{value || "—"}</span>
+        </div>
+    )
+    const SafetyRow = ({ label, issued, date }: { label: string; issued?: boolean; date?: string | null }) => (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
+            <span style={{ fontSize: 16, color: issued ? "#16a34a" : "#dc2626" }}>{issued ? "✓" : "✗"}</span>
+            <span style={{ flex: 1, fontSize: 13, color: "var(--text)" }}>{label}</span>
+            {issued && date && <span style={{ fontSize: 11, color: "var(--text3)" }}>{fmtD(date)}</span>}
+        </div>
+    )
+
+    return (
+        <div style={{ padding: "4px 0" }}>
+            <Section title="Personal Details" />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div style={{ gridColumn: "span 2" }}>
+                    <Field label="Full Name" value={fullName} />
+                </div>
+                <Field label="Name as per Aadhar" value={emp.nameAsPerAadhar} />
+                <Field label="Father's Name" value={emp.fathersName} />
+                <Field label="Date of Birth" value={fmtD(emp.dateOfBirth)} />
+                <Field label="Gender" value={emp.gender} />
+                <Field label="Blood Group" value={emp.bloodGroup} />
+                <Field label="Marital Status" value={emp.maritalStatus} />
+                <Field label="Nationality" value={emp.nationality} />
+                <Field label="Religion" value={emp.religion} />
+                <Field label="Caste" value={emp.caste} />
+            </div>
+
+            <Section title="Contact Details" />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <Field label="Primary Phone" value={emp.phone} />
+                <Field label="Alternate Phone" value={emp.alternatePhone} />
+                <div style={{ gridColumn: "span 2" }}>
+                    <Field label="Personal Email" value={emp.email} />
+                </div>
+                <Field label="Emergency Contact 1" value={emp.emergencyContact1Name} />
+                <Field label="EC1 Phone" value={emp.emergencyContact1Phone} />
+                <Field label="Emergency Contact 2" value={emp.emergencyContact2Name} />
+                <Field label="EC2 Phone" value={emp.emergencyContact2Phone} />
+            </div>
+
+            <Section title="Address" />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div style={{ gridColumn: "span 2" }}>
+                    <Field label="Current Address" value={emp.address} />
+                </div>
+                <Field label="City" value={emp.city} />
+                <Field label="State" value={emp.state} />
+                <Field label="Pincode" value={emp.pincode} />
+                <div style={{ gridColumn: "span 2" }}>
+                    <Field label="Permanent Address" value={emp.permanentAddress} />
+                </div>
+                <Field label="Perm. City" value={emp.permanentCity} />
+                <Field label="Perm. State" value={emp.permanentState} />
+                <Field label="Perm. Pincode" value={emp.permanentPincode} />
+            </div>
+
+            <Section title="Contract & Work" />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <Field label="Contract From" value={fmtD(emp.contractFrom)} />
+                <Field label="Contract Period (Days)" value={emp.contractPeriodDays != null ? String(emp.contractPeriodDays) : null} />
+                <Field label="Contractor Code" value={emp.contractorCode} />
+                <Field label="Work Order No." value={emp.workOrderNumber} />
+                <Field label="Work Order From" value={fmtD(emp.workOrderFrom)} />
+                <Field label="Work Order To" value={fmtD(emp.workOrderTo)} />
+                <Field label="Work Skill" value={emp.workSkill} />
+                <Field label="Nature of Work" value={emp.natureOfWork} />
+                <Field label="Designation" value={emp.designation} />
+                <Field label="Category" value={emp.categoryCode} />
+            </div>
+
+            <Section title="Statutory / Compliance" />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <Field label="Aadhar No." value={emp.aadharNumber} />
+                <Field label="PAN No." value={emp.panNumber} />
+                <Field label="UAN" value={emp.uan} />
+                <Field label="PF No." value={emp.pfNumber} />
+                <Field label="ESI No." value={emp.esiNumber} />
+                <Field label="Labour Card No." value={emp.labourCardNo} />
+                <Field label="Labour Card Expiry" value={fmtD(emp.labourCardExpDate)} />
+            </div>
+
+            <Section title="Bank Details" />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <Field label="Bank Name" value={emp.bankName} />
+                <Field label="Branch" value={emp.bankBranch} />
+                <Field label="IFSC Code" value={emp.bankIFSC} />
+                <Field label="Account Number" value={emp.bankAccountNumber} />
+            </div>
+
+            <Section title="Background & Medical" />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <Field label="Background Check" value={fmtBool(emp.isBackgroundChecked)} />
+                <Field label="BG Remark" value={emp.backgroundCheckRemark} />
+                <Field label="Medical Done" value={fmtBool(emp.isMedicalDone)} />
+                <Field label="Medical Remark" value={emp.medicalRemark} />
+            </div>
+
+            <Section title="Safety Equipment" />
+            <div style={{ marginTop: 4 }}>
+                <SafetyRow label="Safety Goggles" issued={emp.safetyGoggles} date={emp.safetyGogglesDate} />
+                <SafetyRow label="Hand Gloves" issued={emp.safetyGloves} date={emp.safetyGlovesDate} />
+                <SafetyRow label="Helmet" issued={emp.safetyHelmet} date={emp.safetyHelmetDate} />
+                <SafetyRow label="Mask" issued={emp.safetyMask} date={emp.safetyMaskDate} />
+                <SafetyRow label="Safety Jacket" issued={emp.safetyJacket} date={emp.safetyJacketDate} />
+                <SafetyRow label="Ear Muffs" issued={emp.safetyEarMuffs} date={emp.safetyEarMuffsDate} />
+                <SafetyRow label="Safety Shoes" issued={emp.safetyShoes} date={emp.safetyShoesDate} />
+            </div>
+        </div>
+    )
+}
+
+// ─── CLMS Import Modal ────────────────────────────────────────────────────────
+
+function CLMSImportModal({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: () => void }) {
+    const [loading, setLoading] = useState(false)
+    const [result, setResult] = useState<{ imported: number; skipped: number; errors: { row: number; reason: string }[] } | null>(null)
+
+    const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        setLoading(true)
+        setResult(null)
+        try {
+            const ab = await file.arrayBuffer()
+            const wb = XLSX.read(ab, { type: "array" })
+            const ws = wb.Sheets["ContratorEmployee"] ?? wb.Sheets[wb.SheetNames[0]]
+            const rows = XLSX.utils.sheet_to_json(ws)
+            const res = await fetch("/api/employees/import/clms", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ rows }),
+            })
+            const data = await res.json()
+            setResult(data)
+            if (data.imported > 0) {
+                toast.success(`${data.imported} employees imported!`)
+                onDone()
+            }
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "Import failed")
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    if (!open) return null
+    return (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+            <div style={{ background: "var(--surface)", borderRadius: 16, border: "1px solid var(--border)", width: "100%", maxWidth: 480, boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+                    <div>
+                        <p style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", margin: 0 }}>Import from CLMS Excel</p>
+                        <p style={{ fontSize: 12, color: "var(--text3)", margin: "2px 0 0" }}>Upload Growus CLMS file</p>
+                    </div>
+                    <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text3)", padding: 4 }}>
+                        <X size={18} />
+                    </button>
+                </div>
+                <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+                    <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12, fontSize: 12, color: "var(--text2)" }}>
+                        The <strong>ContratorEmployee</strong> sheet will be imported. All employees will be created with onboarding status <strong>IN_PROGRESS</strong>.
+                    </div>
+                    {!result && (
+                        <label style={{
+                            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                            border: "2px dashed var(--border)", borderRadius: 10, padding: "24px 16px",
+                            cursor: loading ? "wait" : "pointer", color: "var(--accent)", fontWeight: 600, fontSize: 13,
+                            opacity: loading ? 0.6 : 1,
+                        }}>
+                            {loading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
+                            {loading ? "Importing..." : "Choose .xls / .xlsx file"}
+                            <input type="file" accept=".xls,.xlsx" onChange={handleFile} style={{ display: "none" }} disabled={loading} />
+                        </label>
+                    )}
+                    {result && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                            <div style={{ display: "flex", gap: 10 }}>
+                                <div style={{ flex: 1, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: 12, textAlign: "center" }}>
+                                    <p style={{ fontSize: 24, fontWeight: 700, color: "#16a34a", margin: 0 }}>{result.imported}</p>
+                                    <p style={{ fontSize: 11, color: "#15803d", margin: "2px 0 0" }}>Imported</p>
+                                </div>
+                                <div style={{ flex: 1, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: 12, textAlign: "center" }}>
+                                    <p style={{ fontSize: 24, fontWeight: 700, color: "#dc2626", margin: 0 }}>{result.skipped}</p>
+                                    <p style={{ fontSize: 11, color: "#b91c1c", margin: "2px 0 0" }}>Skipped</p>
+                                </div>
+                            </div>
+                            {result.errors.length > 0 && (
+                                <div style={{ maxHeight: 160, overflowY: "auto", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: 10 }}>
+                                    {result.errors.map((e, i) => (
+                                        <p key={i} style={{ fontSize: 11, color: "#dc2626", margin: "2px 0" }}>Row {e.row}: {e.reason}</p>
+                                    ))}
+                                </div>
+                            )}
+                            <button onClick={() => { setResult(null) }}
+                                style={{ fontSize: 12, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)", background: "none", cursor: "pointer", color: "var(--text2)" }}>
+                                Import another file
+                            </button>
+                        </div>
+                    )}
+                </div>
+                <div style={{ padding: "12px 20px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "flex-end" }}>
+                    <button onClick={onClose}
+                        style={{ padding: "8px 18px", borderRadius: 8, background: "var(--surface2)", border: "1px solid var(--border)", fontSize: 13, cursor: "pointer", color: "var(--text2)", fontWeight: 500 }}>
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function OnboardingPage() {
@@ -1070,6 +1366,7 @@ export default function OnboardingPage() {
     const [records, setRecords] = useState<OnboardingRecord[]>([])
     const [loading, setLoading] = useState(true)
     const [showStart, setShowStart] = useState(false)
+    const [showImport, setShowImport] = useState(false)
     const [selectedRecord, setSelectedRecord] = useState<OnboardingRecord | null>(null)
     const [search, setSearch] = useState("")
     const [statusFilter, setStatusFilter] = useState<string>("ALL")
@@ -1129,13 +1426,22 @@ export default function OnboardingPage() {
                     <p className="text-[13px] text-[var(--text3)] mt-0.5">Track and manage employee onboarding checklists</p>
                 </div>
                 {session?.user?.role !== "CLIENT" && (
-                    <button
-                        onClick={() => setShowStart(true)}
-                        className="inline-flex items-center gap-2 bg-[var(--accent)] text-white rounded-[10px] text-[13px] font-medium px-4 py-2 hover:opacity-90 transition-opacity"
-                    >
-                        <Plus size={16} />
-                        Start Onboarding
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setShowImport(true)}
+                            className="inline-flex items-center gap-2 border border-[var(--border)] text-[var(--text2)] rounded-[10px] text-[13px] font-medium px-4 py-2 hover:bg-[var(--surface2)] transition-colors"
+                        >
+                            <Upload size={15} />
+                            Import CLMS
+                        </button>
+                        <button
+                            onClick={() => setShowStart(true)}
+                            className="inline-flex items-center gap-2 bg-[var(--accent)] text-white rounded-[10px] text-[13px] font-medium px-4 py-2 hover:opacity-90 transition-opacity"
+                        >
+                            <Plus size={16} />
+                            Start Onboarding
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -1197,6 +1503,11 @@ export default function OnboardingPage() {
             )}
 
             {/* Modals */}
+            <CLMSImportModal
+                open={showImport}
+                onClose={() => setShowImport(false)}
+                onDone={fetchData}
+            />
             <StartOnboardingModal
                 open={showStart}
                 onClose={() => setShowStart(false)}

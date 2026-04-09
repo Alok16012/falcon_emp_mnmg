@@ -491,6 +491,73 @@ model Employee {
   createdBy         String?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
+
+  // Identity
+  middleName            String?
+  nameAsPerAadhar       String?
+  fathersName           String?
+  bloodGroup            String?
+  maritalStatus         String?
+  marriageDate          DateTime?
+  nationality           String?   @default("Indian")
+  religion              String?
+  caste                 String?
+
+  // Statutory Numbers
+  uan                   String?
+  pfNumber              String?
+  esiNumber             String?
+  labourCardNo          String?
+  labourCardExpDate     DateTime?
+
+  // Contract Details
+  contractFrom          DateTime?
+  contractPeriodDays    Int?
+  contractorCode        String?
+  workOrderNumber       String?
+  workOrderFrom         DateTime?
+  workOrderTo           DateTime?
+  workSkill             String?
+  natureOfWork          String?
+  categoryCode          String?
+  employmentTypeCode    String?
+
+  // Emergency Contacts
+  emergencyContact1Name  String?
+  emergencyContact1Phone String?
+  emergencyContact2Name  String?
+  emergencyContact2Phone String?
+
+  // Permanent Address
+  permanentAddress      String?
+  permanentCity         String?
+  permanentState        String?
+  permanentPincode      String?
+
+  // Background & Medical
+  isBackgroundChecked   Boolean   @default(false)
+  backgroundCheckRemark String?
+  isMedicalDone         Boolean   @default(false)
+  medicalRemark         String?
+
+  // Safety Equipment Issued
+  safetyGoggles         Boolean   @default(false)
+  safetyGogglesDate     DateTime?
+  safetyGloves          Boolean   @default(false)
+  safetyGlovesDate      DateTime?
+  safetyHelmet          Boolean   @default(false)
+  safetyHelmetDate      DateTime?
+  safetyMask            Boolean   @default(false)
+  safetyMaskDate        DateTime?
+  safetyJacket          Boolean   @default(false)
+  safetyJacketDate      DateTime?
+  safetyEarMuffs        Boolean   @default(false)
+  safetyEarMuffsDate    DateTime?
+  safetyShoes           Boolean   @default(false)
+  safetyShoesDate       DateTime?
+
+  // Bank extra
+  bankBranch            String?
   user              User?              @relation("EmployeeUser", fields: [userId], references: [id], onDelete: SetNull)
   branch            Branch             @relation(fields: [branchId], references: [id])
   department        Department?        @relation(fields: [departmentId], references: [id])

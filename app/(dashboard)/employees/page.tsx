@@ -19,6 +19,7 @@ type Employee = {
     id: string
     employeeId: string
     firstName: string
+    middleName?: string
     lastName: string
     email?: string
     phone: string
@@ -43,6 +44,7 @@ type Employee = {
     bankAccountNumber?: string
     bankIFSC?: string
     bankName?: string
+    bankBranch?: string
     managerId?: string
     notes?: string
     photo?: string
@@ -50,6 +52,29 @@ type Employee = {
     branch: { id: string; name: string }
     department?: { id: string; name: string }
     _count: { attendances: number; leaves: number }
+    // New fields
+    nameAsPerAadhar?: string
+    fathersName?: string
+    bloodGroup?: string
+    maritalStatus?: string
+    nationality?: string
+    religion?: string
+    caste?: string
+    uan?: string
+    pfNumber?: string
+    esiNumber?: string
+    labourCardNo?: string
+    emergencyContact1Name?: string
+    emergencyContact1Phone?: string
+    emergencyContact2Name?: string
+    emergencyContact2Phone?: string
+    safetyGoggles?: boolean
+    safetyGloves?: boolean
+    safetyHelmet?: boolean
+    safetyMask?: boolean
+    safetyJacket?: boolean
+    safetyEarMuffs?: boolean
+    safetyShoes?: boolean
 }
 
 type Branch = { id: string; name: string; companyId?: string }
@@ -147,8 +172,17 @@ type ModalForm = {
     designation: string; departmentId: string; branchId: string; managerId: string
     dateOfJoining: string; employmentType: string; salaryType: string; basicSalary: string
     address: string; city: string; state: string; pincode: string
-    bankName: string; bankAccountNumber: string; bankIFSC: string
+    bankName: string; bankBranch: string; bankAccountNumber: string; bankIFSC: string
     status: string; notes: string
+    // Compliance
+    middleName: string; nameAsPerAadhar: string; fathersName: string; bloodGroup: string
+    maritalStatus: string; nationality: string; religion: string; caste: string
+    uan: string; pfNumber: string; esiNumber: string; labourCardNo: string
+    emergencyContact1Name: string; emergencyContact1Phone: string
+    emergencyContact2Name: string; emergencyContact2Phone: string
+    // Safety
+    safetyGoggles: boolean; safetyGloves: boolean; safetyHelmet: boolean
+    safetyMask: boolean; safetyJacket: boolean; safetyEarMuffs: boolean; safetyShoes: boolean
 }
 
 const EMPTY_FORM: ModalForm = {
@@ -157,8 +191,17 @@ const EMPTY_FORM: ModalForm = {
     designation: "", departmentId: "", branchId: "", managerId: "",
     dateOfJoining: "", employmentType: "Full-time", salaryType: "Monthly", basicSalary: "",
     address: "", city: "", state: "", pincode: "",
-    bankName: "", bankAccountNumber: "", bankIFSC: "",
-    status: "ACTIVE", notes: ""
+    bankName: "", bankBranch: "", bankAccountNumber: "", bankIFSC: "",
+    status: "ACTIVE", notes: "",
+    // Compliance
+    middleName: "", nameAsPerAadhar: "", fathersName: "", bloodGroup: "",
+    maritalStatus: "", nationality: "Indian", religion: "", caste: "",
+    uan: "", pfNumber: "", esiNumber: "", labourCardNo: "",
+    emergencyContact1Name: "", emergencyContact1Phone: "",
+    emergencyContact2Name: "", emergencyContact2Phone: "",
+    // Safety
+    safetyGoggles: false, safetyGloves: false, safetyHelmet: false,
+    safetyMask: false, safetyJacket: false, safetyEarMuffs: false, safetyShoes: false,
 }
 
 function AddBranchMini({ onCreated }: { onCreated: (b: Branch) => void }) {
@@ -250,7 +293,7 @@ function EmployeeModal({
     const [loading, setLoading] = useState(false)
     const [branches, setBranches] = useState<Branch[]>(initialBranches)
     const [departments, setDepartments] = useState<Department[]>([])
-    const [activeTab, setActiveTab] = useState<"personal" | "employment" | "bank">("personal")
+    const [activeTab, setActiveTab] = useState<"personal" | "employment" | "bank" | "compliance" | "safety">("personal")
     const [form, setForm] = useState<ModalForm>(EMPTY_FORM)
 
     // Keep branches in sync if parent list changes
@@ -283,10 +326,36 @@ function EmployeeModal({
                 state: employee.state || "",
                 pincode: employee.pincode || "",
                 bankName: employee.bankName || "",
+                bankBranch: employee.bankBranch || "",
                 bankAccountNumber: employee.bankAccountNumber || "",
                 bankIFSC: employee.bankIFSC || "",
                 status: employee.status,
                 notes: employee.notes || "",
+                // Compliance
+                middleName: employee.middleName || "",
+                nameAsPerAadhar: employee.nameAsPerAadhar || "",
+                fathersName: employee.fathersName || "",
+                bloodGroup: employee.bloodGroup || "",
+                maritalStatus: employee.maritalStatus || "",
+                nationality: employee.nationality || "Indian",
+                religion: employee.religion || "",
+                caste: employee.caste || "",
+                uan: employee.uan || "",
+                pfNumber: employee.pfNumber || "",
+                esiNumber: employee.esiNumber || "",
+                labourCardNo: employee.labourCardNo || "",
+                emergencyContact1Name: employee.emergencyContact1Name || "",
+                emergencyContact1Phone: employee.emergencyContact1Phone || "",
+                emergencyContact2Name: employee.emergencyContact2Name || "",
+                emergencyContact2Phone: employee.emergencyContact2Phone || "",
+                // Safety
+                safetyGoggles: employee.safetyGoggles ?? false,
+                safetyGloves: employee.safetyGloves ?? false,
+                safetyHelmet: employee.safetyHelmet ?? false,
+                safetyMask: employee.safetyMask ?? false,
+                safetyJacket: employee.safetyJacket ?? false,
+                safetyEarMuffs: employee.safetyEarMuffs ?? false,
+                safetyShoes: employee.safetyShoes ?? false,
             })
         } else {
             setForm(EMPTY_FORM)
@@ -339,6 +408,9 @@ function EmployeeModal({
 
     if (!open) return null
 
+    const setCheck = (key: keyof ModalForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
+        setForm(f => ({ ...f, [key]: e.target.checked }))
+
     const tabCls = (t: string) =>
         `px-4 py-2.5 text-[12px] font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${activeTab === t
             ? "border-[var(--accent)] text-[var(--accent-text)]"
@@ -361,10 +433,10 @@ function EmployeeModal({
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-[var(--border)] px-6">
-                    {(["personal", "employment", "bank"] as const).map(t => (
+                <div className="flex border-b border-[var(--border)] px-6 overflow-x-auto">
+                    {(["personal", "employment", "bank", "compliance", "safety"] as const).map(t => (
                         <button key={t} onClick={() => setActiveTab(t)} className={tabCls(t)}>
-                            {t === "personal" ? "Personal Info" : t === "employment" ? "Employment" : "Bank & Address"}
+                            {t === "personal" ? "Personal Info" : t === "employment" ? "Employment" : t === "bank" ? "Bank & Address" : t === "compliance" ? "Compliance" : "Safety"}
                         </button>
                     ))}
                 </div>
@@ -514,6 +586,10 @@ function EmployeeModal({
                                     <input value={form.bankName} onChange={set("bankName")} className={inputCls} placeholder="Bank name" />
                                 </div>
                                 <div>
+                                    <label className={labelCls}>Bank Branch</label>
+                                    <input value={form.bankBranch} onChange={set("bankBranch")} className={inputCls} placeholder="Branch name" />
+                                </div>
+                                <div>
                                     <label className={labelCls}>IFSC Code</label>
                                     <input value={form.bankIFSC} onChange={set("bankIFSC")} className={inputCls} placeholder="IFSC code" />
                                 </div>
@@ -524,11 +600,121 @@ function EmployeeModal({
                             </div>
                         </div>
                     )}
+
+                    {/* Compliance Tab */}
+                    {activeTab === "compliance" && (
+                        <div className="space-y-4">
+                            <p className="text-[11px] font-semibold text-[var(--text3)] tracking-[0.5px] uppercase">Identity</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={labelCls}>Middle Name</label>
+                                    <input value={form.middleName} onChange={set("middleName")} className={inputCls} placeholder="Middle name" />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>Name as per Aadhar</label>
+                                    <input value={form.nameAsPerAadhar} onChange={set("nameAsPerAadhar")} className={inputCls} placeholder="As on Aadhar card" />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>Father&apos;s Name</label>
+                                    <input value={form.fathersName} onChange={set("fathersName")} className={inputCls} placeholder="Father's full name" />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>Blood Group</label>
+                                    <select value={form.bloodGroup} onChange={set("bloodGroup")} className={inputCls}>
+                                        <option value="">Select</option>
+                                        {["A+","A-","B+","B-","AB+","AB-","O+","O-"].map(g => <option key={g} value={g}>{g}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className={labelCls}>Nationality</label>
+                                    <input value={form.nationality} onChange={set("nationality")} className={inputCls} placeholder="Nationality" />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>Religion</label>
+                                    <input value={form.religion} onChange={set("religion")} className={inputCls} placeholder="Religion" />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>Caste</label>
+                                    <input value={form.caste} onChange={set("caste")} className={inputCls} placeholder="Caste category" />
+                                </div>
+                            </div>
+                            <p className="text-[11px] font-semibold text-[var(--text3)] tracking-[0.5px] uppercase mt-2">Statutory Numbers</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={labelCls}>UAN (PF)</label>
+                                    <input value={form.uan} onChange={set("uan")} className={inputCls} placeholder="Universal Account Number" />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>PF Number</label>
+                                    <input value={form.pfNumber} onChange={set("pfNumber")} className={inputCls} placeholder="PF number" />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>ESI Number</label>
+                                    <input value={form.esiNumber} onChange={set("esiNumber")} className={inputCls} placeholder="ESI number" />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>Labour Card No.</label>
+                                    <input value={form.labourCardNo} onChange={set("labourCardNo")} className={inputCls} placeholder="Labour card number" />
+                                </div>
+                            </div>
+                            <p className="text-[11px] font-semibold text-[var(--text3)] tracking-[0.5px] uppercase mt-2">Emergency Contacts</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className={labelCls}>EC1 Name</label>
+                                    <input value={form.emergencyContact1Name} onChange={set("emergencyContact1Name")} className={inputCls} placeholder="Contact person name" />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>EC1 Phone</label>
+                                    <input value={form.emergencyContact1Phone} onChange={set("emergencyContact1Phone")} className={inputCls} placeholder="Contact phone" />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>EC2 Name</label>
+                                    <input value={form.emergencyContact2Name} onChange={set("emergencyContact2Name")} className={inputCls} placeholder="Contact person name" />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>EC2 Phone</label>
+                                    <input value={form.emergencyContact2Phone} onChange={set("emergencyContact2Phone")} className={inputCls} placeholder="Contact phone" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Safety Tab */}
+                    {activeTab === "safety" && (
+                        <div className="space-y-3">
+                            <p className="text-[11px] font-semibold text-[var(--text3)] tracking-[0.5px] uppercase">Safety Equipment Issued</p>
+                            {([
+                                { key: "safetyGoggles", label: "Safety Goggles" },
+                                { key: "safetyGloves", label: "Hand Gloves" },
+                                { key: "safetyHelmet", label: "Helmet" },
+                                { key: "safetyMask", label: "Mask" },
+                                { key: "safetyJacket", label: "Safety Jacket" },
+                                { key: "safetyEarMuffs", label: "Ear Muffs" },
+                                { key: "safetyShoes", label: "Safety Shoes" },
+                            ] as { key: keyof ModalForm; label: string }[]).map(item => (
+                                <div key={item.key} className="flex items-center gap-3 p-3 rounded-[8px] border border-[var(--border)] bg-[var(--surface2)]/30">
+                                    <input
+                                        type="checkbox"
+                                        id={item.key}
+                                        checked={!!form[item.key]}
+                                        onChange={setCheck(item.key)}
+                                        className="w-4 h-4 accent-[var(--accent)]"
+                                    />
+                                    <label htmlFor={item.key} className="text-[13px] text-[var(--text)] cursor-pointer select-none flex-1">
+                                        {item.label}
+                                    </label>
+                                    {form[item.key] && (
+                                        <span className="text-[11px] text-[#16a34a] font-medium">Issued</span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </form>
 
                 <div className="px-6 py-4 border-t border-[var(--border)] flex items-center justify-between">
                     <div className="flex gap-1">
-                        {(["personal", "employment", "bank"] as const).map((t, i) => (
+                        {(["personal", "employment", "bank", "compliance", "safety"] as const).map((t) => (
                             <div
                                 key={t}
                                 onClick={() => setActiveTab(t)}
@@ -540,10 +726,14 @@ function EmployeeModal({
                         <button onClick={onClose} type="button" className="px-4 py-2 text-[13px] font-medium text-[var(--text2)] hover:text-[var(--text)] rounded-[8px] hover:bg-[var(--surface2)] transition-colors">
                             Cancel
                         </button>
-                        {activeTab !== "bank" ? (
+                        {activeTab !== "safety" ? (
                             <button
                                 type="button"
-                                onClick={() => setActiveTab(activeTab === "personal" ? "employment" : "bank")}
+                                onClick={() => {
+                                    const order = ["personal", "employment", "bank", "compliance", "safety"] as const
+                                    const idx = order.indexOf(activeTab as typeof order[number])
+                                    if (idx < order.length - 1) setActiveTab(order[idx + 1])
+                                }}
                                 className="inline-flex items-center gap-2 px-5 py-2 bg-[var(--accent)] text-white rounded-[8px] text-[13px] font-medium hover:opacity-90 transition-opacity"
                             >
                                 Next

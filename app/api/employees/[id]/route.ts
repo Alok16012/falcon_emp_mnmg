@@ -54,6 +54,17 @@ export async function PUT(
             aadharNumber, panNumber, bankAccountNumber, bankIFSC, bankName,
             photo, designation, departmentId, branchId,
             dateOfJoining, dateOfLeaving, status, employmentType, basicSalary, notes,
+            // New fields
+            middleName, nameAsPerAadhar, fathersName, bloodGroup, maritalStatus, marriageDate, nationality, religion, caste,
+            uan, pfNumber, esiNumber, labourCardNo, labourCardExpDate,
+            contractFrom, contractPeriodDays, contractorCode, workOrderNumber, workOrderFrom, workOrderTo, workSkill, natureOfWork, categoryCode, employmentTypeCode,
+            emergencyContact1Name, emergencyContact1Phone, emergencyContact2Name, emergencyContact2Phone,
+            permanentAddress, permanentCity, permanentState, permanentPincode,
+            isBackgroundChecked, backgroundCheckRemark, isMedicalDone, medicalRemark,
+            safetyGoggles, safetyGogglesDate, safetyGloves, safetyGlovesDate,
+            safetyHelmet, safetyHelmetDate, safetyMask, safetyMaskDate,
+            safetyJacket, safetyJacketDate, safetyEarMuffs, safetyEarMuffsDate,
+            safetyShoes, safetyShoesDate, bankBranch,
         } = body
 
         const updateData: Record<string, unknown> = {}
@@ -83,6 +94,58 @@ export async function PUT(
         if (employmentType !== undefined) updateData.employmentType = employmentType
         if (basicSalary !== undefined) updateData.basicSalary = basicSalary ? parseFloat(basicSalary) : 0
         if (notes !== undefined) updateData.notes = notes
+        // New fields
+        if (middleName !== undefined) updateData.middleName = middleName || null
+        if (nameAsPerAadhar !== undefined) updateData.nameAsPerAadhar = nameAsPerAadhar || null
+        if (fathersName !== undefined) updateData.fathersName = fathersName || null
+        if (bloodGroup !== undefined) updateData.bloodGroup = bloodGroup || null
+        if (maritalStatus !== undefined) updateData.maritalStatus = maritalStatus || null
+        if (marriageDate !== undefined) updateData.marriageDate = marriageDate ? new Date(marriageDate) : null
+        if (nationality !== undefined) updateData.nationality = nationality || null
+        if (religion !== undefined) updateData.religion = religion || null
+        if (caste !== undefined) updateData.caste = caste || null
+        if (uan !== undefined) updateData.uan = uan || null
+        if (pfNumber !== undefined) updateData.pfNumber = pfNumber || null
+        if (esiNumber !== undefined) updateData.esiNumber = esiNumber || null
+        if (labourCardNo !== undefined) updateData.labourCardNo = labourCardNo || null
+        if (labourCardExpDate !== undefined) updateData.labourCardExpDate = labourCardExpDate ? new Date(labourCardExpDate) : null
+        if (contractFrom !== undefined) updateData.contractFrom = contractFrom ? new Date(contractFrom) : null
+        if (contractPeriodDays !== undefined) updateData.contractPeriodDays = contractPeriodDays ? parseInt(String(contractPeriodDays)) : null
+        if (contractorCode !== undefined) updateData.contractorCode = contractorCode || null
+        if (workOrderNumber !== undefined) updateData.workOrderNumber = workOrderNumber || null
+        if (workOrderFrom !== undefined) updateData.workOrderFrom = workOrderFrom ? new Date(workOrderFrom) : null
+        if (workOrderTo !== undefined) updateData.workOrderTo = workOrderTo ? new Date(workOrderTo) : null
+        if (workSkill !== undefined) updateData.workSkill = workSkill || null
+        if (natureOfWork !== undefined) updateData.natureOfWork = natureOfWork || null
+        if (categoryCode !== undefined) updateData.categoryCode = categoryCode || null
+        if (employmentTypeCode !== undefined) updateData.employmentTypeCode = employmentTypeCode || null
+        if (emergencyContact1Name !== undefined) updateData.emergencyContact1Name = emergencyContact1Name || null
+        if (emergencyContact1Phone !== undefined) updateData.emergencyContact1Phone = emergencyContact1Phone || null
+        if (emergencyContact2Name !== undefined) updateData.emergencyContact2Name = emergencyContact2Name || null
+        if (emergencyContact2Phone !== undefined) updateData.emergencyContact2Phone = emergencyContact2Phone || null
+        if (permanentAddress !== undefined) updateData.permanentAddress = permanentAddress || null
+        if (permanentCity !== undefined) updateData.permanentCity = permanentCity || null
+        if (permanentState !== undefined) updateData.permanentState = permanentState || null
+        if (permanentPincode !== undefined) updateData.permanentPincode = permanentPincode || null
+        if (isBackgroundChecked !== undefined) updateData.isBackgroundChecked = isBackgroundChecked ?? false
+        if (backgroundCheckRemark !== undefined) updateData.backgroundCheckRemark = backgroundCheckRemark || null
+        if (isMedicalDone !== undefined) updateData.isMedicalDone = isMedicalDone ?? false
+        if (medicalRemark !== undefined) updateData.medicalRemark = medicalRemark || null
+        if (safetyGoggles !== undefined) updateData.safetyGoggles = safetyGoggles ?? false
+        if (safetyGogglesDate !== undefined) updateData.safetyGogglesDate = safetyGogglesDate ? new Date(safetyGogglesDate) : null
+        if (safetyGloves !== undefined) updateData.safetyGloves = safetyGloves ?? false
+        if (safetyGlovesDate !== undefined) updateData.safetyGlovesDate = safetyGlovesDate ? new Date(safetyGlovesDate) : null
+        if (safetyHelmet !== undefined) updateData.safetyHelmet = safetyHelmet ?? false
+        if (safetyHelmetDate !== undefined) updateData.safetyHelmetDate = safetyHelmetDate ? new Date(safetyHelmetDate) : null
+        if (safetyMask !== undefined) updateData.safetyMask = safetyMask ?? false
+        if (safetyMaskDate !== undefined) updateData.safetyMaskDate = safetyMaskDate ? new Date(safetyMaskDate) : null
+        if (safetyJacket !== undefined) updateData.safetyJacket = safetyJacket ?? false
+        if (safetyJacketDate !== undefined) updateData.safetyJacketDate = safetyJacketDate ? new Date(safetyJacketDate) : null
+        if (safetyEarMuffs !== undefined) updateData.safetyEarMuffs = safetyEarMuffs ?? false
+        if (safetyEarMuffsDate !== undefined) updateData.safetyEarMuffsDate = safetyEarMuffsDate ? new Date(safetyEarMuffsDate) : null
+        if (safetyShoes !== undefined) updateData.safetyShoes = safetyShoes ?? false
+        if (safetyShoesDate !== undefined) updateData.safetyShoesDate = safetyShoesDate ? new Date(safetyShoesDate) : null
+        if (bankBranch !== undefined) updateData.bankBranch = bankBranch || null
 
         const employee = await prisma.employee.update({
             where: { id: params.id },

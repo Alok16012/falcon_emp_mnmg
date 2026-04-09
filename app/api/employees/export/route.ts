@@ -22,7 +22,10 @@ export async function GET() {
     const rows = employees.map(e => ({
         "Employee ID": e.employeeId,
         "First Name": e.firstName,
+        "Middle Name": e.middleName ?? "",
         "Last Name": e.lastName,
+        "Name As Per Aadhar": e.nameAsPerAadhar ?? "",
+        "Father's Name": e.fathersName ?? "",
         "Phone": e.phone,
         "Email": e.email ?? "",
         "Designation": e.designation ?? "",
@@ -33,6 +36,20 @@ export async function GET() {
         "Status": e.status,
         "Date of Joining": e.dateOfJoining ? new Date(e.dateOfJoining).toISOString().split("T")[0] : "",
         "City": e.city ?? "",
+        "Blood Group": e.bloodGroup ?? "",
+        "UAN": e.uan ?? "",
+        "PF No": e.pfNumber ?? "",
+        "ESI No": e.esiNumber ?? "",
+        "Aadhar No": e.aadharNumber ?? "",
+        "PAN No": e.panNumber ?? "",
+        "Labour Card No": e.labourCardNo ?? "",
+        "Contract From": e.contractFrom ? new Date(e.contractFrom).toISOString().split("T")[0] : "",
+        "Contractor Code": e.contractorCode ?? "",
+        "Work Order Number": e.workOrderNumber ?? "",
+        "Bank Name": e.bankName ?? "",
+        "Bank Branch": e.bankBranch ?? "",
+        "Bank IFSC": e.bankIFSC ?? "",
+        "Bank Account": e.bankAccountNumber ?? "",
     }))
 
     const wb = XLSX.utils.book_new()
