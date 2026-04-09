@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import {
@@ -11,9 +11,10 @@ import {
     UserCheck, Banknote, Building2, Wrench,
     FileText, GraduationCap, Award, BarChart2,
     Flame, Droplet, Thermometer, CheckSquare, AlertCircle,
-    TrendingUp
+    TrendingUp, Download, Upload
 } from "lucide-react"
 import { format, formatDistanceToNow, parseISO } from "date-fns"
+import * as XLSX from "xlsx"
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend
@@ -226,6 +227,11 @@ export default function RecruitmentPage() {
     const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
     const [analyticsLoading, setAnalyticsLoading] = useState(false)
     const [duplicateWarning, setDuplicateWarning] = useState("")
+    const [showImportModal, setShowImportModal] = useState(false)
+    const [importRows, setImportRows] = useState<Record<string, unknown>[]>([])
+    const [importLoading, setImportLoading] = useState(false)
+    const [importResult, setImportResult] = useState<{ imported: number; skipped: number; errors: { row: number; reason: string }[] } | null>(null)
+    const importFileRef = useRef<HTMLInputElement>(null)
 
     const emptyForm = {
         candidateName: "", phone: "", email: "", city: "",
@@ -235,6 +241,95 @@ export default function RecruitmentPage() {
         score: "WARM", assignedTo: "", notes: "", nextFollowUp: ""
     }
     const [form, setForm] = useState(emptyForm)
+
+    // ── Export ────────────────────────────────────────────────────────────────
+    async function handleExport() {
+        try {
+            const params = new URLSearchParams()
+            if (filterStatus !== "ALL") params.set("status", filterStatus)
+            if (filterPriority !== "ALL") params.set("priority", filterPriority)
+            if (filterScore !== "ALL") params.set("score", filterScore)
+            if (searchQ) params.set("search", searchQ)
+            const res = await fetch(`/api/recruitment/export?${params}`)
+            if (!res.ok) { toast.error("Export failed"); return }
+            const blob = await res.blob()
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = `recruitment_export_${new Date().toISOString().split("T")[0]}.xlsx`
+            document.body.appendChild(a)
+            a.click()
+            a.remove()
+            URL.revokeObjectURL(url)
+        } catch {
+            toast.error("Export failed")
+        }
+    }
+
+    function handleDownloadTemplate() {
+        const wb = XLSX.utils.book_new()
+        const ws = XLSX.utils.aoa_to_sheet([["Candidate Name", "Phone", "Email", "City", "Position", "Source", "Experience", "Qualification", "Skills", "Notes"]])
+        XLSX.utils.book_append_sheet(wb, ws, "Leads")
+        XLSX.writeFile(wb, "recruitment_template.xlsx")
+    }
+
+    function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0]
+        if (!file) return
+        const reader = new FileReader()
+        reader.onload = (ev) => {
+            const arrayBuffer = ev.target?.result as ArrayBuffer
+            const wb = XLSX.read(arrayBuffer, { type: "array" })
+            const ws = wb.Sheets[wb.SheetNames[0]]
+            const rawRows = XLSX.utils.sheet_to_json(ws) as Record<string, unknown>[]
+            // Normalize keys
+            const normalized = rawRows.map(r => {
+                const entry: Record<string, unknown> = {}
+                for (const key of Object.keys(r)) {
+                    const val = r[key]
+                    const lk = key.toLowerCase().replace(/\s+/g, "")
+                    if (lk === "candidatename") entry.candidateName = val
+                    else if (lk === "phone") entry.phone = val
+                    else if (lk === "email") entry.email = val
+                    else if (lk === "city") entry.city = val
+                    else if (lk === "position") entry.position = val
+                    else if (lk === "source") entry.source = val
+                    else if (lk === "experience") entry.experience = val
+                    else if (lk === "qualification") entry.qualification = val
+                    else if (lk === "skills") entry.skills = val
+                    else if (lk === "notes") entry.notes = val
+                    else if (lk === "priority") entry.priority = val
+                    else if (lk === "score") entry.score = val
+                }
+                return entry
+            })
+            setImportRows(normalized)
+            setImportResult(null)
+        }
+        reader.readAsArrayBuffer(file)
+    }
+
+    async function handleImportSubmit() {
+        if (importRows.length === 0) return
+        setImportLoading(true)
+        try {
+            const res = await fetch("/api/recruitment/import", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ rows: importRows }),
+            })
+            const data = await res.json()
+            setImportResult(data)
+            if (data.imported > 0) {
+                toast.success(`${data.imported} candidate(s) imported`)
+                fetchLeads()
+            }
+        } catch {
+            toast.error("Import failed")
+        } finally {
+            setImportLoading(false)
+        }
+    }
 
     // ── Fetch ──────────────────────────────────────────────────────────────────
     async function fetchLeads() {
@@ -468,13 +563,31 @@ export default function RecruitmentPage() {
                         <h1 className="text-[22px] font-bold text-[var(--text)] tracking-tight">Candidate Pipeline</h1>
                         <p className="text-[13px] text-[var(--text2)] mt-0.5">Track candidates from lead to joining</p>
                     </div>
-                    <button
-                        onClick={openAddForm}
-                        className="flex items-center gap-2 h-9 px-4 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-[13px] font-semibold rounded-[8px] transition-colors active:scale-95 shrink-0"
-                    >
-                        <Plus size={16} />
-                        Add Candidate
-                    </button>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <button
+                            onClick={handleExport}
+                            title="Export to Excel"
+                            style={{ display: "flex", alignItems: "center", gap: "6px", height: "36px", padding: "0 14px", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "13px", fontWeight: 500, borderRadius: "8px", cursor: "pointer", whiteSpace: "nowrap" }}
+                        >
+                            <Download size={15} />
+                            Export
+                        </button>
+                        <button
+                            onClick={() => { setShowImportModal(true); setImportRows([]); setImportResult(null); if (importFileRef.current) importFileRef.current.value = "" }}
+                            title="Import from Excel"
+                            style={{ display: "flex", alignItems: "center", gap: "6px", height: "36px", padding: "0 14px", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "13px", fontWeight: 500, borderRadius: "8px", cursor: "pointer", whiteSpace: "nowrap" }}
+                        >
+                            <Upload size={15} />
+                            Import
+                        </button>
+                        <button
+                            onClick={openAddForm}
+                            className="flex items-center gap-2 h-9 px-4 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-[13px] font-semibold rounded-[8px] transition-colors active:scale-95 shrink-0"
+                        >
+                            <Plus size={16} />
+                            Add Candidate
+                        </button>
+                    </div>
                 </div>
 
                 {/* Quick Stats */}
@@ -788,6 +901,80 @@ export default function RecruitmentPage() {
                         setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))
                     }}
                 />
+            )}
+
+            {/* ── Import Modal ── */}
+            {showImportModal && (
+                <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.45)" }}>
+                    <div style={{ background: "var(--surface)", borderRadius: "14px", width: "min(680px, 96vw)", maxHeight: "88vh", overflowY: "auto", padding: "24px", position: "relative" }}>
+                        <button onClick={() => setShowImportModal(false)} style={{ position: "absolute", top: "14px", right: "14px", background: "none", border: "none", cursor: "pointer", color: "var(--text)" }}><X size={18} /></button>
+                        <h2 style={{ fontSize: "16px", fontWeight: 600, marginBottom: "16px", color: "var(--text)" }}>Import Candidates</h2>
+
+                        <div style={{ display: "flex", gap: "10px", marginBottom: "16px", flexWrap: "wrap" }}>
+                            <label style={{ display: "flex", alignItems: "center", gap: "7px", padding: "8px 14px", border: "1px solid var(--border)", borderRadius: "8px", cursor: "pointer", fontSize: "13px", color: "var(--text)", background: "var(--surface)" }}>
+                                <Upload size={14} /> Choose File (.xlsx / .csv)
+                                <input ref={importFileRef} type="file" accept=".xlsx,.csv" onChange={handleImportFile} style={{ display: "none" }} />
+                            </label>
+                            <button onClick={handleDownloadTemplate} style={{ display: "flex", alignItems: "center", gap: "7px", padding: "8px 14px", border: "1px solid var(--border)", borderRadius: "8px", cursor: "pointer", fontSize: "13px", color: "var(--text)", background: "var(--surface)" }}>
+                                <Download size={14} /> Download Template
+                            </button>
+                        </div>
+
+                        {importRows.length > 0 && !importResult && (
+                            <>
+                                <p style={{ fontSize: "12px", color: "var(--text3)", marginBottom: "8px" }}>Preview (first 5 rows of {importRows.length} total)</p>
+                                <div style={{ overflowX: "auto", marginBottom: "16px" }}>
+                                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                                        <thead>
+                                            <tr style={{ background: "var(--surface)" }}>
+                                                {["Candidate Name", "Phone", "Email", "Position", "Source"].map(h => (
+                                                    <th key={h} style={{ padding: "6px 10px", textAlign: "left", borderBottom: "1px solid var(--border)", color: "var(--text3)", fontWeight: 600 }}>{h}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {importRows.slice(0, 5).map((r, i) => (
+                                                <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
+                                                    <td style={{ padding: "6px 10px", color: "var(--text)" }}>{String(r.candidateName ?? "")}</td>
+                                                    <td style={{ padding: "6px 10px", color: "var(--text)" }}>{String(r.phone ?? "")}</td>
+                                                    <td style={{ padding: "6px 10px", color: "var(--text)" }}>{String(r.email ?? "")}</td>
+                                                    <td style={{ padding: "6px 10px", color: "var(--text)" }}>{String(r.position ?? "")}</td>
+                                                    <td style={{ padding: "6px 10px", color: "var(--text)" }}>{String(r.source ?? "")}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <button
+                                    onClick={handleImportSubmit}
+                                    disabled={importLoading}
+                                    style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: importLoading ? "not-allowed" : "pointer", opacity: importLoading ? 0.7 : 1 }}
+                                >
+                                    {importLoading && <Loader2 size={14} className="animate-spin" />}
+                                    Import {importRows.length} rows
+                                </button>
+                            </>
+                        )}
+
+                        {importResult && (
+                            <div style={{ padding: "14px 16px", borderRadius: "10px", background: importResult.imported > 0 ? "#e8f7f1" : "#fef2f2", border: `1px solid ${importResult.imported > 0 ? "#6ee7b7" : "#fecaca"}` }}>
+                                <p style={{ fontSize: "14px", fontWeight: 600, color: importResult.imported > 0 ? "#047857" : "#dc2626", marginBottom: "4px" }}>
+                                    ✓ {importResult.imported} imported, {importResult.skipped} skipped (duplicates / errors)
+                                </p>
+                                {importResult.errors.length > 0 && (
+                                    <ul style={{ margin: "8px 0 0 0", padding: "0 0 0 16px", fontSize: "12px", color: "#6b7280" }}>
+                                        {importResult.errors.slice(0, 5).map((e, i) => <li key={i}>Row {e.row}: {e.reason}</li>)}
+                                        {importResult.errors.length > 5 && <li>…and {importResult.errors.length - 5} more</li>}
+                                    </ul>
+                                )}
+                            </div>
+                        )}
+
+                        {importRows.length === 0 && !importResult && (
+                            <p style={{ fontSize: "13px", color: "var(--text3)" }}>Select an .xlsx or .csv file to preview and import candidates.</p>
+                        )}
+                    </div>
+                </div>
             )}
         </div>
     )

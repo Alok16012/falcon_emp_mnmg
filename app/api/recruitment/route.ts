@@ -65,6 +65,14 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Candidate name, phone, position and source are required" }, { status: 400 })
         }
 
+        // Resolve real user ID from DB (session.user.id may be a demo-xxx string)
+        const realUser = await prisma.user.findUnique({ where: { id: session.user.id } })
+            ?? await prisma.user.findUnique({ where: { email: session.user.email ?? "" } })
+        if (!realUser) {
+            return NextResponse.json({ error: "Your account is not found in the database. Please log in again." }, { status: 403 })
+        }
+        const creatorId = realUser.id
+
         // Duplicate check on phone
         const existing = await prisma.lead.findFirst({ where: { phone } })
         if (existing) {
@@ -93,7 +101,7 @@ export async function POST(req: Request) {
                 assignedTo: assignedTo || null,
                 notes: notes || null,
                 nextFollowUp: nextFollowUp ? new Date(nextFollowUp) : null,
-                createdBy: session.user.id,
+                createdBy: creatorId,
             },
             include: {
                 assignee: { select: { id: true, name: true } },
@@ -105,7 +113,7 @@ export async function POST(req: Request) {
         await prisma.leadActivity.create({
             data: {
                 leadId: lead.id,
-                userId: session.user.id,
+                userId: creatorId,
                 type: "note",
                 content: `Candidate ${candidateName} added for ${position} position`
             }
