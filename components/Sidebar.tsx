@@ -104,6 +104,7 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
                 { name: "Exit", href: "/exit", icon: LogOut, roles: ["ADMIN", "MANAGER"] },
                 { name: "LMS", href: "/lms", icon: GraduationCap, roles: ["ADMIN", "MANAGER"] },
                 { name: "My Learning", href: "/lms/learn", icon: GraduationCap, roles: ["ADMIN", "MANAGER", "INSPECTION_BOY"] },
+                { name: "My Profile", href: "/profile", icon: UserCheck, roles: ["INSPECTION_BOY"] },
             ]
         },
         {

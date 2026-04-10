@@ -1,178 +1,457 @@
 "use client"
-
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useSession } from "next-auth/react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { User, Phone, Mail, ShieldCheck, Loader2, CheckCircle2, Save } from "lucide-react"
 import { toast } from "sonner"
+import {
+    User, Phone, Mail, Save, Loader2, Upload, FileText,
+    CheckCircle2, Clock, XCircle, AlertCircle, ChevronDown,
+    IndianRupee, Shield, ClipboardList, X
+} from "lucide-react"
 
-export default function ProfilePage() {
-    const { data: session, update } = useSession()
-    const [loading, setLoading] = useState(true)
-    const [saving, setSaving] = useState(false)
-    const [formData, setFormData] = useState({
-        name: "",
-        email: "",
-        phone: "",
-        role: ""
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+const DOC_TYPES = ["AADHAAR","PAN","RESUME","PHOTO","CERTIFICATE","BANK_PROOF","OFFER_LETTER","OTHER"]
+const DOC_LABELS: Record<string, string> = {
+    AADHAAR:"Aadhaar Card", PAN:"PAN Card", RESUME:"Resume / CV",
+    PHOTO:"Passport Photo", CERTIFICATE:"Educational Certificate",
+    BANK_PROOF:"Bank Proof / Passbook", OFFER_LETTER:"Offer Letter", OTHER:"Other Document"
+}
+
+function statusBadge(s: string) {
+    if (s === "VERIFIED")  return <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-700">Verified ✓</span>
+    if (s === "REJECTED")  return <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-600">Rejected</span>
+    return <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700">Pending Review</span>
+}
+
+function taskStatusIcon(s: string) {
+    if (s === "COMPLETED") return <CheckCircle2 size={16} className="text-green-500 shrink-0" />
+    if (s === "SKIPPED")   return <XCircle size={16} className="text-gray-400 shrink-0" />
+    if (s === "IN_PROGRESS") return <Clock size={16} className="text-blue-500 shrink-0 animate-pulse" />
+    return <div className="w-4 h-4 rounded-full border-2 border-[var(--border)] shrink-0" />
+}
+
+// Simulate file upload — in production use Supabase Storage / S3
+async function uploadFile(file: File): Promise<string> {
+    return new Promise(resolve => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.readAsDataURL(file)
     })
+}
+
+// ─── Tab: My Documents ────────────────────────────────────────────────────────
+function DocsTab() {
+    const [docs, setDocs] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+    const [uploading, setUploading] = useState<string | null>(null)
+    const fileRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
     useEffect(() => {
-        const fetchProfile = async () => {
-            try {
-                const res = await fetch("/api/profile")
-                const data = await res.json()
-                setFormData({
-                    name: data.name || "",
-                    email: data.email || "",
-                    phone: data.phone || "",
-                    role: data.role || ""
-                })
-            } catch (error) {
-                console.error("Failed to fetch profile", error)
-            } finally {
-                setLoading(false)
-            }
-        }
-        fetchProfile()
+        fetch("/api/me/documents").then(r => r.json()).then(setDocs).finally(() => setLoading(false))
     }, [])
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const upload = async (type: string, file: File) => {
+        setUploading(type)
+        try {
+            const fileUrl = await uploadFile(file)
+            const res = await fetch("/api/me/documents", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ type, fileName: file.name, fileUrl })
+            })
+            if (!res.ok) throw new Error()
+            const doc = await res.json()
+            setDocs(prev => [...prev.filter(d => d.type !== type), doc])
+            toast.success(`${DOC_LABELS[type]} uploaded! Pending HR review.`)
+        } catch { toast.error("Upload failed") }
+        finally { setUploading(null) }
+    }
+
+    if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-[var(--accent)]" /></div>
+
+    return (
+        <div className="space-y-3">
+            <p className="text-[13px] text-[var(--text3)]">Upload your documents. HR will verify them. Rejected documents can be re-uploaded.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {DOC_TYPES.map(type => {
+                    const existing = docs.find(d => d.type === type)
+                    const isUploading = uploading === type
+                    return (
+                        <div key={type} className={`border rounded-xl p-4 ${existing?.status === "REJECTED" ? "border-red-200 bg-red-50" : "border-[var(--border)] bg-white"}`}>
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-2.5">
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${existing ? "bg-green-100" : "bg-[var(--surface)]"}`}>
+                                        <FileText size={15} className={existing ? "text-green-600" : "text-[var(--text3)]"} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[13px] font-medium text-[var(--text)]">{DOC_LABELS[type]}</p>
+                                        {existing && <p className="text-[11px] text-[var(--text3)] mt-0.5 truncate max-w-[150px]">{existing.fileName}</p>}
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    {existing && statusBadge(existing.status)}
+                                    <button
+                                        onClick={() => fileRefs.current[type]?.click()}
+                                        disabled={isUploading}
+                                        className="flex items-center gap-1 text-[11px] font-medium text-[var(--accent)] hover:underline disabled:opacity-50">
+                                        {isUploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                                        {existing ? "Re-upload" : "Upload"}
+                                    </button>
+                                    <input ref={el => { fileRefs.current[type] = el }} type="file"
+                                        accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+                                        onChange={e => { const f = e.target.files?.[0]; if (f) upload(type, f) }} />
+                                </div>
+                            </div>
+                            {existing?.status === "REJECTED" && existing.rejectionReason && (
+                                <div className="mt-2 flex items-start gap-1.5 text-[11px] text-red-600">
+                                    <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                                    <span>{existing.rejectionReason}</span>
+                                </div>
+                            )}
+                        </div>
+                    )
+                })}
+            </div>
+        </div>
+    )
+}
+
+// ─── Tab: My Onboarding ───────────────────────────────────────────────────────
+function OnboardingTab() {
+    const [data, setData] = useState<any>(null)
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        fetch("/api/me/onboarding").then(r => r.json()).then(setData).finally(() => setLoading(false))
+    }, [])
+
+    if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-[var(--accent)]" /></div>
+    if (!data?.onboardingRecord) return (
+        <div className="text-center py-12 text-[var(--text3)]">
+            <ClipboardList size={36} className="mx-auto mb-3 opacity-30" />
+            <p className="text-[14px]">Onboarding not started yet.</p>
+        </div>
+    )
+
+    const record = data.onboardingRecord
+    const tasks: any[] = record.tasks ?? []
+    const completed = tasks.filter(t => t.status === "COMPLETED").length
+    const pct = tasks.length ? Math.round((completed / tasks.length) * 100) : 0
+
+    // Group tasks by category
+    const grouped = tasks.reduce((acc: Record<string, any[]>, t) => {
+        acc[t.category] = [...(acc[t.category] ?? []), t]
+        return acc
+    }, {})
+
+    const statusColors: Record<string, string> = {
+        NOT_STARTED: "bg-gray-100 text-gray-600",
+        IN_PROGRESS: "bg-blue-100 text-blue-700",
+        COMPLETED: "bg-green-100 text-green-700",
+        ON_HOLD: "bg-amber-100 text-amber-700",
+    }
+
+    return (
+        <div className="space-y-4">
+            {/* Progress */}
+            <div className="bg-white border border-[var(--border)] rounded-xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                    <div>
+                        <p className="text-[14px] font-semibold text-[var(--text)]">Onboarding Progress</p>
+                        <p className="text-[12px] text-[var(--text3)] mt-0.5">{completed} of {tasks.length} tasks completed</p>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-[11px] font-semibold ${statusColors[record.status] ?? "bg-gray-100 text-gray-600"}`}>
+                        {record.status.replace("_", " ")}
+                    </span>
+                </div>
+                <div className="w-full h-2 bg-[var(--surface)] rounded-full overflow-hidden">
+                    <div className="h-full bg-[var(--accent)] rounded-full transition-all" style={{ width: `${pct}%` }} />
+                </div>
+                <p className="text-right text-[12px] text-[var(--accent)] font-semibold mt-1">{pct}%</p>
+            </div>
+
+            {/* Tasks by category */}
+            {Object.entries(grouped).map(([cat, catTasks]) => (
+                <div key={cat} className="bg-white border border-[var(--border)] rounded-xl overflow-hidden">
+                    <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
+                        <p className="text-[13px] font-semibold text-[var(--text)]">{cat}</p>
+                        <p className="text-[11px] text-[var(--text3)]">
+                            {catTasks.filter(t => t.status === "COMPLETED").length}/{catTasks.length}
+                        </p>
+                    </div>
+                    <div className="divide-y divide-[var(--border)]">
+                        {catTasks.map((task: any) => (
+                            <div key={task.id} className="px-4 py-3 flex items-start gap-3">
+                                {taskStatusIcon(task.status)}
+                                <div className="flex-1 min-w-0">
+                                    <p className={`text-[13px] ${task.status === "COMPLETED" ? "line-through text-[var(--text3)]" : "text-[var(--text)]"}`}>
+                                        {task.title}
+                                    </p>
+                                    {task.description && <p className="text-[11px] text-[var(--text3)] mt-0.5">{task.description}</p>}
+                                    {task.dueDate && (
+                                        <p className="text-[11px] text-amber-600 mt-0.5">
+                                            Due: {new Date(task.dueDate).toLocaleDateString("en-IN")}
+                                        </p>
+                                    )}
+                                </div>
+                                {task.isRequired && task.status !== "COMPLETED" && (
+                                    <span className="text-[10px] text-red-500 font-medium shrink-0">Required</span>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+// ─── Tab: My Payslip ─────────────────────────────────────────────────────────
+function PayslipTab() {
+    const [data, setData] = useState<{ employee: any; payslips: any[] } | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [selected, setSelected] = useState<any>(null)
+
+    useEffect(() => {
+        fetch("/api/me/payslip").then(r => r.json()).then(d => {
+            setData(d)
+            if (d.payslips?.length) setSelected(d.payslips[0])
+        }).finally(() => setLoading(false))
+    }, [])
+
+    if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-[var(--accent)]" /></div>
+    if (!data?.payslips?.length) return (
+        <div className="text-center py-12 text-[var(--text3)]">
+            <IndianRupee size={36} className="mx-auto mb-3 opacity-30" />
+            <p className="text-[14px]">No payslips available yet.</p>
+            <p className="text-[12px] mt-1">Payslips will appear here once HR processes your salary.</p>
+        </div>
+    )
+
+    const p = selected
+
+    return (
+        <div className="space-y-4">
+            {/* Month selector */}
+            <div className="flex gap-2 overflow-x-auto pb-1">
+                {data.payslips.map((ps: any) => (
+                    <button key={ps.id} onClick={() => setSelected(ps)}
+                        className={`shrink-0 px-3 py-1.5 rounded-lg text-[12px] font-medium border transition-colors ${selected?.id === ps.id ? "bg-[var(--accent)] text-white border-[var(--accent)]" : "bg-white border-[var(--border)] text-[var(--text3)]"}`}>
+                        {MONTHS[ps.month - 1]} {ps.year}
+                    </button>
+                ))}
+            </div>
+
+            {p && (
+                <div className="bg-white border border-[var(--border)] rounded-xl overflow-hidden">
+                    {/* Header */}
+                    <div className="bg-[var(--accent)] text-white px-6 py-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-[18px] font-bold">{data.employee.firstName} {data.employee.lastName}</p>
+                                <p className="text-[12px] opacity-80 mt-0.5">{data.employee.employeeId} · {data.employee.designation}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[13px] opacity-80">Pay Period</p>
+                                <p className="text-[16px] font-bold">{MONTHS[p.month - 1]} {p.year}</p>
+                            </div>
+                        </div>
+                        <div className="mt-4 text-center">
+                            <p className="text-[12px] opacity-80">Net Salary</p>
+                            <p className="text-[32px] font-bold">₹{Math.round(p.netSalary).toLocaleString("en-IN")}</p>
+                        </div>
+                    </div>
+
+                    <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+                        {/* Earnings */}
+                        <div>
+                            <p className="text-[12px] font-semibold text-[var(--text3)] uppercase tracking-wide mb-3">Earnings</p>
+                            <div className="space-y-2">
+                                {[
+                                    ["Basic", p.basicSalary],
+                                    ["DA", p.da],
+                                    ["HRA", p.hra],
+                                    ["Washing", p.washing],
+                                    ["Bonus", p.bonus],
+                                    ["OT Pay", p.overtimePay],
+                                ].filter(([, v]) => Number(v) > 0).map(([label, val]) => (
+                                    <div key={label as string} className="flex justify-between text-[13px]">
+                                        <span className="text-[var(--text3)]">{label}</span>
+                                        <span className="font-medium">₹{Math.round(val as number).toLocaleString("en-IN")}</span>
+                                    </div>
+                                ))}
+                                <div className="flex justify-between text-[13px] border-t border-[var(--border)] pt-2 font-semibold">
+                                    <span>Gross Earnings</span>
+                                    <span className="text-[var(--accent)]">₹{Math.round(p.grossSalary).toLocaleString("en-IN")}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Deductions */}
+                        <div>
+                            <p className="text-[12px] font-semibold text-[var(--text3)] uppercase tracking-wide mb-3">Deductions</p>
+                            <div className="space-y-2">
+                                {[
+                                    ["PF (Employee)", p.pfEmployee],
+                                    ["ESIC (0.75%)", p.esiEmployee],
+                                    ["Professional Tax", p.pt],
+                                    ["Canteen", p.canteen],
+                                    ["Penalty", p.penalty],
+                                    ["Advance", p.advance],
+                                    ["Other", p.otherDeductions],
+                                ].filter(([, v]) => Number(v) > 0).map(([label, val]) => (
+                                    <div key={label as string} className="flex justify-between text-[13px]">
+                                        <span className="text-[var(--text3)]">{label}</span>
+                                        <span className="text-red-600">-₹{Math.round(val as number).toLocaleString("en-IN")}</span>
+                                    </div>
+                                ))}
+                                <div className="flex justify-between text-[13px] border-t border-[var(--border)] pt-2 font-semibold">
+                                    <span>Total Deductions</span>
+                                    <span className="text-red-600">-₹{Math.round(p.totalDeductions).toLocaleString("en-IN")}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Attendance + Net */}
+                    <div className="border-t border-[var(--border)] px-5 py-4 bg-[var(--surface)] grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                        {[
+                            ["Working Days", p.workingDays],
+                            ["Days Present", p.presentDays],
+                            ["LOP Days", p.workingDays - p.presentDays],
+                            ["OT Days", p.otDays],
+                        ].map(([label, val]) => (
+                            <div key={label as string}>
+                                <p className="text-[11px] text-[var(--text3)]">{label}</p>
+                                <p className="text-[18px] font-bold text-[var(--text)]">{val}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* CTC row */}
+                    <div className="border-t border-[var(--border)] px-5 py-3 flex items-center justify-between text-[12px] text-[var(--text3)]">
+                        <span>Employer PF: <b className="text-[var(--text)]">₹{p.pfEmployer}</b></span>
+                        <span>Employer ESIC: <b className="text-[var(--text)]">₹{p.esiEmployer}</b></span>
+                        <span>CTC: <b className="text-purple-700">₹{Math.round(p.ctc).toLocaleString("en-IN")}</b></span>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
+// ─── Main Profile Page ────────────────────────────────────────────────────────
+export default function ProfilePage() {
+    const { data: session, update } = useSession()
+    const [activeTab, setActiveTab] = useState<"profile"|"documents"|"onboarding"|"payslip">("profile")
+    const [loading, setLoading] = useState(true)
+    const [saving, setSaving] = useState(false)
+    const [formData, setFormData] = useState({ name: "", email: "", phone: "", role: "" })
+
+    const isEmployee = session?.user?.role === "INSPECTION_BOY"
+
+    useEffect(() => {
+        fetch("/api/profile").then(r => r.json()).then(d => {
+            setFormData({ name: d.name||"", email: d.email||"", phone: d.phone||"", role: d.role||"" })
+        }).finally(() => setLoading(false))
+    }, [])
+
+    const saveProfile = async (e: React.FormEvent) => {
         e.preventDefault()
         setSaving(true)
         try {
             const res = await fetch("/api/profile", {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: formData.name,
-                    phone: formData.phone
-                })
+                method: "PUT", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: formData.name, phone: formData.phone })
             })
-
-            if (res.ok) {
-                await update({
-                    name: formData.name,
-                })
-                toast.success("Profile updated successfully!")
-            } else {
-                toast.error("Failed to update profile.")
-            }
-        } catch (error) {
-            toast.error("An error occurred.")
-        } finally {
-            setSaving(false)
-        }
+            if (!res.ok) throw new Error()
+            await update({ name: formData.name })
+            toast.success("Profile updated!")
+        } catch { toast.error("Failed to update profile") }
+        finally { setSaving(false) }
     }
 
-    const roleBadgeStyles: Record<string, { bg: string; color: string }> = {
-        ADMIN: { bg: "#e8f7f1", color: "#0d6b4a" },
-        MANAGER: { bg: "#eff6ff", color: "#1d4ed8" },
+    if (loading) return <div className="flex h-[50vh] items-center justify-center"><Loader2 className="animate-spin text-[var(--accent)]" /></div>
+
+    const roleBadge: Record<string, { bg: string; color: string }> = {
+        ADMIN:          { bg: "#e8f7f1", color: "#0d6b4a" },
+        MANAGER:        { bg: "#eff6ff", color: "#1d4ed8" },
         INSPECTION_BOY: { bg: "#fef3c7", color: "#92400e" },
     }
-    const roleBadge = roleBadgeStyles[formData.role] || { bg: "#f9f8f5", color: "#6b6860" }
-    const roleLabel = formData.role.replace("_", " ")
+    const badge = roleBadge[formData.role] ?? { bg: "#f9f8f5", color: "#6b6860" }
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-[#f5f4f0] flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-[#9e9b95]" />
-            </div>
-        )
-    }
+    const tabs = [
+        { key: "profile",    label: "Profile",       icon: User },
+        ...(isEmployee ? [
+            { key: "documents",  label: "My Documents",  icon: FileText },
+            { key: "onboarding", label: "My Onboarding", icon: ClipboardList },
+            { key: "payslip",    label: "My Payslip",    icon: IndianRupee },
+        ] : [])
+    ] as { key: typeof activeTab; label: string; icon: any }[]
 
     return (
-        <div className="min-h-screen bg-[#f5f4f0] p-6 lg:p-7">
-            <div className="text-center mb-6">
-                <h1 className="text-[22px] font-semibold text-[#1a1a18] tracking-[-0.4px]">Account Settings</h1>
-                <p className="text-[13px] text-[#9e9b95] mt-1">Manage your professional profile and contact info</p>
+        <div className="max-w-3xl mx-auto pb-12 space-y-5">
+            {/* Header card */}
+            <div className="bg-white border border-[var(--border)] rounded-2xl p-6 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-[#1a1a18] text-white flex items-center justify-center text-[22px] font-bold shrink-0">
+                    {formData.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                    <p className="text-[17px] font-semibold text-[var(--text)]">{formData.name}</p>
+                    <p className="text-[12px] text-[var(--text3)] mt-0.5">{formData.email}</p>
+                    <span className="inline-block mt-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wide"
+                        style={{ backgroundColor: badge.bg, color: badge.color }}>
+                        {formData.role.replace("_", " ")}
+                    </span>
+                </div>
             </div>
 
-            <form onSubmit={handleSubmit}>
-                <div className="bg-white border border-[#e8e6e1] rounded-[16px] w-[480px] mx-auto p-7 shadow-none">
-                    <div className="flex items-center gap-4 mb-5 pb-5 border-b border-[#e8e6e1]">
-                        <div className="w-14 h-14 rounded-full bg-[#1a1a18] text-white flex items-center justify-center text-[20px] font-semibold">
-                            {formData.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                            <p className="text-[16px] font-semibold text-[#1a1a18] mb-1">{formData.name}</p>
-                            <span
-                                className="inline-block rounded-[20px] px-[10px] py-[3px] text-[11px] font-semibold tracking-[0.5px]"
-                                style={{ backgroundColor: roleBadge.bg, color: roleBadge.color }}
-                            >
-                                {roleLabel}
-                            </span>
+            {/* Tabs */}
+            <div className="flex gap-1 bg-[var(--surface)] rounded-xl p-1 w-fit">
+                {tabs.map(({ key, label, icon: Icon }) => (
+                    <button key={key} onClick={() => setActiveTab(key)}
+                        className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${activeTab === key ? "bg-white text-[var(--text)] shadow-sm" : "text-[var(--text3)] hover:text-[var(--text)]"}`}>
+                        <Icon size={14} />{label}
+                    </button>
+                ))}
+            </div>
+
+            {/* ── Profile tab ── */}
+            {activeTab === "profile" && (
+                <form onSubmit={saveProfile} className="bg-white border border-[var(--border)] rounded-2xl p-6 space-y-5">
+                    <div>
+                        <label className="text-[11px] font-medium text-[var(--text3)] uppercase tracking-wide block mb-1.5">Full Name</label>
+                        <div className="relative">
+                            <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
+                            <input value={formData.name} onChange={e => setFormData(f => ({ ...f, name: e.target.value }))}
+                                className="w-full pl-9 pr-4 py-2.5 border border-[var(--border)] rounded-lg text-[13px] outline-none focus:border-[var(--accent)]" />
                         </div>
                     </div>
-
-                    <div className="space-y-5">
-                        <div className="space-y-2">
-                            <Label htmlFor="name" className="text-[11.5px] font-medium text-[#9e9b95] uppercase tracking-[0.6px]">Full Name</Label>
-                            <div className="relative group">
-                                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-[15px] w-[15px] text-[#9e9b95]" />
-                                <Input
-                                    id="name"
-                                    className="pl-9 py-[10px] pr-4 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13.5px] font-medium text-[#1a1a18] focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:outline-none transition-all w-full"
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label className="text-[11.5px] font-medium text-[#9e9b95] uppercase tracking-[0.6px]">
-                                Email Address <span className="text-[#9e9b95] font-normal normal-case tracking-normal">(Read-only)</span>
-                            </Label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-[15px] w-[15px] text-[#9e9b95]" />
-                                <Input
-                                    className="pl-9 py-[10px] pr-4 bg-[#f5f4f0] border border-dashed border-[#d4d1ca] text-[#9e9b95] cursor-not-allowed w-full"
-                                    value={formData.email}
-                                    disabled
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="phone" className="text-[11.5px] font-medium text-[#9e9b95] uppercase tracking-[0.6px]">Phone Number</Label>
-                            <div className="relative group">
-                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-[15px] w-[15px] text-[#9e9b95]" />
-                                <Input
-                                    id="phone"
-                                    type="tel"
-                                    placeholder="+91 00000 00000"
-                                    className="pl-9 py-[10px] pr-4 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13.5px] font-medium text-[#1a1a18] focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:outline-none transition-all w-full"
-                                    value={formData.phone}
-                                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                />
-                            </div>
+                    <div>
+                        <label className="text-[11px] font-medium text-[var(--text3)] uppercase tracking-wide block mb-1.5">Email <span className="normal-case font-normal">(read-only)</span></label>
+                        <div className="relative">
+                            <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
+                            <input value={formData.email} disabled
+                                className="w-full pl-9 pr-4 py-2.5 border border-dashed border-[var(--border)] rounded-lg text-[13px] text-[var(--text3)] bg-[var(--surface)] cursor-not-allowed" />
                         </div>
                     </div>
-
-                    <div className="border-t border-[#e8e6e1] mt-6 pt-5">
-                        <Button
-                            type="submit"
-                            className="w-full py-3 bg-[#1a9e6e] hover:bg-[#158a5e] text-white border-none rounded-[10px] text-[13.5px] font-semibold flex items-center justify-center gap-2 transition-colors"
-                            disabled={saving}
-                        >
-                            {saving ? (
-                                <>
-                                    <Loader2 className="h-[15px] w-[15px] animate-spin" />
-                                    Saving...
-                                </>
-                            ) : (
-                                <>
-                                    <Save className="h-[15px] w-[15px]" />
-                                    Save Profile
-                                </>
-                            )}
-                        </Button>
+                    <div>
+                        <label className="text-[11px] font-medium text-[var(--text3)] uppercase tracking-wide block mb-1.5">Phone</label>
+                        <div className="relative">
+                            <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
+                            <input value={formData.phone} onChange={e => setFormData(f => ({ ...f, phone: e.target.value }))}
+                                className="w-full pl-9 pr-4 py-2.5 border border-[var(--border)] rounded-lg text-[13px] outline-none focus:border-[var(--accent)]" />
+                        </div>
                     </div>
-                </div>
-            </form>
+                    <button type="submit" disabled={saving}
+                        className="w-full py-2.5 bg-[var(--accent)] text-white rounded-lg text-[13px] font-semibold flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-60">
+                        {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                        Save Profile
+                    </button>
+                </form>
+            )}
+
+            {activeTab === "documents"  && <DocsTab />}
+            {activeTab === "onboarding" && <OnboardingTab />}
+            {activeTab === "payslip"    && <PayslipTab />}
         </div>
     )
 }
