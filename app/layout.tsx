@@ -12,12 +12,13 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.svg",
-    apple: "/logo.png",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Falcon EMP",
+    title: "Falcon Plus",
   },
   formatDetection: {
     telephone: false,
