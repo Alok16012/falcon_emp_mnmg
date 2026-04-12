@@ -20,9 +20,9 @@ export default withAuth(
             return NextResponse.redirect(new URL("/login", req.url))
         }
 
-        // Only ADMIN can access /admin routes
-        if (path.startsWith("/admin") && token.role !== "ADMIN") {
-            return NextResponse.redirect(new URL("/", req.url))
+        // Only ADMIN can access /admin/users (user management)
+        if (path.startsWith("/admin/users") && token.role !== "ADMIN") {
+            return NextResponse.redirect(new URL("/admin", req.url))
         }
 
         return NextResponse.next()
@@ -38,5 +38,15 @@ export default withAuth(
 )
 
 export const config = {
-    matcher: ["/admin/:path*", "/employees/:path*", "/expenses/:path*", "/leaves/:path*", "/payroll/:path*", "/departments/:path*", "/profile/:path*"],
+    matcher: [
+        "/admin/:path*",
+        "/employees/:path*",
+        "/attendance/:path*",
+        "/advances/:path*",
+        "/expenses/:path*",
+        "/leaves/:path*",
+        "/payroll/:path*",
+        "/departments/:path*",
+        "/profile/:path*",
+    ],
 }
