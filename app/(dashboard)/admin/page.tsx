@@ -88,16 +88,16 @@ export default function AdminDashboard() {
                     sub={`${stats?.labourCount ?? 0} Labour · ${stats?.staffCount ?? 0} Staff`}
                     icon={Users} color="#1a9e6e" bg="#e8f7f1" href="/employees" />
                 <StatCard label="Present Today"
-                    value={`${stats?.attendance.present ?? 0}/${stats?.totalEmployees ?? 0}`}
-                    sub={stats?.attendance.marked
+                    value={`${stats?.attendance?.present ?? 0}/${stats?.totalEmployees ?? 0}`}
+                    sub={stats?.attendance?.marked
                         ? `${stats.attendance.halfDay} half day · ${stats.attendance.absent} absent`
                         : "Attendance not marked yet"}
                     icon={UserCheck} color="#2563eb" bg="#eff6ff" href="/attendance" />
                 <StatCard label="Pending Leaves" value={stats?.pendingLeaves ?? 0}
                     sub="Awaiting approval"
                     icon={CalendarOff} color="#d97706" bg="#fef3c7" href="/leaves" />
-                <StatCard label="Advance This Month" value={`₹${(stats?.thisMonthAdvances.total ?? 0).toLocaleString()}`}
-                    sub={`${stats?.thisMonthAdvances.count ?? 0} employees`}
+                <StatCard label="Advance This Month" value={`₹${(stats?.thisMonthAdvances?.total ?? 0).toLocaleString()}`}
+                    sub={`${stats?.thisMonthAdvances?.count ?? 0} employees`}
                     icon={IndianRupee} color="#7c3aed" bg="#f5f3ff" href="/advances" />
             </div>
 
@@ -122,20 +122,20 @@ export default function AdminDashboard() {
                                     <span>Attendance rate</span>
                                     <span className="font-semibold text-[var(--text)]">
                                         {stats?.totalEmployees
-                                            ? Math.round(((stats.attendance.present + stats.attendance.halfDay * 0.5) / stats.totalEmployees) * 100)
+                                            ? Math.round((((stats.attendance?.present ?? 0) + (stats.attendance?.halfDay ?? 0) * 0.5) / stats.totalEmployees) * 100)
                                             : 0}%
                                     </span>
                                 </div>
                                 <div className="h-2.5 bg-[var(--surface2)] rounded-full overflow-hidden">
                                     <div className="h-full bg-[var(--accent)] rounded-full transition-all duration-700"
-                                        style={{ width: `${stats?.totalEmployees ? Math.round(((stats.attendance.present + stats.attendance.halfDay * 0.5) / stats.totalEmployees) * 100) : 0}%` }} />
+                                        style={{ width: `${stats?.totalEmployees ? Math.round((((stats.attendance?.present ?? 0) + (stats.attendance?.halfDay ?? 0) * 0.5) / stats.totalEmployees) * 100) : 0}%` }} />
                                 </div>
                             </div>
                             <div className="grid grid-cols-4 gap-3">
                                 {[
-                                    { label: "Present", value: stats?.attendance.present ?? 0, color: "#16a34a", bg: "#dcfce7" },
-                                    { label: "Half Day", value: stats?.attendance.halfDay ?? 0, color: "#d97706", bg: "#fef3c7" },
-                                    { label: "Absent", value: stats?.attendance.absent ?? 0, color: "#dc2626", bg: "#fee2e2" },
+                                    { label: "Present", value: stats?.attendance?.present ?? 0, color: "#16a34a", bg: "#dcfce7" },
+                                    { label: "Half Day", value: stats?.attendance?.halfDay ?? 0, color: "#d97706", bg: "#fef3c7" },
+                                    { label: "Absent", value: stats?.attendance?.absent ?? 0, color: "#dc2626", bg: "#fee2e2" },
                                     { label: "Total", value: stats?.totalEmployees ?? 0, color: "#6b7280", bg: "#f3f4f6" },
                                 ].map(s => (
                                     <div key={s.label} className="rounded-[10px] p-3 text-center" style={{ background: s.bg }}>
@@ -144,7 +144,7 @@ export default function AdminDashboard() {
                                     </div>
                                 ))}
                             </div>
-                            {!stats?.attendance.marked && (
+                            {!stats?.attendance?.marked && (
                                 <div className="mt-3 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-[8px] flex items-center gap-2">
                                     <span className="text-amber-500 text-lg">⚠️</span>
                                     <p className="text-[12px] text-amber-700 font-medium">Attendance not marked for today yet</p>
