@@ -1,11 +1,11 @@
 {
-  "name": "CIMS - Inspection Management",
-  "short_name": "CIMS",
-  "description": "Quality Inspection Management System by Growus",
+  "name": "Falcon Plus EMP",
+  "short_name": "Falcon Plus",
+  "description": "Employee Management System by Falcon Plus",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f5f4f0",
-  "theme_color": "#1a9e6e",
+  "theme_color": "#1e3799",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -25,14 +25,14 @@
   "categories": ["business", "productivity"],
   "shortcuts": [
     {
-      "name": "Submit Inspection",
-      "url": "/inspection",
-      "description": "Go to your active inspections"
+      "name": "Dashboard",
+      "url": "/admin",
+      "description": "Go to dashboard"
     },
     {
-      "name": "Approvals",
-      "url": "/approvals",
-      "description": "Review pending approvals"
+      "name": "Attendance",
+      "url": "/attendance",
+      "description": "Mark attendance"
     }
   ]
 }

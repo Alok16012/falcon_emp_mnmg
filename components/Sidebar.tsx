@@ -57,13 +57,15 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
             {/* Header / Logo */}
             <div className="flex h-[54px] items-center justify-between px-4 border-b border-[var(--border)] shrink-0">
                 <Link href="/" className="flex items-center gap-2.5">
-                    <div className="h-8 w-8 bg-[var(--accent)] rounded-[6px] flex items-center justify-center text-white">
-                        <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M3 3h18v18H3z" />
-                            <path d="M18 9h-6v6h6v-3h-3" />
+                    <div className="h-8 w-8 bg-[#1e3799] rounded-[6px] flex items-center justify-center text-white shrink-0">
+                        <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="currentColor">
+                            <path d="M4 4h10c3.3 0 6 2.7 6 6s-2.7 6-6 6H9v4H4V4zm5 8h5c1.1 0 2-.9 2-2s-.9-2-2-2H9v4z"/>
                         </svg>
                     </div>
-                    <span className="font-bold text-[16px] tracking-tight text-[var(--text)]">Growus Auto</span>
+                    <div className="flex flex-col leading-none">
+                        <span className="font-black text-[15px] tracking-tight text-[#1e3799] uppercase">Falcon</span>
+                        <span className="font-semibold text-[10px] tracking-widest text-[var(--text3)] uppercase">Plus EMP</span>
+                    </div>
                 </Link>
                 {onMobileClose && (
                     <button onClick={onMobileClose} className="p-1 md:hidden hover:bg-[var(--surface2)] rounded-md transition-colors text-[var(--text3)]">

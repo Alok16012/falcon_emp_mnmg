@@ -82,7 +82,7 @@ export function TopNav({ onMenuClick }: { onMenuClick: () => void }) {
                     <Menu size={20} />
                 </button>
                 <div className="hidden md:flex items-center gap-2 text-[13px]">
-                    <span className="text-[var(--text3)]">Falcon EMP</span>
+                    <span className="text-[var(--text3)]">Falcon Plus</span>
                     <span className="text-[var(--text3)] text-[10px]">›</span>
                     <span className="text-[var(--text)] font-medium">{pageLabel}</span>
                 </div>

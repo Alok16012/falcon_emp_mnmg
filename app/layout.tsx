@@ -7,8 +7,8 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Falcon EMP - Employee Management",
-  description: "Employee Management System for Falcon Manufacturing",
+  title: "Falcon Plus - Employee Management",
+  description: "Employee Management System by Falcon Plus",
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.svg",

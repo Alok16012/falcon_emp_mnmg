@@ -74,7 +74,7 @@ export default function AdminDashboard() {
                         Welcome back, {session?.user?.name?.split(" ")[0] || "Admin"} 👋
                     </h1>
                     <p className="text-[13px] text-[var(--text3)] mt-0.5">
-                        {format(now, "EEEE, dd MMMM yyyy")} · Falcon EMP Dashboard
+                        {format(now, "EEEE, dd MMMM yyyy")} · Falcon Plus Dashboard
                     </p>
                 </div>
                 <button onClick={fetchStats} className="p-2 rounded-[8px] border border-[var(--border)] bg-white hover:bg-[var(--surface2)] transition-colors text-[var(--text3)]">

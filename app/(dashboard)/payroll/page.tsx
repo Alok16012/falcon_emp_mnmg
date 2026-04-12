@@ -46,7 +46,7 @@ function fmt(n: number) {
     return "₹" + Math.round(n).toLocaleString("en-IN")
 }
 
-// ─── Growus formula (client-side preview) ────────────────────────────────────
+// ─── Falcon Plus formula (client-side preview) ───────────────────────────────
 function calcPreview(sal: SalarySalary, att: AttInput): CalcResult {
     const { basic, da, washing, conveyance, leaveWithWages, otherAllowance, otRatePerHour, canteenRatePerDay } = sal
     const { monthDays, workedDays, otDays, canteenDays, penalty, advance, otherDeductions, productionIncentive, lwf } = att
@@ -272,7 +272,7 @@ export default function PayrollPage() {
             const ws = XLSX.utils.json_to_sheet(rows)
             const wb = XLSX.utils.book_new()
             XLSX.utils.book_append_sheet(wb, ws, "STRUCTURE")
-            XLSX.writeFile(wb, `Growus_Payroll_${MONTHS[month-1]}_${year}.xlsx`)
+            XLSX.writeFile(wb, `FalconPlus_Payroll_${MONTHS[month-1]}_${year}.xlsx`)
             toast.success("Excel downloaded!")
         } catch (e: any) { toast.error(e.message) }
     }
@@ -301,7 +301,7 @@ export default function PayrollPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-[22px] font-semibold text-[var(--text)]">Payroll</h1>
-                    <p className="text-[13px] text-[var(--text3)]">Growus salary structure — net salary calculator</p>
+                    <p className="text-[13px] text-[var(--text3)]">Falcon Plus salary structure — net salary calculator</p>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                     {/* Month/Year selector */}
