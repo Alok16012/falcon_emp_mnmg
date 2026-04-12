@@ -84,8 +84,8 @@ export async function POST(req: Request) {
             safetyShoes, safetyShoesDate, bankBranch,
         } = body
 
-        if (!firstName || !lastName || !phone || !branchId) {
-            return new NextResponse("firstName, lastName, phone and branchId are required", { status: 400 })
+        if (!firstName || !lastName || !phone) {
+            return new NextResponse("firstName, lastName and phone are required", { status: 400 })
         }
 
         // Auto-generate employeeId as EMP-NNNN
@@ -153,7 +153,7 @@ export async function POST(req: Request) {
                 photo,
                 designation,
                 departmentId: departmentId || null,
-                branchId,
+                branchId: branchId || null,
                 dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : null,
                 status: status || "ACTIVE",
                 employmentType: employmentType || "Full-time",
