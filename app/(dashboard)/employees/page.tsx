@@ -167,10 +167,12 @@ function InfoItem({ label, value, icon }: { label: string; value: string; icon?:
 // ─── Add/Edit Modal ───────────────────────────────────────────────────────────
 
 type ModalForm = {
+    employeeCategory: string  // LABOUR or STAFF
     firstName: string; lastName: string; email: string; phone: string; alternatePhone: string
     dateOfBirth: string; gender: string; aadharNumber: string; panNumber: string
     designation: string; departmentId: string; branchId: string; managerId: string
     dateOfJoining: string; employmentType: string; salaryType: string; basicSalary: string
+    dailyRate: string  // For LABOUR
     address: string; city: string; state: string; pincode: string
     bankName: string; bankBranch: string; bankAccountNumber: string; bankIFSC: string
     status: string; notes: string
@@ -186,10 +188,12 @@ type ModalForm = {
 }
 
 const EMPTY_FORM: ModalForm = {
+    employeeCategory: "LABOUR",
     firstName: "", lastName: "", email: "", phone: "", alternatePhone: "",
     dateOfBirth: "", gender: "", aadharNumber: "", panNumber: "",
     designation: "", departmentId: "", branchId: "", managerId: "",
     dateOfJoining: "", employmentType: "Full-time", salaryType: "Monthly", basicSalary: "",
+    dailyRate: "",
     address: "", city: "", state: "", pincode: "",
     bankName: "", bankBranch: "", bankAccountNumber: "", bankIFSC: "",
     status: "ACTIVE", notes: "",
@@ -304,6 +308,7 @@ function EmployeeModal({
         setActiveTab("personal")
         if (employee) {
             setForm({
+                employeeCategory: (employee as any).employeeCategory || "STAFF",
                 firstName: employee.firstName,
                 lastName: employee.lastName,
                 email: employee.email || "",
@@ -321,6 +326,7 @@ function EmployeeModal({
                 employmentType: employee.employmentType,
                 salaryType: employee.salaryType || "Monthly",
                 basicSalary: employee.basicSalary.toString(),
+                dailyRate: (employee as any).dailyRate?.toString() || "",
                 address: employee.address || "",
                 city: employee.city || "",
                 state: employee.state || "",
@@ -432,6 +438,31 @@ function EmployeeModal({
                     </button>
                 </div>
 
+                {/* Employee Category Selector */}
+                <div className="px-6 py-3 border-b border-[var(--border)] bg-[var(--surface2)]">
+                    <p className="text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] mb-2">Employee Type</p>
+                    <div className="flex gap-2">
+                        {[
+                            { value: "LABOUR", label: "Labour", desc: "Daily wage worker", icon: "🔧" },
+                            { value: "STAFF", label: "Staff / Manager", desc: "Monthly salary", icon: "👔" },
+                        ].map(opt => (
+                            <button key={opt.value} type="button"
+                                onClick={() => setForm(f => ({ ...f, employeeCategory: opt.value, salaryType: opt.value === "LABOUR" ? "Daily" : "Monthly" }))}
+                                className={`flex-1 flex items-center gap-2.5 px-3 py-2.5 rounded-[10px] border-2 transition-all text-left ${
+                                    form.employeeCategory === opt.value
+                                        ? "border-[var(--accent)] bg-[var(--accent-light)]"
+                                        : "border-[var(--border)] bg-white hover:border-[var(--accent)]"
+                                }`}>
+                                <span className="text-xl">{opt.icon}</span>
+                                <div>
+                                    <p className={`text-[13px] font-semibold ${form.employeeCategory === opt.value ? "text-[var(--accent-text)]" : "text-[var(--text)]"}`}>{opt.label}</p>
+                                    <p className="text-[11px] text-[var(--text3)]">{opt.desc}</p>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 {/* Tabs */}
                 <div className="flex border-b border-[var(--border)] px-6 overflow-x-auto">
                     {(["personal", "employment", "bank", "compliance", "safety"] as const).map(t => (
@@ -533,16 +564,32 @@ function EmployeeModal({
                                         {EMPLOYMENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                                     </select>
                                 </div>
-                                <div>
-                                    <label className={labelCls}>Salary Type</label>
-                                    <select value={form.salaryType} onChange={set("salaryType")} className={inputCls}>
-                                        {SALARY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className={labelCls}>Basic Salary (₹)</label>
-                                    <input type="number" value={form.basicSalary} onChange={set("basicSalary")} className={inputCls} placeholder="0" min="0" />
-                                </div>
+                                {form.employeeCategory === "LABOUR" ? (
+                                    <div className="col-span-2 grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className={labelCls}>Daily Rate (₹) *</label>
+                                            <input type="number" value={form.dailyRate} onChange={set("dailyRate")} className={inputCls} placeholder="e.g. 500" min="0" />
+                                            <p className="text-[11px] text-[var(--text3)] mt-1">Per day wage · Salary cycle: 1st to 1st</p>
+                                        </div>
+                                        <div>
+                                            <label className={labelCls}>Labour Card No.</label>
+                                            <input value={form.labourCardNo} onChange={set("labourCardNo")} className={inputCls} placeholder="Labour card number" />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div>
+                                            <label className={labelCls}>Salary Type</label>
+                                            <select value={form.salaryType} onChange={set("salaryType")} className={inputCls}>
+                                                {SALARY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className={labelCls}>Monthly Salary (₹)</label>
+                                            <input type="number" value={form.basicSalary} onChange={set("basicSalary")} className={inputCls} placeholder="0" min="0" />
+                                        </div>
+                                    </>
+                                )}
                                 <div>
                                     <label className={labelCls}>Status</label>
                                     <select value={form.status} onChange={set("status")} className={inputCls}>
@@ -1620,7 +1667,15 @@ export default function EmployeesPage() {
                                                     <span className="text-[13px] text-[var(--text3)]">—</span>
                                                 )}
                                             </td>
-                                            <td className="px-4 py-3 text-[13px] text-[var(--text2)]">{emp.employmentType}</td>
+                                            <td className="px-4 py-3">
+                                                <span className={`px-2 py-0.5 rounded-[6px] text-[11px] font-semibold ${
+                                                    (emp as any).employeeCategory === "LABOUR"
+                                                        ? "bg-orange-50 text-orange-700 border border-orange-200"
+                                                        : "bg-blue-50 text-blue-700 border border-blue-200"
+                                                }`}>
+                                                    {(emp as any).employeeCategory === "LABOUR" ? "🔧 Labour" : "👔 Staff"}
+                                                </span>
+                                            </td>
                                             <td className="px-4 py-3 text-[13px] text-[var(--text2)]">{emp.phone}</td>
                                             <td className="px-4 py-3 text-[13px] text-[var(--text2)] whitespace-nowrap">
                                                 {emp.dateOfJoining ? format(new Date(emp.dateOfJoining), "dd MMM yyyy") : "—"}

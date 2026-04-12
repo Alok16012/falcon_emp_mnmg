@@ -1,5 +1,0 @@
-/_next/static/chunks/webpack-25977d370c191598.js
-/_next/static/chunks/fd9d1056-f3785a0783a6d3ec.js
-/_next/static/chunks/7023-26d53c7e3f3b57ff.js
-/_next/static/chunks/main-app-c7af0dc179356917.js
-/_next/static/chunks/9247-c6e9311141d81b34.js

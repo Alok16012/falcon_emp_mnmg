@@ -70,7 +70,7 @@ export async function POST(req: Request) {
             dateOfBirth, gender, address, city, state, pincode,
             aadharNumber, panNumber, bankAccountNumber, bankIFSC, bankName,
             photo, designation, departmentId, branchId,
-            dateOfJoining, status, employmentType, basicSalary, notes,
+            dateOfJoining, status, employmentType, basicSalary, dailyRate, employeeCategory, notes,
             // New fields
             middleName, nameAsPerAadhar, fathersName, bloodGroup, maritalStatus, marriageDate, nationality, religion, caste,
             uan, pfNumber, esiNumber, labourCardNo, labourCardExpDate,
@@ -157,7 +157,9 @@ export async function POST(req: Request) {
                 dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : null,
                 status: status || "ACTIVE",
                 employmentType: employmentType || "Full-time",
+                employeeCategory: employeeCategory || "LABOUR",
                 basicSalary: basicSalary ? parseFloat(basicSalary) : 0,
+                dailyRate: dailyRate ? parseFloat(dailyRate) : null,
                 userId,
                 // New fields
                 middleName: middleName || null,

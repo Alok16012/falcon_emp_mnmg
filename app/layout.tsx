@@ -7,8 +7,8 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "CIMS - Inspection Management",
-  description: "Quality Inspection Management System by Growus",
+  title: "Falcon EMP - Employee Management",
+  description: "Employee Management System for Falcon Manufacturing",
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.svg",
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "CIMS",
+    title: "Falcon EMP",
   },
   formatDetection: {
     telephone: false,

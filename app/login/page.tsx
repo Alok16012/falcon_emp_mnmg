@@ -151,55 +151,17 @@ export default function LoginPage() {
                         <div className="flex-1 h-px bg-[#e8e6e1]"></div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
-                        <button
-                            type="button"
-                            onClick={() => handleDemoLogin("admin@cims.com")}
-                            disabled={loading}
-                            className="flex items-center justify-center gap-1.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] py-[9px] px-3 text-[13px] font-medium text-[#6b6860] cursor-pointer transition-all hover:bg-[#e8f7f1] hover:text-[#0d6b4a] hover:border-[rgba(26,158,110,0.3)] disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                            </svg>
-                            Admin
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handleDemoLogin("manager@cims.com")}
-                            disabled={loading}
-                            className="flex items-center justify-center gap-1.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] py-[9px] px-3 text-[13px] font-medium text-[#6b6860] cursor-pointer transition-all hover:bg-[#eff6ff] hover:text-[#1d4ed8] hover:border-[rgba(29,78,216,0.2)] disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-                                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-                            </svg>
-                            Manager
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handleDemoLogin("inspector@cims.com")}
-                            disabled={loading}
-                            className="flex items-center justify-center gap-1.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] py-[9px] px-3 text-[13px] font-medium text-[#6b6860] cursor-pointer transition-all hover:bg-[#fef3c7] hover:text-[#92400e] hover:border-[rgba(217,119,6,0.2)] disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-                                <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-                            </svg>
-                            Inspector
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handleDemoLogin("client@cims.com")}
-                            disabled={loading}
-                            className="flex items-center justify-center gap-1.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] py-[9px] px-3 text-[13px] font-medium text-[#6b6860] cursor-pointer transition-all hover:bg-[#f5f3ff] hover:text-[#6d28d9] hover:border-[rgba(109,40,217,0.2)] disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                                <circle cx="12" cy="7" r="4" />
-                            </svg>
-                            Client
-                        </button>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={() => handleDemoLogin("admin@cims.com")}
+                        disabled={loading}
+                        className="w-full flex items-center justify-center gap-1.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] py-[9px] px-3 text-[13px] font-medium text-[#6b6860] cursor-pointer transition-all hover:bg-[#e8f7f1] hover:text-[#0d6b4a] hover:border-[rgba(26,158,110,0.3)] disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        </svg>
+                        Demo Admin Login
+                    </button>
                 </form>
             </div>
 

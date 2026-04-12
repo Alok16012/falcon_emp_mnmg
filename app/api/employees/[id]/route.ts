@@ -53,7 +53,7 @@ export async function PUT(
             dateOfBirth, gender, address, city, state, pincode,
             aadharNumber, panNumber, bankAccountNumber, bankIFSC, bankName,
             photo, designation, departmentId, branchId,
-            dateOfJoining, dateOfLeaving, status, employmentType, basicSalary, notes,
+            dateOfJoining, dateOfLeaving, status, employmentType, basicSalary, dailyRate, employeeCategory, notes,
             // New fields
             middleName, nameAsPerAadhar, fathersName, bloodGroup, maritalStatus, marriageDate, nationality, religion, caste,
             uan, pfNumber, esiNumber, labourCardNo, labourCardExpDate,
@@ -92,7 +92,9 @@ export async function PUT(
         if (dateOfLeaving !== undefined) updateData.dateOfLeaving = dateOfLeaving ? new Date(dateOfLeaving) : null
         if (status !== undefined) updateData.status = status
         if (employmentType !== undefined) updateData.employmentType = employmentType
+        if (employeeCategory !== undefined) updateData.employeeCategory = employeeCategory
         if (basicSalary !== undefined) updateData.basicSalary = basicSalary ? parseFloat(basicSalary) : 0
+        if (dailyRate !== undefined) updateData.dailyRate = dailyRate ? parseFloat(dailyRate) : null
         if (notes !== undefined) updateData.notes = notes
         // New fields
         if (middleName !== undefined) updateData.middleName = middleName || null

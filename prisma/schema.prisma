@@ -480,8 +480,10 @@ model Employee {
   dateOfLeaving     DateTime?
   status            EmployeeStatus     @default(ACTIVE)
   employmentType    String             @default("Full-time")
+  employeeCategory  String             @default("STAFF")  // LABOUR or STAFF
   salaryType        String?
   basicSalary       Float              @default(0)
+  dailyRate         Float?             // For LABOUR: per day rate
   managerId         String?
   notes             String?
   isKycVerified     Boolean            @default(false)

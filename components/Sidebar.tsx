@@ -5,37 +5,18 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 import {
     LayoutDashboard,
     Users,
     Building2,
-    HardHat,
-    ClipboardCheck,
-    FileText,
-    X,
-    Folder,
-    BarChart2,
-    Users2,
-    ChevronRight,
-    Sparkles,
-    TrendingUp,
-    Target,
     UserCheck,
-    MapPin,
-    Clock,
     CalendarOff,
     Wallet,
-    ClipboardList,
-    Star,
-    LogOut,
-    Package,
-    Headphones,
-    Receipt,
     CreditCard,
-    FileSignature,
-    GraduationCap,
-    Navigation
+    X,
+    Sparkles,
+    ClipboardList,
+    IndianRupee,
 } from "lucide-react"
 
 export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
@@ -43,88 +24,30 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
     const { data: session } = useSession()
     const role = session?.user?.role
 
-    const [pendingCount, setPendingCount] = useState(0)
-
-    useEffect(() => {
-        if (role === "ADMIN" || role === "MANAGER") {
-            const fetchCount = async () => {
-                try {
-                    const res = await fetch("/api/approvals?count=true")
-                    const data = await res.json()
-                    setPendingCount(data.count || 0)
-                } catch (e) {
-                    console.error("Failed to fetch pending count", e)
-                }
-            }
-            fetchCount()
-            const interval = setInterval(fetchCount, 60000)
-            return () => clearInterval(interval)
-        }
-    }, [role])
-
     const navigation = [
         {
             title: "MAIN",
             links: [
-                { name: "Dashboard", href: role === "INSPECTION_BOY" ? "/inspection" : role === "MANAGER" ? "/manager" : "/admin", icon: LayoutDashboard, roles: ["ADMIN", "MANAGER", "INSPECTION_BOY"] },
-                { name: "Client Portal", href: "/client", icon: FileText, roles: ["CLIENT"] },
+                { name: "Dashboard", href: "/admin", icon: LayoutDashboard, roles: ["ADMIN", "MANAGER"] },
             ]
         },
         {
-            title: "MANAGEMENT",
+            title: "HR MANAGEMENT",
             links: [
-                { name: "Companies", href: "/companies", icon: Building2, roles: ["ADMIN", "MANAGER"] },
-                { name: "Projects", href: "/projects", icon: Folder, roles: [] },
-                { name: "Assignments", href: "/assignments", icon: HardHat, roles: ["ADMIN", "MANAGER"] },
-                { name: "Groups", href: "/groups", icon: Users2, roles: ["ADMIN", "MANAGER"] },
-                { name: "Recruitment", href: "/recruitment", icon: Target, roles: ["ADMIN", "MANAGER"] },
                 { name: "Employees", href: "/employees", icon: UserCheck, roles: ["ADMIN", "MANAGER"] },
-                { name: "Sites", href: "/sites", icon: MapPin, roles: ["ADMIN", "MANAGER"] },
-                { name: "Field", href: "/field", icon: Navigation, roles: ["ADMIN", "MANAGER"] },
-                { name: "Billing", href: "/billing", icon: Receipt, roles: ["ADMIN", "MANAGER"] },
-                { name: "Contracts", href: "/contracts", icon: FileSignature, roles: ["ADMIN", "MANAGER"] },
-                { name: "Approvals", href: "/approvals", icon: ClipboardCheck, roles: ["ADMIN", "MANAGER"], badge: true },
-            ]
-        },
-        {
-            title: "HR OPERATIONS",
-            links: [
-                { name: "Attendance", href: "/attendance", icon: Clock, roles: ["ADMIN", "MANAGER"] },
+                { name: "Attendance", href: "/attendance", icon: ClipboardList, roles: ["ADMIN", "MANAGER"] },
+                { name: "Advance Salary", href: "/advances", icon: IndianRupee, roles: ["ADMIN", "MANAGER"] },
                 { name: "Leaves", href: "/leaves", icon: CalendarOff, roles: ["ADMIN", "MANAGER"] },
                 { name: "Payroll", href: "/payroll", icon: Wallet, roles: ["ADMIN", "MANAGER"] },
-                { name: "Assets", href: "/assets", icon: Package, roles: ["ADMIN", "MANAGER"] },
                 { name: "Expenses", href: "/expenses", icon: CreditCard, roles: ["ADMIN", "MANAGER"] },
-            ]
-        },
-        {
-            title: "PEOPLE OPS",
-            links: [
-                { name: "Onboarding", href: "/onboarding", icon: ClipboardList, roles: ["ADMIN", "MANAGER"] },
-                { name: "Performance", href: "/performance", icon: Star, roles: ["ADMIN", "MANAGER"] },
-                { name: "Exit", href: "/exit", icon: LogOut, roles: ["ADMIN", "MANAGER"] },
-                { name: "LMS", href: "/lms", icon: GraduationCap, roles: ["ADMIN", "MANAGER"] },
-                { name: "My Learning", href: "/lms/learn", icon: GraduationCap, roles: ["ADMIN", "MANAGER", "INSPECTION_BOY"] },
-                { name: "My Profile", href: "/profile", icon: UserCheck, roles: ["INSPECTION_BOY"] },
-            ]
-        },
-        {
-            title: "SUPPORT",
-            links: [
-                { name: "Helpdesk", href: "/helpdesk", icon: Headphones, roles: ["ADMIN", "MANAGER"] },
-            ]
-        },
-        {
-            title: "ANALYTICS",
-            links: [
-                { name: "Analytics", href: "/manager/analytics", icon: TrendingUp, roles: ["ADMIN", "MANAGER"] },
-                { name: "Reports", href: "/reports", icon: BarChart2, roles: ["ADMIN", "MANAGER", "INSPECTION_BOY"] },
+                { name: "Departments", href: "/departments", icon: Building2, roles: ["ADMIN", "MANAGER"] },
             ]
         },
         {
             title: "CONFIGURATION",
             links: [
                 { name: "Users", href: "/admin/users", icon: Users, roles: ["ADMIN"] },
-                { name: "Reports", href: "/reports", icon: BarChart2, roles: ["CLIENT"] },
+                { name: "My Profile", href: "/profile", icon: UserCheck, roles: ["ADMIN", "MANAGER"] },
             ]
         }
     ]
@@ -136,9 +59,7 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
                 <Link href="/" className="flex items-center gap-2.5">
                     <div className="h-8 w-8 bg-[var(--accent)] rounded-[6px] flex items-center justify-center text-white">
                         <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            {/* Square Frame */}
                             <path d="M3 3h18v18H3z" />
-                            {/* The 'G' shape inside */}
                             <path d="M18 9h-6v6h6v-3h-3" />
                         </svg>
                     </div>
@@ -175,21 +96,14 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
                                             href={link.href}
                                             onClick={onMobileClose}
                                             className={cn(
-                                                "flex items-center justify-between rounded-[8px] px-[10px] py-[8px] text-[13px] transition-all group",
+                                                "flex items-center gap-3 rounded-[8px] px-[10px] py-[8px] text-[13px] transition-all group",
                                                 isActive
                                                     ? "bg-[var(--accent-light)] text-[var(--accent-text)] font-medium"
                                                     : "text-[var(--text2)] hover:bg-[var(--surface2)] hover:text-[var(--text)]"
                                             )}
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <Icon size={18} className={cn(isActive ? "text-[var(--accent-text)]" : "text-[var(--text3)] group-hover:text-[var(--text2)]")} />
-                                                {link.name}
-                                            </div>
-                                            {link.badge && pendingCount > 0 && (
-                                                <div className="h-[18px] min-w-[18px] rounded-full bg-[var(--red)] text-white text-[10px] font-bold flex items-center justify-center px-1">
-                                                    {pendingCount}
-                                                </div>
-                                            )}
+                                            <Icon size={18} className={cn(isActive ? "text-[var(--accent-text)]" : "text-[var(--text3)] group-hover:text-[var(--text2)]")} />
+                                            {link.name}
                                         </Link>
                                     )
                                 })}
@@ -207,11 +121,8 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
                             <Sparkles size={16} fill="currentColor" />
                         </div>
                     </div>
-                    <p className="text-[12px] font-medium text-[var(--text)] mb-1">Scale your inspections</p>
-                    <p className="text-[11px] text-[var(--text2)] mb-3">Upgrade for unlimited devices</p>
-                    <button className="w-full h-8 bg-white border border-[var(--border)] text-[11px] font-semibold text-[var(--text)] rounded-[6px] hover:bg-white shadow-sm transition-all active:scale-95">
-                        Upgrade Pro
-                    </button>
+                    <p className="text-[12px] font-medium text-[var(--text)] mb-1">Manage your workforce</p>
+                    <p className="text-[11px] text-[var(--text2)] mb-3">Employee management made simple</p>
                 </div>
             </div>
 

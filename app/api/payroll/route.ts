@@ -86,33 +86,54 @@ export async function POST(req: Request) {
         const startDate = new Date(y, m - 1, 1)
         const endDate = new Date(y, m, 1)
         const attendances = await prisma.attendance.findMany({
-            where: {
-                employeeId,
-                date: { gte: startDate, lt: endDate },
-            },
+            where: { employeeId, date: { gte: startDate, lt: endDate } },
         })
 
-        const presentDays = attendances.filter(a => a.status === "PRESENT" || a.status === "HALF_DAY").length
+        const presentDays = attendances.filter(a => a.status === "PRESENT").length
+        const halfDays = attendances.filter(a => a.status === "HALF_DAY").length
         const leaveDays = attendances.filter(a => a.status === "LEAVE").length
         const lwpDays = attendances.filter(a => a.status === "ABSENT").length
         const overtimeHrs = attendances.reduce((s, a) => s + (a.overtimeHrs || 0), 0)
+        const effectiveDays = presentDays + (halfDays * 0.5)
 
-        const basicSalary = employee.basicSalary
-        const effectiveDays = presentDays > 0 ? presentDays : wDays
-        const dailyRate = basicSalary / wDays
-        const earnedBasic = dailyRate * effectiveDays
-        const hraAmt = earnedBasic * 0.2
+        // Fetch advance for this month (to deduct from net)
+        const advances = await prisma.advanceAndReimbursement.findMany({
+            where: { employeeId, type: "ADVANCE", monthToImpact: m, yearToImpact: y, status: "APPROVED" },
+        })
+        const totalAdvance = advances.reduce((s, a) => s + a.amount, 0)
+
+        const isLabour = (employee as any).employeeCategory === "LABOUR"
+        let earnedBasic: number
+        let hraAmt = 0
+        let pfEmployee = 0
+        let pfEmployer = 0
+        let esiEmployee = 0
+        let esiEmployer = 0
+
+        if (isLabour) {
+            // LABOUR: daily rate × effective days
+            const rate = (employee as any).dailyRate || employee.basicSalary
+            earnedBasic = rate * (effectiveDays > 0 ? effectiveDays : wDays)
+            // Labour usually no PF/HRA unless configured
+        } else {
+            // STAFF: monthly salary pro-rated
+            const basicSalaryMonthly = employee.basicSalary
+            const dailyRateCalc = basicSalaryMonthly / wDays
+            earnedBasic = effectiveDays > 0 ? dailyRateCalc * effectiveDays : basicSalaryMonthly
+            hraAmt = earnedBasic * 0.2
+            pfEmployee = Math.round(earnedBasic * 0.12)
+            pfEmployer = Math.round(earnedBasic * 0.12)
+            esiEmployee = earnedBasic <= 21000 ? Math.round(earnedBasic * 0.0075) : 0
+            esiEmployer = earnedBasic <= 21000 ? Math.round(earnedBasic * 0.0325) : 0
+        }
+
         const allowancesAmt = allowances || 0
         const overtimePayAmt = overtimePay || 0
         const grossSalary = earnedBasic + hraAmt + allowancesAmt + overtimePayAmt
-
-        const pfEmployee = Math.round(earnedBasic * 0.12)
-        const pfEmployer = Math.round(earnedBasic * 0.12)
-        const esiEmployee = grossSalary <= 21000 ? Math.round(grossSalary * 0.0075) : 0
-        const esiEmployer = grossSalary <= 21000 ? Math.round(grossSalary * 0.0325) : 0
         const tdsAmt = tds || 0
         const otherDeductionsAmt = otherDeductions || 0
-        const totalDeductions = pfEmployee + esiEmployee + tdsAmt + otherDeductionsAmt
+        // Advance is deducted from net salary
+        const totalDeductions = pfEmployee + esiEmployee + tdsAmt + otherDeductionsAmt + totalAdvance
         const netSalary = grossSalary - totalDeductions
 
         const data = {
@@ -126,11 +147,11 @@ export async function POST(req: Request) {
             esiEmployee,
             esiEmployer,
             tds: tdsAmt,
-            otherDeductions: otherDeductionsAmt,
-            totalDeductions,
+            otherDeductions: Math.round(otherDeductionsAmt + totalAdvance), // includes advance
+            totalDeductions: Math.round(totalDeductions),
             netSalary: Math.round(netSalary),
             workingDays: wDays,
-            presentDays: effectiveDays,
+            presentDays: Math.round(effectiveDays),
             leaveDays,
             lwpDays,
             overtimeHrs,
