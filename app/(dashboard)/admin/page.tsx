@@ -189,7 +189,7 @@ export default function AdminDashboard() {
                     <div className="p-5 space-y-3">
                         {[1,2,3].map(i => <div key={i} className="h-12 bg-[var(--surface2)] rounded-[8px] animate-pulse" />)}
                     </div>
-                ) : !stats?.recentEmployees.length ? (
+                ) : !stats?.recentEmployees?.length ? (
                     <div className="py-12 text-center text-[var(--text3)]">
                         <Users size={32} className="mx-auto mb-2 opacity-30" />
                         <p className="text-[14px]">No employees yet</p>
