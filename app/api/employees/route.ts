@@ -44,6 +44,7 @@ export async function GET(req: Request) {
             include: {
                 branch: { select: { id: true, name: true } },
                 department: { select: { id: true, name: true } },
+                employeeSalary: true,
                 _count: { select: { attendances: true, leaves: true } },
             },
             orderBy: { createdAt: "desc" },
