@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
 
-const VALID_TYPES = ["RESUME", "AADHAAR", "PAN", "PHOTO", "CERTIFICATE", "OFFER_LETTER", "OTHER"]
+const VALID_TYPES = ["RESUME", "AADHAAR", "PAN", "PHOTO", "CERTIFICATE", "BANK_PROOF", "OFFER_LETTER", "OTHER"]
 
 export async function GET(
     req: Request,

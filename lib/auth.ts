@@ -119,6 +119,20 @@ export const authOptions: NextAuthOptions = {
                 token.id = user.id
                 token.role = user.role
             }
+            // Always re-fetch role from DB so role changes take effect immediately
+            // (without needing re-login)
+            if (token.id) {
+                try {
+                    const dbUser = await prisma.user.findUnique({
+                        where: { id: token.id as string },
+                        select: { role: true, isActive: true },
+                    })
+                    if (dbUser) {
+                        token.role = dbUser.role
+                        token.isActive = dbUser.isActive
+                    }
+                } catch { /* ignore DB errors */ }
+            }
             return token
         },
         async session({ session, token }) {

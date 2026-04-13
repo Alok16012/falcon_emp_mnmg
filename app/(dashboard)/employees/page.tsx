@@ -810,6 +810,7 @@ const DOC_TYPE_CONFIG: Record<string, { label: string; color: string; bg: string
     RESUME: { label: "Resume", color: "#7c3aed", bg: "#ede9fe" },
     PHOTO: { label: "Photo", color: "#15803d", bg: "#dcfce7" },
     CERTIFICATE: { label: "Certificate", color: "#0f766e", bg: "#ccfbf1" },
+    BANK_PROOF: { label: "Bank Proof", color: "#0369a1", bg: "#e0f2fe" },
     OFFER_LETTER: { label: "Offer Letter", color: "#9333ea", bg: "#f3e8ff" },
     OTHER: { label: "Other", color: "#6b7280", bg: "#f3f4f6" },
 }
@@ -856,6 +857,27 @@ function EmployeeDrawer({
     const [uploadForm, setUploadForm] = useState({ type: "RESUME", fileName: "", fileUrl: "" })
     const [uploadSaving, setUploadSaving] = useState(false)
     const [actionLoading, setActionLoading] = useState<string | null>(null)
+    const adminFileRef = useRef<HTMLInputElement | null>(null)
+
+    const handleAdminFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        const reader = new FileReader()
+        reader.onload = () => {
+            setUploadForm(f => ({ ...f, fileName: file.name, fileUrl: reader.result as string }))
+        }
+        reader.readAsDataURL(file)
+    }
+
+    const downloadDoc = (fileUrl: string, fileName: string) => {
+        const a = document.createElement("a")
+        a.href = fileUrl
+        a.download = fileName
+        a.target = "_blank"
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+    }
 
     const fetchDocuments = async (empId: string) => {
         setDocsLoading(true)
@@ -900,8 +922,8 @@ function EmployeeDrawer({
 
     const handleUpload = async () => {
         if (!employee) return
-        if (!uploadForm.fileName.trim() || !uploadForm.fileUrl.trim()) {
-            toast.error("File name and URL are required")
+        if (!uploadForm.fileUrl.trim()) {
+            toast.error("Please select a file first")
             return
         }
         setUploadSaving(true)
@@ -1116,27 +1138,21 @@ function EmployeeDrawer({
                                         </select>
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: 11, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>File Name</label>
-                                        <input
-                                            value={uploadForm.fileName}
-                                            onChange={e => setUploadForm(f => ({ ...f, fileName: e.target.value }))}
-                                            placeholder="e.g. Aadhaar Card"
-                                            style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--surface)", color: "var(--text)", boxSizing: "border-box" }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: 11, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>File URL</label>
-                                        <input
-                                            value={uploadForm.fileUrl}
-                                            onChange={e => setUploadForm(f => ({ ...f, fileUrl: e.target.value }))}
-                                            placeholder="https://..."
-                                            style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--surface)", color: "var(--text)", boxSizing: "border-box" }}
-                                        />
-                                        <p style={{ fontSize: 11, color: "var(--text3)", marginTop: 4 }}>Tip: Upload file to Supabase Storage and paste URL here</p>
+                                        <label style={{ fontSize: 11, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>Select File</label>
+                                        <div
+                                            onClick={() => adminFileRef.current?.click()}
+                                            style={{ width: "100%", padding: "10px", borderRadius: 8, border: "2px dashed var(--border)", fontSize: 13, background: "var(--surface)", color: "var(--text3)", boxSizing: "border-box", cursor: "pointer", textAlign: "center" }}
+                                        >
+                                            {uploadForm.fileName
+                                                ? <span style={{ color: "var(--accent)", fontWeight: 500 }}>✓ {uploadForm.fileName}</span>
+                                                : "Click to choose file (PDF, JPG, PNG)"}
+                                        </div>
+                                        <input ref={adminFileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+                                            onChange={handleAdminFilePick} />
                                     </div>
                                     <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                                         <button
-                                            onClick={() => { setShowUploadForm(false); setUploadForm({ type: "RESUME", fileName: "", fileUrl: "" }) }}
+                                            onClick={() => { setShowUploadForm(false); setUploadForm({ type: "RESUME", fileName: "", fileUrl: "" }); if (adminFileRef.current) adminFileRef.current.value = "" }}
                                             style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "none", cursor: "pointer", fontSize: 12, color: "var(--text)" }}
                                         >
                                             Cancel
@@ -1186,14 +1202,12 @@ function EmployeeDrawer({
                                                     </p>
                                                 )}
                                                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                                                    <a
-                                                        href={doc.fileUrl}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        style={{ fontSize: 12, color: "var(--accent)", textDecoration: "underline", display: "inline-flex", alignItems: "center", gap: 4 }}
+                                                    <button
+                                                        onClick={() => downloadDoc(doc.fileUrl, doc.fileName)}
+                                                        style={{ fontSize: 12, color: "var(--accent)", textDecoration: "underline", background: "none", border: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, padding: 0 }}
                                                     >
-                                                        <FileText size={12} /> Download
-                                                    </a>
+                                                        <FileText size={12} /> View / Download
+                                                    </button>
                                                     {isAdmin && doc.status !== "VERIFIED" && (
                                                         <button
                                                             onClick={() => handleVerify(doc.id)}
