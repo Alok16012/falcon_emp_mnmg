@@ -582,6 +582,7 @@ model Employee {
   courseFeedbacks  CourseFeedback[]
   employeeSalary   EmployeeSalary?
   advances         AdvanceAndReimbursement[]
+  hrDocuments      HRDocument[]
 
   @@index([branchId])
   @@index([status])
@@ -1621,4 +1622,76 @@ model ContractRenewal {
   contract     ClientContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
 
   @@index([contractId])
+}
+
+// ─── HR DOCUMENT MANAGEMENT ───────────────────────────────────────────────────
+
+enum HRDocStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  ISSUED
+}
+
+model HRDocTemplate {
+  id               String       @id @default(uuid())
+  name             String
+  type             String       // OFFER_LETTER | APPOINTMENT | CONFIRMATION | EXPERIENCE | RELIEVING | SALARY_CERT | WARNING | OTHER
+  description      String?
+  templateContent  String       @db.Text
+  approvalRequired Boolean      @default(true)
+  isActive         Boolean      @default(true)
+  createdBy        String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  documents        HRDocument[]
+
+  @@index([type])
+  @@index([isActive])
+}
+
+model HRDocument {
+  id              String        @id @default(uuid())
+  docNumber       String        @unique
+  templateId      String?
+  employeeId      String
+  type            String
+  title           String
+  content         String        @db.Text
+  status          HRDocStatus   @default(DRAFT)
+  effectiveDate   DateTime?
+  issuedAt        DateTime?
+  issuedBy        String?
+  approvedBy      String?
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?
+  acknowledgedAt  DateTime?
+  emailSentAt     DateTime?
+  createdBy       String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  template        HRDocTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  employee        Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  approvals       HRDocApproval[]
+
+  @@index([employeeId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model HRDocApproval {
+  id          String     @id @default(uuid())
+  documentId  String
+  approverId  String
+  status      String     @default("PENDING")
+  comments    String?
+  actionAt    DateTime?
+  createdAt   DateTime   @default(now())
+  document    HRDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([approverId])
 }
