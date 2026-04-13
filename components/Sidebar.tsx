@@ -17,7 +17,6 @@ import {
     Sparkles,
     ClipboardList,
     IndianRupee,
-    FileText,
 } from "lucide-react"
 
 export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
@@ -41,7 +40,6 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
                 { name: "Leaves", href: "/leaves", icon: CalendarOff, roles: ["ADMIN", "MANAGER"] },
                 { name: "Payroll", href: "/payroll", icon: Wallet, roles: ["ADMIN", "MANAGER"] },
                 { name: "Expenses", href: "/expenses", icon: CreditCard, roles: ["ADMIN", "MANAGER"] },
-                { name: "Documents", href: "/documents", icon: FileText, roles: ["ADMIN", "MANAGER"] },
                 { name: "Departments", href: "/departments", icon: Building2, roles: ["ADMIN", "MANAGER"] },
             ]
         },
