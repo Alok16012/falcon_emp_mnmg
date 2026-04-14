@@ -43,18 +43,55 @@ export async function POST(req: Request) {
         const defaultMonthDays = new Date(year, month, 0).getDate()
         let totalGross = 0, totalNet = 0, totalPfE = 0, totalEsiE = 0
 
+        // Fetch all advances for this month/year in one query
+        const monthAdvances = await prisma.advanceAndReimbursement.findMany({
+            where: { type: "ADVANCE", monthToImpact: month, yearToImpact: year, status: "APPROVED" }
+        })
+
+        // Fetch all approved leaves for this month in one query
+        const monthStart = new Date(year, month - 1, 1)
+        const monthEnd   = new Date(year, month, 0)
+        const monthLeaves = await prisma.leave.findMany({
+            where: {
+                status: "APPROVED",
+                startDate: { lte: monthEnd },
+                endDate:   { gte: monthStart },
+            }
+        })
+
         const upserts = employees.map(async emp => {
             const sal = emp.employeeSalary
             if (!sal || sal.status !== "APPROVED") return null
 
             const attInput = (attendance as any[])?.find((a: any) => a.employeeId === emp.id) ?? {}
+
+            // Auto-sum approved advances for this employee this month
+            const autoAdvance = monthAdvances
+                .filter(a => a.employeeId === emp.id)
+                .reduce((sum, a) => sum + a.amount, 0)
+
+            // Auto-calculate leave days (unpaid) → subtract from workedDays
+            const empLeaves = monthLeaves.filter(l => l.employeeId === emp.id)
+            let leaveDays = 0
+            for (const lv of empLeaves) {
+                const start = new Date(Math.max(lv.startDate.getTime(), monthStart.getTime()))
+                const end   = new Date(Math.min(lv.endDate.getTime(),   monthEnd.getTime()))
+                const days  = Math.round((end.getTime() - start.getTime()) / 86400000) + 1
+                leaveDays  += Math.max(0, days)
+            }
+
+            const monthDays   = attInput.monthDays ?? defaultMonthDays
+            const workedDays  = attInput.workedDays !== undefined
+                ? Number(attInput.workedDays)
+                : Math.max(0, monthDays - leaveDays)
+
             const att = {
-                monthDays:           attInput.monthDays          ?? defaultMonthDays,
-                workedDays:          attInput.workedDays         ?? defaultMonthDays,
+                monthDays,
+                workedDays,
                 otDays:              Number(attInput.otDays)     || 0,
                 canteenDays:         Number(attInput.canteenDays)|| 0,
                 penalty:             Number(attInput.penalty)    || 0,
-                advance:             Number(attInput.advance)    || 0,
+                advance:             Number(attInput.advance)    || autoAdvance,
                 otherDeductions:     Number(attInput.otherDeductions) || 0,
                 productionIncentive: Number(attInput.productionIncentive) || 0,
                 lwf:                 Number(attInput.lwf)        || 0,

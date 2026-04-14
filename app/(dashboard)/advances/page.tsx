@@ -40,7 +40,9 @@ export default function AdvancesPage() {
         setLoading(true)
         try {
             const r = await fetch(`/api/advances?month=${filterMonth}&year=${filterYear}`)
-            setAdvances(Array.isArray(await r.json()) ? await r.clone().json() : [])
+            if (!r.ok) throw new Error(`HTTP ${r.status}`)
+            const data = await r.json()
+            setAdvances(Array.isArray(data) ? data : [])
         } catch { toast.error("Failed to load advances") }
         finally { setLoading(false) }
     }, [filterMonth, filterYear])

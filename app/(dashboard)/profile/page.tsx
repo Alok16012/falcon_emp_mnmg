@@ -349,8 +349,8 @@ export default function ProfilePage() {
     const isEmployee = session?.user?.role === "INSPECTION_BOY"
 
     useEffect(() => {
-        fetch("/api/profile").then(r => r.json()).then(d => {
-            setFormData({ name: d.name||"", email: d.email||"", phone: d.phone||"", role: d.role||"" })
+        fetch("/api/profile").then(r => r.ok ? r.json() : null).then(d => {
+            if (d) setFormData({ name: d.name||"", email: d.email||"", phone: d.phone||"", role: d.role||"" })
         }).finally(() => setLoading(false))
     }, [])
 

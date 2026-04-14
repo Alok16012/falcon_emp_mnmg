@@ -172,7 +172,9 @@ export async function DELETE(
             return new NextResponse("Forbidden", { status: 403 })
         }
 
-        // Check if employee has any associated records
+        const { searchParams } = new URL(req.url)
+        const force = searchParams.get("force") === "true"
+
         const employee = await prisma.employee.findUnique({
             where: { id: params.id },
             include: {
@@ -189,6 +191,16 @@ export async function DELETE(
 
         if (!employee) return new NextResponse("Not Found", { status: 404 })
 
+        if (force) {
+            // Hard delete — remove all related records first, then employee
+            await prisma.attendance.deleteMany({ where: { employeeId: params.id } })
+            await prisma.leave.deleteMany({ where: { employeeId: params.id } })
+            await prisma.payroll.deleteMany({ where: { employeeId: params.id } })
+            await prisma.advanceAndReimbursement.deleteMany({ where: { employeeId: params.id } })
+            await prisma.employee.delete({ where: { id: params.id } })
+            return NextResponse.json({ success: true, softDeleted: false, hardDeleted: true })
+        }
+
         const hasRecords =
             employee._count.attendances > 0 ||
             employee._count.leaves > 0 ||
@@ -196,7 +208,6 @@ export async function DELETE(
             employee._count.deployments > 0
 
         if (hasRecords) {
-            // Soft delete: set status to TERMINATED
             const updated = await prisma.employee.update({
                 where: { id: params.id },
                 data: { status: "TERMINATED" },

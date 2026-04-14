@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
     Calculator, Download, Loader2, Settings, CheckCircle2,
-    IndianRupee, Users, ChevronDown, ChevronUp, Edit2, Save, X, FileSpreadsheet
+    IndianRupee, Users, ChevronDown, ChevronUp, Edit2, Save, X, FileSpreadsheet, Printer, BadgeCheck
 } from "lucide-react"
 import * as XLSX from "xlsx"
 
@@ -38,6 +38,7 @@ type CalcResult = {
 type EmpRow = {
     id: string; employeeId: string; name: string; designation: string; branch: string
     salary: SalarySalary | null; payroll: CalcResult | null; payrollId: string | null
+    payrollStatus: string | null
 }
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
@@ -176,6 +177,7 @@ export default function PayrollPage() {
     const [salaryModal, setSalaryModal] = useState<EmpRow | null>(null)
     const [expandedId, setExpandedId] = useState<string | null>(null)
     const [tab, setTab] = useState<"payroll"|"setup">("payroll")
+    const [slipEmployee, setSlipEmployee] = useState<{ emp: EmpRow; att: AttInput; preview: CalcResult } | null>(null)
     // Attendance inputs per employee
     const [attInputs, setAttInputs] = useState<Record<string, AttInput>>({})
 
@@ -189,12 +191,16 @@ export default function PayrollPage() {
     const loadData = useCallback(async () => {
         setLoading(true)
         try {
-            const [empRes, payRes] = await Promise.all([
+            const [empRes, payRes, advRes, leaveRes] = await Promise.all([
                 fetch("/api/employees?limit=1000"),
-                fetch(`/api/payroll?month=${month}&year=${year}&limit=1000`)
+                fetch(`/api/payroll?month=${month}&year=${year}&limit=1000`),
+                fetch(`/api/advances?month=${month}&year=${year}`),
+                fetch(`/api/leaves?month=${year}-${String(month).padStart(2,"0")}&status=APPROVED`),
             ])
-            const emps = empRes.ok ? await empRes.json() : []
-            const pays = payRes.ok ? await payRes.json() : []
+            const emps   = empRes.ok   ? await empRes.json()   : []
+            const pays   = payRes.ok   ? await payRes.json()   : []
+            const advances = advRes.ok ? await advRes.json()   : []
+            const leaves   = leaveRes.ok ? await leaveRes.json() : []
 
             const rows: EmpRow[] = (emps.data ?? emps).map((e: any) => {
                 const pay = pays.find((p: any) => p.employeeId === e.id)
@@ -206,27 +212,49 @@ export default function PayrollPage() {
                     salary: e.employeeSalary ?? null,
                     payroll: pay ?? null,
                     payrollId: pay?.id ?? null,
+                    payrollStatus: pay?.status ?? null,
                 }
             })
             setEmployees(rows)
 
-            // Init attendance inputs from saved payroll or defaults
+            const mDays = new Date(year, month, 0).getDate()
+
+            // Init attendance inputs from saved payroll or defaults + auto-fill advance & leave
             const init: Record<string, AttInput> = {}
             rows.forEach(r => {
+                // Auto-sum advances for this employee this month
+                const autoAdvance = (Array.isArray(advances) ? advances : [])
+                    .filter((a: any) => a.employeeId === r.id)
+                    .reduce((s: number, a: any) => s + (a.amount ?? 0), 0)
+
+                // Auto-calc leave days
+                const empLeaves = (Array.isArray(leaves) ? leaves : []).filter((l: any) => l.employeeId === r.id)
+                let leaveDays = 0
+                for (const lv of empLeaves) {
+                    const start = new Date(lv.startDate)
+                    const end   = new Date(lv.endDate)
+                    leaveDays  += Math.round((end.getTime() - start.getTime()) / 86400000) + 1
+                }
+                const autoWorkedDays = Math.max(0, mDays - leaveDays)
+
                 if (r.payroll) {
                     init[r.id] = {
-                        monthDays:           r.payroll.workingDays ?? new Date(year, month, 0).getDate(),
-                        workedDays:          r.payroll.presentDays ?? new Date(year, month, 0).getDate(),
+                        monthDays:           r.payroll.workingDays ?? mDays,
+                        workedDays:          r.payroll.presentDays ?? mDays,
                         otDays:              r.payroll.otDays ?? 0,
                         canteenDays:         r.payroll.canteenDays ?? 0,
                         penalty:             r.payroll.penalty ?? 0,
-                        advance:             r.payroll.advance ?? 0,
+                        advance:             autoAdvance > 0 ? autoAdvance : (r.payroll.advance ?? 0),
                         otherDeductions:     r.payroll.otherDeductions ?? 0,
                         productionIncentive: r.payroll.productionIncentive ?? 0,
                         lwf:                 r.payroll.lwf ?? 0,
                     } as AttInput
                 } else {
-                    init[r.id] = defaultAtt()
+                    init[r.id] = {
+                        ...defaultAtt(),
+                        advance: autoAdvance,
+                        workedDays: autoWorkedDays,
+                    }
                 }
             })
             setAttInputs(init)
@@ -262,6 +290,20 @@ export default function PayrollPage() {
         } catch (e: any) {
             toast.error(e.message || "Failed to process payroll")
         } finally { setProcessing(false) }
+    }
+
+    const markPaid = async (payrollId: string) => {
+        try {
+            const res = await fetch(`/api/payroll/${payrollId}`, {
+                method: "PUT", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "PAID" })
+            })
+            if (!res.ok) throw new Error(await res.text())
+            toast.success("Payroll marked as PAID ✓")
+            setEmployees(prev => prev.map(e => e.payrollId === payrollId ? { ...e, payrollStatus: "PAID" } : e))
+        } catch (e: any) {
+            toast.error(e.message || "Failed to mark as paid")
+        }
     }
 
     const exportExcel = async () => {
@@ -430,10 +472,29 @@ export default function PayrollPage() {
                                                         {preview ? fmt(preview.ctc) : "—"}
                                                     </td>
                                                     <td className="px-3 py-2 text-center">
-                                                        <button onClick={() => setExpandedId(isExpanded ? null : emp.id)}
-                                                            className="text-[var(--text3)] hover:text-[var(--accent)]">
-                                                            {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                                                        </button>
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            {emp.payrollId && emp.payrollStatus !== "PAID" && (
+                                                                <button onClick={() => markPaid(emp.payrollId!)}
+                                                                    title="Mark as PAID"
+                                                                    className="p-1 rounded hover:bg-green-50 text-green-600">
+                                                                    <BadgeCheck size={15} />
+                                                                </button>
+                                                            )}
+                                                            {emp.payrollStatus === "PAID" && (
+                                                                <span className="text-[10px] font-bold text-green-700 bg-green-100 px-1.5 py-0.5 rounded">PAID</span>
+                                                            )}
+                                                            {preview && (
+                                                                <button onClick={() => setSlipEmployee({ emp, att, preview })}
+                                                                    title="Salary Slip"
+                                                                    className="p-1 rounded hover:bg-blue-50 text-blue-500">
+                                                                    <Printer size={15} />
+                                                                </button>
+                                                            )}
+                                                            <button onClick={() => setExpandedId(isExpanded ? null : emp.id)}
+                                                                className="p-1 text-[var(--text3)] hover:text-[var(--accent)]">
+                                                                {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                                 {/* Expanded detail row */}
@@ -483,12 +544,27 @@ export default function PayrollPage() {
                                                                         ["ESIC (0.75%)", preview.esiEmployee],
                                                                         ["PT", preview.pt],
                                                                         ["Canteen", preview.canteen],
+                                                                        ...(preview.penalty > 0 ? [["Penalty", preview.penalty]] : []),
+                                                                        ...(preview.otherDeductions > 0 ? [["Other Deductions", preview.otherDeductions]] : []),
+                                                                        ...(preview.lwf > 0 ? [["LWF", preview.lwf]] : []),
                                                                     ].map(([k, v]) => (
                                                                         <div key={k as string} className="flex justify-between py-0.5">
                                                                             <span className="text-[var(--text3)]">{k}</span>
                                                                             <span className="text-red-600">-₹{Math.round(v as number).toLocaleString()}</span>
                                                                         </div>
                                                                     ))}
+                                                                    {preview.advance > 0 && (
+                                                                        <div className="flex justify-between py-0.5 bg-orange-50 rounded px-1">
+                                                                            <span className="text-orange-700 font-medium">Advance Salary</span>
+                                                                            <span className="text-orange-700 font-medium">-₹{Math.round(preview.advance).toLocaleString()}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {att.workedDays < att.monthDays && (
+                                                                        <div className="flex justify-between py-0.5 bg-yellow-50 rounded px-1">
+                                                                            <span className="text-yellow-700 font-medium">Leave Cut ({att.monthDays - att.workedDays} days)</span>
+                                                                            <span className="text-yellow-700 font-medium">-₹{Math.round((preview.basicSalary / att.workedDays || 0) * (att.monthDays - att.workedDays)).toLocaleString()}</span>
+                                                                        </div>
+                                                                    )}
                                                                     <div className="flex justify-between border-t border-[var(--border)] pt-1 mt-1 font-bold text-green-700">
                                                                         <span>NET SALARY</span><span>₹{preview.netSalary.toLocaleString()}</span>
                                                                     </div>
@@ -595,6 +671,103 @@ export default function PayrollPage() {
                         setSalaryModal(null)
                     }}
                 />
+            )}
+
+            {/* Salary Slip Modal */}
+            {slipEmployee && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                        {/* Print header */}
+                        <div className="flex items-center justify-between px-6 py-4 border-b print:hidden">
+                            <h2 className="text-[15px] font-bold">Salary Slip</h2>
+                            <div className="flex gap-2">
+                                <button onClick={() => window.print()}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent)] text-white rounded-lg text-[13px] font-medium">
+                                    <Printer size={13} /> Print
+                                </button>
+                                <button onClick={() => setSlipEmployee(null)} className="p-1.5 rounded hover:bg-[var(--surface2)]"><X size={15} /></button>
+                            </div>
+                        </div>
+                        {/* Slip content */}
+                        <div id="salary-slip" className="px-6 py-5 text-[12px]">
+                            {/* Company & Employee Info */}
+                            <div className="text-center mb-4">
+                                <div className="text-[16px] font-bold text-[var(--accent)]">Falcon Plus</div>
+                                <div className="text-[11px] text-[var(--text3)]">Salary Slip — {MONTHS[month-1]} {year}</div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-1 mb-4 p-3 bg-[var(--surface)] rounded-lg text-[11px]">
+                                <div><span className="text-[var(--text3)]">Name: </span><span className="font-semibold">{slipEmployee.emp.name}</span></div>
+                                <div><span className="text-[var(--text3)]">ID: </span><span className="font-semibold">{slipEmployee.emp.employeeId}</span></div>
+                                <div><span className="text-[var(--text3)]">Designation: </span><span>{slipEmployee.emp.designation}</span></div>
+                                <div><span className="text-[var(--text3)]">Month: </span><span>{MONTHS[month-1]} {year}</span></div>
+                                <div><span className="text-[var(--text3)]">Total Days: </span><span>{slipEmployee.att.monthDays}</span></div>
+                                <div><span className="text-[var(--text3)]">Present Days: </span><span className="font-semibold text-green-700">{slipEmployee.att.workedDays}</span></div>
+                                <div><span className="text-[var(--text3)]">Absent Days: </span><span className="font-semibold text-red-600">{slipEmployee.att.monthDays - slipEmployee.att.workedDays}</span></div>
+                                <div><span className="text-[var(--text3)]">OT Days: </span><span>{slipEmployee.att.otDays}</span></div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* Earnings */}
+                                <div>
+                                    <div className="font-bold text-[var(--text)] mb-2 border-b border-[var(--border)] pb-1">EARNINGS</div>
+                                    {[
+                                        ["Basic", slipEmployee.preview.basicSalary],
+                                        ["DA", slipEmployee.preview.da],
+                                        ["HRA", slipEmployee.preview.hra],
+                                        ["Washing", slipEmployee.preview.washing],
+                                        ["Conveyance", slipEmployee.preview.conveyance],
+                                        ["Leave With Wages", slipEmployee.preview.lwwEarned],
+                                        ["Bonus", slipEmployee.preview.bonus],
+                                        ["OT Pay", slipEmployee.preview.overtimePay],
+                                        ["Prod. Incentive", slipEmployee.preview.productionIncentive],
+                                    ].filter(([,v]) => (v as number) > 0).map(([k, v]) => (
+                                        <div key={k as string} className="flex justify-between py-0.5">
+                                            <span className="text-[var(--text3)]">{k}</span>
+                                            <span>{fmt(v as number)}</span>
+                                        </div>
+                                    ))}
+                                    <div className="flex justify-between border-t border-[var(--border)] pt-1 mt-1 font-bold text-[var(--accent)]">
+                                        <span>Gross Earned</span><span>{fmt(slipEmployee.preview.grossSalary)}</span>
+                                    </div>
+                                </div>
+                                {/* Deductions */}
+                                <div>
+                                    <div className="font-bold text-[var(--text)] mb-2 border-b border-[var(--border)] pb-1">DEDUCTIONS</div>
+                                    {[
+                                        ["PF (Employee)", slipEmployee.preview.pfEmployee],
+                                        ["ESIC (0.75%)", slipEmployee.preview.esiEmployee],
+                                        ["PT", slipEmployee.preview.pt],
+                                        ["Canteen", slipEmployee.preview.canteen],
+                                        ["Penalty", slipEmployee.preview.penalty],
+                                        ["Other Deductions", slipEmployee.preview.otherDeductions],
+                                        ["LWF", slipEmployee.preview.lwf],
+                                    ].filter(([,v]) => (v as number) > 0).map(([k, v]) => (
+                                        <div key={k as string} className="flex justify-between py-0.5">
+                                            <span className="text-[var(--text3)]">{k}</span>
+                                            <span className="text-red-600">-{fmt(v as number)}</span>
+                                        </div>
+                                    ))}
+                                    {slipEmployee.preview.advance > 0 && (
+                                        <div className="flex justify-between py-0.5 bg-orange-50 rounded px-1">
+                                            <span className="text-orange-700 font-medium">Advance Salary</span>
+                                            <span className="text-orange-700 font-medium">-{fmt(slipEmployee.preview.advance)}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between border-t border-[var(--border)] pt-1 mt-1 font-bold text-red-700">
+                                        <span>Total Deductions</span><span>-{fmt(slipEmployee.preview.totalDeductions)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Net */}
+                            <div className="mt-4 p-3 bg-green-50 rounded-lg flex justify-between items-center border border-green-200">
+                                <span className="font-bold text-[14px] text-green-800">NET SALARY PAYABLE</span>
+                                <span className="font-bold text-[18px] text-green-700">{fmt(slipEmployee.preview.netSalary)}</span>
+                            </div>
+                            {slipEmployee.emp.payrollStatus === "PAID" && (
+                                <div className="mt-2 text-center text-[11px] font-bold text-green-700 bg-green-100 rounded py-1">✓ PAID & CONFIRMED</div>
+                            )}
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     )

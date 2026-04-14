@@ -46,6 +46,7 @@ export async function GET(req: Request) {
             }
         })
 
+        if (!user) return new NextResponse("User not found", { status: 404 })
         return NextResponse.json(user)
     } catch (error) {
         return new NextResponse("Internal Server Error", { status: 500 })

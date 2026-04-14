@@ -77,7 +77,6 @@ type Employee = {
     safetyShoes?: boolean
 }
 
-type Branch = { id: string; name: string; companyId?: string }
 type Department = { id: string; name: string; branchId: string }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -170,7 +169,7 @@ type ModalForm = {
     employeeCategory: string  // LABOUR or STAFF
     firstName: string; lastName: string; email: string; phone: string; alternatePhone: string
     dateOfBirth: string; gender: string; aadharNumber: string; panNumber: string
-    designation: string; departmentId: string; branchId: string; managerId: string
+    designation: string; departmentId: string; managerId: string
     dateOfJoining: string; employmentType: string; salaryType: string; basicSalary: string
     dailyRate: string  // For LABOUR
     address: string; city: string; state: string; pincode: string
@@ -182,16 +181,13 @@ type ModalForm = {
     uan: string; pfNumber: string; esiNumber: string; labourCardNo: string
     emergencyContact1Name: string; emergencyContact1Phone: string
     emergencyContact2Name: string; emergencyContact2Phone: string
-    // Safety
-    safetyGoggles: boolean; safetyGloves: boolean; safetyHelmet: boolean
-    safetyMask: boolean; safetyJacket: boolean; safetyEarMuffs: boolean; safetyShoes: boolean
 }
 
 const EMPTY_FORM: ModalForm = {
     employeeCategory: "LABOUR",
     firstName: "", lastName: "", email: "", phone: "", alternatePhone: "",
     dateOfBirth: "", gender: "", aadharNumber: "", panNumber: "",
-    designation: "", departmentId: "", branchId: "", managerId: "",
+    designation: "", departmentId: "", managerId: "",
     dateOfJoining: "", employmentType: "Full-time", salaryType: "Monthly", basicSalary: "",
     dailyRate: "",
     address: "", city: "", state: "", pincode: "",
@@ -203,105 +199,18 @@ const EMPTY_FORM: ModalForm = {
     uan: "", pfNumber: "", esiNumber: "", labourCardNo: "",
     emergencyContact1Name: "", emergencyContact1Phone: "",
     emergencyContact2Name: "", emergencyContact2Phone: "",
-    // Safety
-    safetyGoggles: false, safetyGloves: false, safetyHelmet: false,
-    safetyMask: false, safetyJacket: false, safetyEarMuffs: false, safetyShoes: false,
 }
 
-function AddBranchMini({ onCreated }: { onCreated: (b: Branch) => void }) {
-    const [open, setOpen] = useState(false)
-    const [name, setName] = useState("")
-    const [city, setCity] = useState("")
-    const [saving, setSaving] = useState(false)
-    const [companies, setCompanies] = useState<{ id: string; name: string }[]>([])
-    const [companyId, setCompanyId] = useState("")
-
-    useEffect(() => {
-        if (open) {
-            fetch("/api/companies").then(r => r.json()).then(d => {
-                const list = Array.isArray(d) ? d : []
-                setCompanies(list)
-                if (list.length === 1) setCompanyId(list[0].id)
-            }).catch(() => {})
-        }
-    }, [open])
-
-    async function handleSave() {
-        if (!name.trim() || !companyId) { toast.error("Branch name and company required"); return }
-        setSaving(true)
-        try {
-            const r = await fetch("/api/branches", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim(), city: city.trim(), companyId }) })
-            if (!r.ok) throw new Error()
-            const branch = await r.json()
-            toast.success(`Branch "${branch.name}" created`)
-            onCreated(branch)
-            setOpen(false); setName(""); setCity(""); setCompanyId("")
-        } catch { toast.error("Failed to create branch") }
-        finally { setSaving(false) }
-    }
-
-    return (
-        <>
-            <button type="button" onClick={() => setOpen(true)}
-                style={{ fontSize: 11, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: "2px 4px", textDecoration: "underline", whiteSpace: "nowrap" }}>
-                + New Branch
-            </button>
-            {open && (
-                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <div style={{ background: "var(--surface)", borderRadius: 12, padding: 24, width: 360, boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}>
-                        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, color: "var(--text)" }}>Add New Branch</div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                            {companies.length > 1 && (
-                                <div>
-                                    <label style={{ fontSize: 11, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>Company *</label>
-                                    <select value={companyId} onChange={e => setCompanyId(e.target.value)}
-                                        style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--surface)", color: "var(--text)" }}>
-                                        <option value="">Select Company</option>
-                                        {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </select>
-                                </div>
-                            )}
-                            <div>
-                                <label style={{ fontSize: 11, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>Branch Name *</label>
-                                <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Mumbai Office"
-                                    style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--surface)", color: "var(--text)", boxSizing: "border-box" }} />
-                            </div>
-                            <div>
-                                <label style={{ fontSize: 11, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>City</label>
-                                <input value={city} onChange={e => setCity(e.target.value)} placeholder="e.g. Mumbai"
-                                    style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--surface)", color: "var(--text)", boxSizing: "border-box" }} />
-                            </div>
-                        </div>
-                        <div style={{ display: "flex", gap: 8, marginTop: 20, justifyContent: "flex-end" }}>
-                            <button type="button" onClick={() => setOpen(false)}
-                                style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)", background: "none", cursor: "pointer", fontSize: 13 }}>
-                                Cancel
-                            </button>
-                            <button type="button" onClick={handleSave} disabled={saving}
-                                style={{ padding: "8px 16px", borderRadius: 8, background: "var(--accent)", color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
-                                {saving ? "Saving..." : "Create Branch"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </>
-    )
-}
 
 function EmployeeModal({
-    open, onClose, onSaved, branches: initialBranches, employee,
+    open, onClose, onSaved, employee,
 }: {
-    open: boolean; onClose: () => void; onSaved: () => void; branches: Branch[]; employee?: Employee | null
+    open: boolean; onClose: () => void; onSaved: () => void; employee?: Employee | null
 }) {
     const [loading, setLoading] = useState(false)
-    const [branches, setBranches] = useState<Branch[]>(initialBranches)
     const [departments, setDepartments] = useState<Department[]>([])
-    const [activeTab, setActiveTab] = useState<"personal" | "employment" | "bank" | "compliance" | "safety">("personal")
+    const [activeTab, setActiveTab] = useState<"personal" | "employment" | "bank" | "compliance">("personal")
     const [form, setForm] = useState<ModalForm>(EMPTY_FORM)
-
-    // Keep branches in sync if parent list changes
-    useEffect(() => { setBranches(initialBranches) }, [initialBranches])
 
     useEffect(() => {
         if (!open) return
@@ -320,7 +229,6 @@ function EmployeeModal({
                 panNumber: employee.panNumber || "",
                 designation: employee.designation || "",
                 departmentId: employee.departmentId || "",
-                branchId: employee.branchId,
                 managerId: employee.managerId || "",
                 dateOfJoining: employee.dateOfJoining ? employee.dateOfJoining.split("T")[0] : "",
                 employmentType: employee.employmentType,
@@ -354,14 +262,6 @@ function EmployeeModal({
                 emergencyContact1Phone: employee.emergencyContact1Phone || "",
                 emergencyContact2Name: employee.emergencyContact2Name || "",
                 emergencyContact2Phone: employee.emergencyContact2Phone || "",
-                // Safety
-                safetyGoggles: employee.safetyGoggles ?? false,
-                safetyGloves: employee.safetyGloves ?? false,
-                safetyHelmet: employee.safetyHelmet ?? false,
-                safetyMask: employee.safetyMask ?? false,
-                safetyJacket: employee.safetyJacket ?? false,
-                safetyEarMuffs: employee.safetyEarMuffs ?? false,
-                safetyShoes: employee.safetyShoes ?? false,
             })
         } else {
             setForm(EMPTY_FORM)
@@ -369,15 +269,12 @@ function EmployeeModal({
     }, [employee, open])
 
     useEffect(() => {
-        if (form.branchId) {
-            fetch(`/api/departments?branchId=${form.branchId}`)
-                .then(r => r.json())
-                .then(data => setDepartments(Array.isArray(data) ? data : []))
-                .catch(() => setDepartments([]))
-        } else {
-            setDepartments([])
-        }
-    }, [form.branchId])
+        if (!open) return
+        fetch("/api/departments")
+            .then(r => r.json())
+            .then(data => setDepartments(Array.isArray(data) ? data : []))
+            .catch(() => setDepartments([]))
+    }, [open])
 
     const set = (key: keyof ModalForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
         setForm(f => ({ ...f, [key]: e.target.value }))
@@ -386,10 +283,6 @@ function EmployeeModal({
         e.preventDefault()
         if (!form.firstName.trim() || !form.lastName.trim() || !form.phone.trim()) {
             toast.error("First name, last name and phone are required")
-            return
-        }
-        if (!form.branchId) {
-            toast.error("Branch is required")
             return
         }
         setLoading(true)
@@ -414,8 +307,6 @@ function EmployeeModal({
 
     if (!open) return null
 
-    const setCheck = (key: keyof ModalForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
-        setForm(f => ({ ...f, [key]: e.target.checked }))
 
     const tabCls = (t: string) =>
         `px-4 py-2.5 text-[12px] font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${activeTab === t
@@ -465,9 +356,9 @@ function EmployeeModal({
 
                 {/* Tabs */}
                 <div className="flex border-b border-[var(--border)] px-6 overflow-x-auto">
-                    {(["personal", "employment", "bank", "compliance", "safety"] as const).map(t => (
+                    {(["personal", "employment", "bank", "compliance"] as const).map(t => (
                         <button key={t} onClick={() => setActiveTab(t)} className={tabCls(t)}>
-                            {t === "personal" ? "Personal Info" : t === "employment" ? "Employment" : t === "bank" ? "Bank & Address" : t === "compliance" ? "Compliance" : "Safety"}
+                            {t === "personal" ? "Personal Info" : t === "employment" ? "Employment" : t === "bank" ? "Bank & Address" : "Compliance"}
                         </button>
                     ))}
                 </div>
@@ -526,19 +417,6 @@ function EmployeeModal({
                     {activeTab === "employment" && (
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                                        <label className={labelCls} style={{ margin: 0 }}>Branch *</label>
-                                        <AddBranchMini onCreated={b => {
-                                            setBranches(prev => [...prev, b])
-                                            setForm(f => ({ ...f, branchId: b.id, departmentId: "" }))
-                                        }} />
-                                    </div>
-                                    <select value={form.branchId} onChange={e => setForm(f => ({ ...f, branchId: e.target.value, departmentId: "" }))} className={inputCls} required>
-                                        <option value="">Select Branch</option>
-                                        {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                                    </select>
-                                </div>
                                 <div>
                                     <label className={labelCls}>Designation</label>
                                     <input value={form.designation} onChange={set("designation")} className={inputCls} placeholder="e.g. Security Guard" />
@@ -726,42 +604,11 @@ function EmployeeModal({
                         </div>
                     )}
 
-                    {/* Safety Tab */}
-                    {activeTab === "safety" && (
-                        <div className="space-y-3">
-                            <p className="text-[11px] font-semibold text-[var(--text3)] tracking-[0.5px] uppercase">Safety Equipment Issued</p>
-                            {([
-                                { key: "safetyGoggles", label: "Safety Goggles" },
-                                { key: "safetyGloves", label: "Hand Gloves" },
-                                { key: "safetyHelmet", label: "Helmet" },
-                                { key: "safetyMask", label: "Mask" },
-                                { key: "safetyJacket", label: "Safety Jacket" },
-                                { key: "safetyEarMuffs", label: "Ear Muffs" },
-                                { key: "safetyShoes", label: "Safety Shoes" },
-                            ] as { key: keyof ModalForm; label: string }[]).map(item => (
-                                <div key={item.key} className="flex items-center gap-3 p-3 rounded-[8px] border border-[var(--border)] bg-[var(--surface2)]/30">
-                                    <input
-                                        type="checkbox"
-                                        id={item.key}
-                                        checked={!!form[item.key]}
-                                        onChange={setCheck(item.key)}
-                                        className="w-4 h-4 accent-[var(--accent)]"
-                                    />
-                                    <label htmlFor={item.key} className="text-[13px] text-[var(--text)] cursor-pointer select-none flex-1">
-                                        {item.label}
-                                    </label>
-                                    {form[item.key] && (
-                                        <span className="text-[11px] text-[#16a34a] font-medium">Issued</span>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    )}
                 </form>
 
                 <div className="px-6 py-4 border-t border-[var(--border)] flex items-center justify-between">
                     <div className="flex gap-1">
-                        {(["personal", "employment", "bank", "compliance", "safety"] as const).map((t) => (
+                        {(["personal", "employment", "bank", "compliance"] as const).map((t) => (
                             <div
                                 key={t}
                                 onClick={() => setActiveTab(t)}
@@ -773,12 +620,12 @@ function EmployeeModal({
                         <button onClick={onClose} type="button" className="px-4 py-2 text-[13px] font-medium text-[var(--text2)] hover:text-[var(--text)] rounded-[8px] hover:bg-[var(--surface2)] transition-colors">
                             Cancel
                         </button>
-                        {activeTab !== "safety" ? (
+                        {activeTab !== "compliance" ? (
                             <button
                                 type="button"
                                 onClick={() => {
-                                    const order = ["personal", "employment", "bank", "compliance", "safety"] as const
-                                    const idx = order.indexOf(activeTab as typeof order[number])
+                                    const order = ["personal", "employment", "bank", "compliance"] as const
+                                    const idx = order.indexOf(activeTab)
                                     if (idx < order.length - 1) setActiveTab(order[idx + 1])
                                 }}
                                 className="inline-flex items-center gap-2 px-5 py-2 bg-[var(--accent)] text-white rounded-[8px] text-[13px] font-medium hover:opacity-90 transition-opacity"
@@ -1087,7 +934,6 @@ function EmployeeDrawer({
                                     value={emp.dateOfJoining ? format(new Date(emp.dateOfJoining), "dd MMM yyyy") : "—"}
                                     icon={<Calendar size={13} />}
                                 />
-                                <InfoItem label="Branch" value={employee.branch.name} icon={<Building2 size={13} />} />
                             </div>
                             {emp.notes && (
                                 <div className="p-3 rounded-[10px] bg-[var(--surface2)]/40 border border-[var(--border)]">
@@ -1286,6 +1132,7 @@ function RowActions({
     onEdit,
     onTerminate,
     onDelete,
+    onHardDelete,
 }: {
     emp: Employee
     isAdmin: boolean
@@ -1293,47 +1140,67 @@ function RowActions({
     onEdit: () => void
     onTerminate: () => void
     onDelete: () => void
+    onHardDelete: () => void
 }) {
-    const [open, setOpen] = useState(false)
-    const ref = useRef<HTMLDivElement>(null)
+    const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+    const btnRef = useRef<HTMLButtonElement>(null)
 
     useEffect(() => {
+        if (!pos) return
         function handler(e: MouseEvent) {
-            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+            const el = document.getElementById("row-actions-menu")
+            if (el && !el.contains(e.target as Node) && e.target !== btnRef.current) setPos(null)
         }
         document.addEventListener("mousedown", handler)
         return () => document.removeEventListener("mousedown", handler)
-    }, [])
+    }, [pos])
+
+    function toggle() {
+        if (pos) { setPos(null); return }
+        const rect = btnRef.current?.getBoundingClientRect()
+        if (!rect) return
+        setPos({ top: rect.bottom + 4, left: rect.right - 160 })
+    }
 
     return (
-        <div className="relative" ref={ref}>
+        <>
             <button
-                onClick={() => setOpen(v => !v)}
+                ref={btnRef}
+                onClick={toggle}
                 className="p-1.5 rounded-md hover:bg-[var(--surface2)] text-[var(--text3)] transition-colors"
             >
                 <MoreVertical size={15} />
             </button>
-            {open && (
-                <div className="absolute right-0 top-full mt-1 w-[160px] bg-white border border-[var(--border)] rounded-[10px] shadow-xl z-20 py-1 overflow-hidden">
-                    <button onClick={() => { onView(); setOpen(false) }} className="w-full text-left px-4 py-2 text-[13px] flex items-center gap-2.5 hover:bg-[var(--surface2)] text-[var(--text2)] transition-colors">
+            {pos && (
+                <div
+                    id="row-actions-menu"
+                    style={{ position: "fixed", top: pos.top, left: pos.left, width: 160, zIndex: 9999 }}
+                    className="bg-white border border-[var(--border)] rounded-[10px] shadow-xl py-1"
+                >
+                    <button onClick={() => { onView(); setPos(null) }} className="w-full text-left px-4 py-2 text-[13px] flex items-center gap-2.5 hover:bg-[var(--surface2)] text-[var(--text2)] transition-colors">
                         <Eye size={14} /> View
                     </button>
-                    <button onClick={() => { onEdit(); setOpen(false) }} className="w-full text-left px-4 py-2 text-[13px] flex items-center gap-2.5 hover:bg-[var(--surface2)] text-[var(--text2)] transition-colors">
+                    <button onClick={() => { onEdit(); setPos(null) }} className="w-full text-left px-4 py-2 text-[13px] flex items-center gap-2.5 hover:bg-[var(--surface2)] text-[var(--text2)] transition-colors">
                         <Edit2 size={14} /> Edit
                     </button>
                     {emp.status !== "TERMINATED" && (
-                        <button onClick={() => { onTerminate(); setOpen(false) }} className="w-full text-left px-4 py-2 text-[13px] flex items-center gap-2.5 hover:bg-[var(--surface2)] text-[#f59e0b] transition-colors">
+                        <button onClick={() => { onTerminate(); setPos(null) }} className="w-full text-left px-4 py-2 text-[13px] flex items-center gap-2.5 hover:bg-[var(--surface2)] text-[#f59e0b] transition-colors">
                             <ShieldOff size={14} /> Terminate
                         </button>
                     )}
                     {isAdmin && (
-                        <button onClick={() => { onDelete(); setOpen(false) }} className="w-full text-left px-4 py-2 text-[13px] flex items-center gap-2.5 hover:bg-[#fef2f2] text-[#dc2626] transition-colors">
+                        <button onClick={() => { onDelete(); setPos(null) }} className="w-full text-left px-4 py-2 text-[13px] flex items-center gap-2.5 hover:bg-[#fef2f2] text-[#dc2626] transition-colors">
                             <Trash2 size={14} /> Delete
+                        </button>
+                    )}
+                    {isAdmin && (
+                        <button onClick={() => { onHardDelete(); setPos(null) }} className="w-full text-left px-4 py-2 text-[13px] flex items-center gap-2.5 hover:bg-[#fef2f2] text-[#7f1d1d] font-semibold transition-colors border-t border-[var(--border)]">
+                            <Trash2 size={14} /> Hard Delete
                         </button>
                     )}
                 </div>
             )}
-        </div>
+        </>
     )
 }
 
@@ -1343,7 +1210,6 @@ export default function EmployeesPage() {
     const { data: session, status } = useSession()
     const router = useRouter()
     const [employees, setEmployees] = useState<Employee[]>([])
-    const [branches, setBranches] = useState<Branch[]>([])
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState("")
     const [statusFilter, setStatusFilter] = useState("")
@@ -1377,10 +1243,12 @@ export default function EmployeesPage() {
             if (empTypeFilter) params.set("employmentType", empTypeFilter)
             if (search) params.set("search", search)
             const res = await fetch(`/api/employees?${params}`)
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data = await res.json()
             setEmployees(Array.isArray(data) ? data : [])
-        } catch {
-            toast.error("Failed to load employees")
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Unknown error"
+            toast.error(`Failed to load employees: ${msg}`)
         } finally {
             setLoading(false)
         }
@@ -1391,7 +1259,6 @@ export default function EmployeesPage() {
     }, [status, fetchEmployees])
 
     useEffect(() => {
-        fetch("/api/branches").then(r => r.json()).then(data => setBranches(Array.isArray(data) ? data : [])).catch(() => {})
         fetch("/api/departments").then(r => r.json()).then(data => setAllDepts(Array.isArray(data) ? data : [])).catch(() => {})
     }, [])
 
@@ -1415,7 +1282,7 @@ export default function EmployeesPage() {
 
     function handleDownloadTemplate() {
         const wb = XLSX.utils.book_new()
-        const ws = XLSX.utils.aoa_to_sheet([["First Name", "Last Name", "Phone", "Email", "Designation", "Branch Name", "Employment Type", "Basic Salary", "City", "Date of Joining (YYYY-MM-DD)"]])
+        const ws = XLSX.utils.aoa_to_sheet([["First Name", "Last Name", "Phone", "Email", "Designation", "Employment Type", "Basic Salary", "City", "Date of Joining (YYYY-MM-DD)"]])
         XLSX.utils.book_append_sheet(wb, ws, "Employees")
         XLSX.writeFile(wb, "employees_template.xlsx")
     }
@@ -1439,7 +1306,6 @@ export default function EmployeesPage() {
                     else if (lk === "phone") entry.phone = val
                     else if (lk === "email") entry.email = val
                     else if (lk === "designation") entry.designation = val
-                    else if (lk === "branchname") entry.branchName = val
                     else if (lk === "employmenttype") entry.employmentType = val
                     else if (lk === "basicsalary") entry.basicSalary = val
                     else if (lk === "city") entry.city = val
@@ -1500,6 +1366,18 @@ export default function EmployeesPage() {
             if (!res.ok) throw new Error(await res.text())
             const data = await res.json()
             toast.success(data.softDeleted ? "Employee terminated (has records)" : "Employee deleted")
+            fetchEmployees()
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "Failed to delete")
+        }
+    }
+
+    const handleHardDelete = async (id: string, name: string) => {
+        if (!confirm(`PERMANENTLY DELETE "${name}"?\n\nYeh employee aur uske saare records (attendance, leaves, payroll) hamesha ke liye delete ho jaayenge. Yeh action undo nahi ho sakta.`)) return
+        try {
+            const res = await fetch(`/api/employees/${id}?force=true`, { method: "DELETE" })
+            if (!res.ok) throw new Error(await res.text())
+            toast.success("Employee permanently deleted")
             fetchEmployees()
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "Failed to delete")
@@ -1716,6 +1594,7 @@ export default function EmployeesPage() {
                                                         onEdit={() => { setEditEmployee(emp); setShowModal(true) }}
                                                         onTerminate={() => handleStatusChange(emp.id, "TERMINATED")}
                                                         onDelete={() => handleDelete(emp.id)}
+                                                        onHardDelete={() => handleHardDelete(emp.id, `${emp.firstName} ${emp.lastName}`)}
                                                     />
                                                 </div>
                                             </td>
@@ -1733,7 +1612,6 @@ export default function EmployeesPage() {
                 open={showModal}
                 onClose={() => { setShowModal(false); setEditEmployee(null) }}
                 onSaved={fetchEmployees}
-                branches={branches}
                 employee={editEmployee}
             />
             <EmployeeDrawer
@@ -1768,7 +1646,7 @@ export default function EmployeesPage() {
                                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
                                         <thead>
                                             <tr style={{ background: "var(--surface)" }}>
-                                                {["First Name", "Last Name", "Phone", "Branch Name", "Designation"].map(h => (
+                                                {["First Name", "Last Name", "Phone", "Designation"].map(h => (
                                                     <th key={h} style={{ padding: "6px 10px", textAlign: "left", borderBottom: "1px solid var(--border)", color: "var(--text3)", fontWeight: 600 }}>{h}</th>
                                                 ))}
                                             </tr>
@@ -1779,7 +1657,6 @@ export default function EmployeesPage() {
                                                     <td style={{ padding: "6px 10px", color: "var(--text)" }}>{String(r.firstName ?? "")}</td>
                                                     <td style={{ padding: "6px 10px", color: "var(--text)" }}>{String(r.lastName ?? "")}</td>
                                                     <td style={{ padding: "6px 10px", color: "var(--text)" }}>{String(r.phone ?? "")}</td>
-                                                    <td style={{ padding: "6px 10px", color: "var(--text)" }}>{String(r.branchName ?? "")}</td>
                                                     <td style={{ padding: "6px 10px", color: "var(--text)" }}>{String(r.designation ?? "")}</td>
                                                 </tr>
                                             ))}

@@ -89,8 +89,11 @@ export default function UserManagementPage() {
             const [usersRes, companiesRes, managersRes] = await Promise.all([
                 fetch("/api/admin/users"),
                 fetch("/api/companies"),
-                fetch("/api/users?role=MANAGER")
+                fetch("/api/admin/users")
             ])
+            if (!usersRes.ok) throw new Error(`users: HTTP ${usersRes.status}`)
+            if (!companiesRes.ok) throw new Error(`companies: HTTP ${companiesRes.status}`)
+            if (!managersRes.ok) throw new Error(`managers: HTTP ${managersRes.status}`)
             const [usersData, companiesData, managersData] = await Promise.all([
                 usersRes.json(),
                 companiesRes.json(),
@@ -99,7 +102,7 @@ export default function UserManagementPage() {
             setUsers(Array.isArray(usersData) ? usersData : [])
             setCompanies(Array.isArray(companiesData) ? companiesData : [])
             setGroupCompanies(Array.isArray(companiesData) ? companiesData : [])
-            setManagers(Array.isArray(managersData) ? managersData : [])
+            setManagers(Array.isArray(managersData) ? managersData.filter((u: any) => u.role === "MANAGER") : [])
         } catch (error) {
             console.error("Failed to fetch admin data", error)
             toast.error("Failed to load user data")
