@@ -109,7 +109,7 @@ export async function POST(req: Request) {
             totalPfE   += calc.pfEmployer
             totalEsiE  += calc.esiEmployer
 
-            return prisma.payroll.upsert({
+            const payrollRecord = await prisma.payroll.upsert({
                 where: { employeeId_month_year: { employeeId: emp.id, month, year } },
                 create: {
                     employeeId: emp.id, payrollRunId: run.id, month, year,
@@ -128,6 +128,36 @@ export async function POST(req: Request) {
                     processedBy: session.user.id,
                 }
             })
+
+            // Upsert DRAFT expense so it appears in expenses immediately on calculate
+            const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+            const expTitle = `Salary - ${emp.firstName} ${emp.lastName} (${monthNames[month - 1]} ${year})`
+            const existingExp = await prisma.expense.findFirst({
+                where: { employeeId: emp.id, category: "SALARY", title: expTitle }
+            })
+            if (!existingExp) {
+                const expCount = await prisma.expense.count()
+                await prisma.expense.create({
+                    data: {
+                        expenseNo: `EXP-${String(expCount + 1).padStart(4, "0")}`,
+                        title: expTitle,
+                        category: "SALARY",
+                        amount: Math.round(calc.netSalary),
+                        date: new Date(year, month - 1, 1),
+                        description: `Net salary for ${monthNames[month - 1]} ${year} — ${emp.employeeId}`,
+                        employeeId: emp.id,
+                        submittedBy: session.user.id,
+                        status: "DRAFT",
+                    },
+                }).catch(() => {})
+            } else if (existingExp.status !== "APPROVED") {
+                await prisma.expense.update({
+                    where: { id: existingExp.id },
+                    data: { amount: Math.round(calc.netSalary) },
+                }).catch(() => {})
+            }
+
+            return payrollRecord
         })
 
         const results = await Promise.all(upserts)
