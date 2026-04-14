@@ -15,7 +15,7 @@ import { format } from "date-fns"
 
 type ExpenseStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED" | "PAID"
 type ExpenseCategory =
-    | "TRAVEL" | "FOOD" | "ACCOMMODATION" | "FUEL"
+    | "SALARY" | "TRAVEL" | "FOOD" | "ACCOMMODATION" | "FUEL"
     | "OFFICE_SUPPLIES" | "COMMUNICATION" | "MEDICAL"
     | "UNIFORM" | "TRAINING" | "OTHER"
 
@@ -48,7 +48,7 @@ type Expense = {
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const CATEGORIES: ExpenseCategory[] = [
-    "TRAVEL", "FOOD", "ACCOMMODATION", "FUEL",
+    "SALARY", "TRAVEL", "FOOD", "ACCOMMODATION", "FUEL",
     "OFFICE_SUPPLIES", "COMMUNICATION", "MEDICAL",
     "UNIFORM", "TRAINING", "OTHER"
 ]
@@ -63,6 +63,7 @@ function formatINR(amount: number): string {
 
 function categoryLabel(cat: ExpenseCategory): string {
     const map: Record<ExpenseCategory, string> = {
+        SALARY: "Salary",
         TRAVEL: "Travel",
         FOOD: "Food",
         ACCOMMODATION: "Accommodation",
@@ -79,6 +80,7 @@ function categoryLabel(cat: ExpenseCategory): string {
 
 function categoryStyle(cat: ExpenseCategory): { bg: string; color: string } {
     const map: Record<ExpenseCategory, { bg: string; color: string }> = {
+        SALARY: { bg: "#f0fdf4", color: "#16a34a" },
         TRAVEL: { bg: "#eff6ff", color: "#3b82f6" },
         FOOD: { bg: "#fff7ed", color: "#f97316" },
         ACCOMMODATION: { bg: "#fdf4ff", color: "#a855f7" },

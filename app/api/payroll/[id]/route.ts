@@ -79,6 +79,7 @@ export async function PUT(
                 updateData.paidAt = new Date()
                 updateData.paidBy = session.user.id
             }
+
         }
 
         // Recalculate if financial fields changed
@@ -117,6 +118,28 @@ export async function PUT(
                 },
             },
         })
+
+        // Auto-create expense entry when payroll is marked PAID
+        if (status === "PAID") {
+            const emp = payroll.employee
+            const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+            const monthLabel = monthNames[(existing.month ?? 1) - 1]
+            const expCount = await prisma.expense.count()
+            const expenseNo = `EXP-${String(expCount + 1).padStart(4, "0")}`
+            await prisma.expense.create({
+                data: {
+                    expenseNo,
+                    title: `Salary - ${emp.firstName} ${emp.lastName} (${monthLabel} ${existing.year})`,
+                    category: "SALARY",
+                    amount: Math.round(netSalary),
+                    date: new Date(existing.year ?? new Date().getFullYear(), (existing.month ?? 1) - 1, 1),
+                    description: `Net salary paid to ${emp.employeeId} for ${monthLabel} ${existing.year}`,
+                    employeeId: emp.id,
+                    submittedBy: session.user.id,
+                    status: "APPROVED",
+                },
+            }).catch(() => {}) // Non-blocking — don't fail payroll if expense creation fails
+        }
 
         return NextResponse.json(payroll)
     } catch (error) {
