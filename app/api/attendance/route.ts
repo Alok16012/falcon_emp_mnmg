@@ -38,6 +38,7 @@ export async function GET(req: Request) {
                         id: true, firstName: true, lastName: true,
                         employeeId: true, designation: true,
                         employeeCategory: true, dailyRate: true, basicSalary: true,
+                        shiftHours: true,
                         department: { select: { name: true } },
                     },
                 },
@@ -61,8 +62,16 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json()
-        // Bulk upsert: [{ employeeId, date, status, remarks }]
-        const records: { employeeId: string; date: string; status: string; remarks?: string }[] = body
+        // Bulk upsert: [{ employeeId, date, status, remarks, checkIn?, checkOut? }]
+        // checkIn and checkOut are "HH:MM" strings (local time)
+        const records: {
+            employeeId: string
+            date: string
+            status: string
+            remarks?: string
+            checkIn?: string
+            checkOut?: string
+        }[] = body
 
         if (!Array.isArray(records) || records.length === 0) {
             return new NextResponse("Invalid payload", { status: 400 })
@@ -74,23 +83,48 @@ export async function POST(req: Request) {
                 const next = new Date(d)
                 next.setDate(next.getDate() + 1)
 
+                // Build checkIn / checkOut DateTimes from "HH:MM" + date
+                let checkInDT: Date | null = null
+                let checkOutDT: Date | null = null
+                let workingHrs = 0
+
+                if (r.checkIn) {
+                    // Combine date string + time string → local datetime
+                    checkInDT = new Date(`${r.date}T${r.checkIn}:00`)
+                }
+                if (r.checkOut) {
+                    checkOutDT = new Date(`${r.date}T${r.checkOut}:00`)
+                }
+                if (checkInDT && checkOutDT && checkOutDT > checkInDT) {
+                    workingHrs = parseFloat(
+                        ((checkOutDT.getTime() - checkInDT.getTime()) / (1000 * 60 * 60)).toFixed(2)
+                    )
+                }
+
                 const existing = await prisma.attendance.findFirst({
                     where: { employeeId: r.employeeId, date: { gte: d, lt: next } },
                 })
 
+                const data = {
+                    status: r.status,
+                    remarks: r.remarks || null,
+                    markedBy: session.user.id,
+                    checkIn: checkInDT,
+                    checkOut: checkOutDT,
+                    workingHrs,
+                }
+
                 if (existing) {
                     return prisma.attendance.update({
                         where: { id: existing.id },
-                        data: { status: r.status, remarks: r.remarks || null, markedBy: session.user.id },
+                        data,
                     })
                 } else {
                     return prisma.attendance.create({
                         data: {
                             employeeId: r.employeeId,
                             date: d,
-                            status: r.status,
-                            remarks: r.remarks || null,
-                            markedBy: session.user.id,
+                            ...data,
                         },
                     })
                 }

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { format, parseISO } from "date-fns"
 import { toast } from "sonner"
-import { Calendar, Users, CheckCircle, XCircle, Clock, Save, ChevronLeft, ChevronRight, Download } from "lucide-react"
+import { Calendar, Users, CheckCircle, XCircle, Clock, Save, ChevronLeft, ChevronRight, LogIn, LogOut } from "lucide-react"
 
 type Employee = {
     id: string
@@ -13,16 +13,11 @@ type Employee = {
     employeeCategory: string
     dailyRate?: number
     basicSalary: number
+    shiftHours?: number
     department?: { name: string }
 }
 
 type AttendanceStatus = "PRESENT" | "ABSENT" | "HALF_DAY" | "HOLIDAY" | "WEEKLY_OFF"
-
-type AttendanceRow = {
-    employeeId: string
-    status: AttendanceStatus
-    remarks: string
-}
 
 const STATUS_CONFIG: Record<AttendanceStatus, { label: string; short: string; color: string; bg: string }> = {
     PRESENT:    { label: "Present",    short: "P",  color: "#16a34a", bg: "#dcfce7" },
@@ -32,10 +27,39 @@ const STATUS_CONFIG: Record<AttendanceStatus, { label: string; short: string; co
     WEEKLY_OFF: { label: "Weekly Off", short: "WO", color: "#6b7280", bg: "#f3f4f6" },
 }
 
+// Helper: extract "HH:MM" from a Date/ISO string in local time
+function extractTime(dt: string | null | undefined): string {
+    if (!dt) return ""
+    const d = new Date(dt)
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+}
+
+// Helper: calculate working hours from "HH:MM" strings
+function calcWorkingHrs(checkIn: string, checkOut: string): number {
+    if (!checkIn || !checkOut) return 0
+    const [inH, inM] = checkIn.split(":").map(Number)
+    const [outH, outM] = checkOut.split(":").map(Number)
+    const totalMins = (outH * 60 + outM) - (inH * 60 + inM)
+    return Math.max(0, parseFloat((totalMins / 60).toFixed(2)))
+}
+
+// For labour: compute day earning and deduction
+function calcLabourDay(emp: Employee, checkIn: string, checkOut: string) {
+    if (!emp.dailyRate || !checkIn || !checkOut) return null
+    const shiftHrs = emp.shiftHours || 8
+    const worked = calcWorkingHrs(checkIn, checkOut)
+    const hourlyRate = emp.dailyRate / shiftHrs
+    const dayEarning = parseFloat((Math.min(worked, shiftHrs) * hourlyRate).toFixed(2))
+    const deduction = parseFloat((emp.dailyRate - dayEarning).toFixed(2))
+    return { worked, shiftHrs, dayEarning, deduction, hourlyRate }
+}
+
 export default function AttendancePage() {
     const [employees, setEmployees] = useState<Employee[]>([])
     const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({})
     const [remarks, setRemarks] = useState<Record<string, string>>({})
+    const [checkIns, setCheckIns] = useState<Record<string, string>>({})
+    const [checkOuts, setCheckOuts] = useState<Record<string, string>>({})
     const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"))
     const [saving, setSaving] = useState(false)
     const [loading, setLoading] = useState(true)
@@ -57,14 +81,26 @@ export default function AttendancePage() {
             const data = await r.json()
             const map: Record<string, AttendanceStatus> = {}
             const rem: Record<string, string> = {}
+            const ci: Record<string, string> = {}
+            const co: Record<string, string> = {}
             if (Array.isArray(data)) {
-                data.forEach((a: { employeeId: string; status: AttendanceStatus; remarks?: string }) => {
+                data.forEach((a: {
+                    employeeId: string
+                    status: AttendanceStatus
+                    remarks?: string
+                    checkIn?: string
+                    checkOut?: string
+                }) => {
                     map[a.employeeId] = a.status
                     if (a.remarks) rem[a.employeeId] = a.remarks
+                    if (a.checkIn) ci[a.employeeId] = extractTime(a.checkIn)
+                    if (a.checkOut) co[a.employeeId] = extractTime(a.checkOut)
                 })
             }
             setAttendance(map)
             setRemarks(rem)
+            setCheckIns(ci)
+            setCheckOuts(co)
             setSaved(Object.keys(map).length > 0)
         } catch { toast.error("Failed to load attendance") }
         finally { setLoading(false) }
@@ -92,6 +128,8 @@ export default function AttendancePage() {
             date,
             status: attendance[e.id] || "ABSENT",
             remarks: remarks[e.id] || "",
+            checkIn: checkIns[e.id] || undefined,
+            checkOut: checkOuts[e.id] || undefined,
         }))
         setSaving(true)
         try {
@@ -127,7 +165,7 @@ export default function AttendancePage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-[22px] font-bold text-[var(--text)]">Attendance</h1>
-                    <p className="text-[13px] text-[var(--text3)] mt-0.5">Mark daily attendance for all employees</p>
+                    <p className="text-[13px] text-[var(--text3)] mt-0.5">Mark daily attendance · Labour punch-in/out auto-calculates working hours</p>
                 </div>
                 <button onClick={handleSave} disabled={saving || filtered.length === 0}
                     className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-[9px] text-[13px] font-semibold disabled:opacity-60 hover:bg-[#158a5e] transition-colors">
@@ -180,7 +218,6 @@ export default function AttendancePage() {
 
             {/* Controls */}
             <div className="flex items-center justify-between bg-white border border-[var(--border)] rounded-[12px] px-4 py-3">
-                {/* Filter */}
                 <div className="flex gap-2">
                     {(["ALL", "LABOUR", "STAFF"] as const).map(f => (
                         <button key={f} onClick={() => setFilter(f)}
@@ -191,7 +228,6 @@ export default function AttendancePage() {
                         </button>
                     ))}
                 </div>
-                {/* Bulk mark */}
                 <div className="flex items-center gap-2">
                     <span className="text-[12px] text-[var(--text3)]">Mark all:</span>
                     {(Object.entries(STATUS_CONFIG) as [AttendanceStatus, typeof STATUS_CONFIG[AttendanceStatus]][]).map(([key, cfg]) => (
@@ -219,9 +255,9 @@ export default function AttendancePage() {
                         <thead>
                             <tr className="border-b border-[var(--border)] bg-[var(--surface2)]">
                                 <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px]">Employee</th>
-                                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px]">Type</th>
-                                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px]">Rate</th>
-                                <th className="text-center px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] colspan-5">Attendance</th>
+                                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px]">Type / Rate</th>
+                                <th className="text-center px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px]">Status</th>
+                                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px]">Punch In/Out · Working Hrs</th>
                                 <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px]">Remarks</th>
                             </tr>
                         </thead>
@@ -229,8 +265,15 @@ export default function AttendancePage() {
                             {filtered.map(emp => {
                                 const status = attendance[emp.id] || "ABSENT"
                                 const cfg = STATUS_CONFIG[status]
+                                const isLabour = emp.employeeCategory === "LABOUR"
+                                const isPresent = status === "PRESENT"
+                                const ci = checkIns[emp.id] || ""
+                                const co = checkOuts[emp.id] || ""
+                                const dayCalc = isLabour && isPresent ? calcLabourDay(emp, ci, co) : null
+
                                 return (
                                     <tr key={emp.id} className="hover:bg-[var(--surface2)] transition-colors">
+                                        {/* Employee */}
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2.5">
                                                 <div className="w-8 h-8 rounded-full bg-[var(--accent-light)] flex items-center justify-center text-[12px] font-bold text-[var(--accent-text)]">
@@ -238,26 +281,28 @@ export default function AttendancePage() {
                                                 </div>
                                                 <div>
                                                     <p className="text-[13px] font-medium text-[var(--text)]">{emp.firstName} {emp.lastName}</p>
-                                                    <p className="text-[11px] text-[var(--text3)]">{emp.employeeId} {emp.department ? `· ${emp.department.name}` : ""}</p>
+                                                    <p className="text-[11px] text-[var(--text3)]">{emp.employeeId}{emp.department ? ` · ${emp.department.name}` : ""}</p>
                                                 </div>
                                             </div>
                                         </td>
+
+                                        {/* Type / Rate */}
                                         <td className="px-4 py-3">
-                                            <span className={`px-2 py-0.5 rounded-[5px] text-[11px] font-semibold ${
-                                                emp.employeeCategory === "LABOUR"
-                                                    ? "bg-orange-50 text-orange-700"
-                                                    : "bg-blue-50 text-blue-700"
+                                            <span className={`px-2 py-0.5 rounded-[5px] text-[11px] font-semibold block w-fit mb-1 ${
+                                                isLabour ? "bg-orange-50 text-orange-700" : "bg-blue-50 text-blue-700"
                                             }`}>
-                                                {emp.employeeCategory === "LABOUR" ? "🔧 Labour" : "👔 Staff"}
+                                                {isLabour ? "🔧 Labour" : "👔 Staff"}
                                             </span>
+                                            <p className="text-[12px] text-[var(--text2)]">
+                                                {isLabour
+                                                    ? `₹${emp.dailyRate || 0}/day · ${emp.shiftHours || 8}hr shift`
+                                                    : `₹${(emp.basicSalary || 0).toLocaleString()}/mo`}
+                                            </p>
                                         </td>
-                                        <td className="px-4 py-3 text-[13px] text-[var(--text2)]">
-                                            {emp.employeeCategory === "LABOUR"
-                                                ? `₹${emp.dailyRate || 0}/day`
-                                                : `₹${(emp.basicSalary || 0).toLocaleString()}/mo`}
-                                        </td>
+
+                                        {/* Status buttons */}
                                         <td className="px-4 py-3">
-                                            <div className="flex gap-1.5">
+                                            <div className="flex gap-1.5 justify-center">
                                                 {(Object.entries(STATUS_CONFIG) as [AttendanceStatus, typeof STATUS_CONFIG[AttendanceStatus]][]).map(([key, c]) => (
                                                     <button key={key} onClick={() => setStatus(emp.id, key)}
                                                         className="w-8 h-8 rounded-[6px] text-[11px] font-bold transition-all"
@@ -272,6 +317,67 @@ export default function AttendancePage() {
                                                 ))}
                                             </div>
                                         </td>
+
+                                        {/* Punch In/Out column */}
+                                        <td className="px-4 py-3">
+                                            {isLabour && isPresent ? (
+                                                <div className="flex flex-col gap-1.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-[7px] px-2 py-1">
+                                                            <LogIn size={12} className="text-green-600" />
+                                                            <span className="text-[11px] text-green-700 font-medium">In</span>
+                                                            <input
+                                                                type="time"
+                                                                value={ci}
+                                                                onChange={e => setCheckIns(p => ({ ...p, [emp.id]: e.target.value }))}
+                                                                className="text-[12px] font-semibold text-green-800 bg-transparent border-none outline-none w-[72px]"
+                                                            />
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-[7px] px-2 py-1">
+                                                            <LogOut size={12} className="text-red-500" />
+                                                            <span className="text-[11px] text-red-600 font-medium">Out</span>
+                                                            <input
+                                                                type="time"
+                                                                value={co}
+                                                                onChange={e => setCheckOuts(p => ({ ...p, [emp.id]: e.target.value }))}
+                                                                className="text-[12px] font-semibold text-red-700 bg-transparent border-none outline-none w-[72px]"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Working hours + deduction preview */}
+                                                    {dayCalc ? (
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className={`px-2 py-0.5 rounded-[5px] text-[11px] font-bold ${
+                                                                dayCalc.worked >= dayCalc.shiftHrs
+                                                                    ? "bg-green-100 text-green-700"
+                                                                    : "bg-amber-100 text-amber-700"
+                                                            }`}>
+                                                                ⏱ {dayCalc.worked.toFixed(1)} hr / {dayCalc.shiftHrs} hr
+                                                            </span>
+                                                            <span className="text-[11px] font-semibold text-green-700">
+                                                                ₹{dayCalc.dayEarning.toFixed(0)} earned
+                                                            </span>
+                                                            {dayCalc.deduction > 0 && (
+                                                                <span className="text-[11px] font-semibold text-red-600">
+                                                                    −₹{dayCalc.deduction.toFixed(0)} cut
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    ) : ci && co ? null : (
+                                                        <p className="text-[11px] text-[var(--text3)]">Enter punch-in &amp; out time</p>
+                                                    )}
+                                                </div>
+                                            ) : isLabour && !isPresent ? (
+                                                <span className="text-[12px] text-[var(--text3)] italic">
+                                                    {status === "ABSENT" ? "Absent — ₹0" : status === "HALF_DAY" ? `Half day — ₹${((emp.dailyRate || 0) / 2).toFixed(0)}` : "—"}
+                                                </span>
+                                            ) : (
+                                                <span className="text-[12px] text-[var(--text3)]">—</span>
+                                            )}
+                                        </td>
+
+                                        {/* Remarks */}
                                         <td className="px-4 py-3">
                                             <input
                                                 value={remarks[emp.id] || ""}

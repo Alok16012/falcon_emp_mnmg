@@ -82,7 +82,7 @@ export async function POST(req: Request) {
             safetyGoggles, safetyGogglesDate, safetyGloves, safetyGlovesDate,
             safetyHelmet, safetyHelmetDate, safetyMask, safetyMaskDate,
             safetyJacket, safetyJacketDate, safetyEarMuffs, safetyEarMuffsDate,
-            safetyShoes, safetyShoesDate, bankBranch,
+            safetyShoes, safetyShoesDate, bankBranch, shiftHours,
         } = body
 
         if (!firstName || !lastName || !phone) {
@@ -161,6 +161,7 @@ export async function POST(req: Request) {
                 employeeCategory: employeeCategory || "LABOUR",
                 basicSalary: basicSalary ? parseFloat(basicSalary) : 0,
                 dailyRate: dailyRate ? parseFloat(dailyRate) : null,
+                shiftHours: shiftHours ? parseInt(String(shiftHours)) : 8,
                 userId,
                 // New fields
                 middleName: middleName || null,

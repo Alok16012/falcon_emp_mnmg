@@ -172,6 +172,7 @@ type ModalForm = {
     designation: string; departmentId: string; managerId: string
     dateOfJoining: string; employmentType: string; salaryType: string; basicSalary: string
     dailyRate: string  // For LABOUR
+    shiftHours: string  // For LABOUR: 8, 10, or 12
     address: string; city: string; state: string; pincode: string
     bankName: string; bankBranch: string; bankAccountNumber: string; bankIFSC: string
     status: string; notes: string
@@ -189,7 +190,7 @@ const EMPTY_FORM: ModalForm = {
     dateOfBirth: "", gender: "", aadharNumber: "", panNumber: "",
     designation: "", departmentId: "", managerId: "",
     dateOfJoining: "", employmentType: "Full-time", salaryType: "Monthly", basicSalary: "",
-    dailyRate: "",
+    dailyRate: "", shiftHours: "8",
     address: "", city: "", state: "", pincode: "",
     bankName: "", bankBranch: "", bankAccountNumber: "", bankIFSC: "",
     status: "ACTIVE", notes: "",
@@ -235,6 +236,7 @@ function EmployeeModal({
                 salaryType: employee.salaryType || "Monthly",
                 basicSalary: employee.basicSalary.toString(),
                 dailyRate: (employee as any).dailyRate?.toString() || "",
+                shiftHours: (employee as any).shiftHours?.toString() || "8",
                 address: employee.address || "",
                 city: employee.city || "",
                 state: employee.state || "",
@@ -447,6 +449,32 @@ function EmployeeModal({
                                         <div>
                                             <label className={labelCls}>Daily Rate (₹) *</label>
                                             <input type="number" value={form.dailyRate} onChange={set("dailyRate")} className={inputCls} placeholder="e.g. 500" min="0" />
+                                        </div>
+                                        <div>
+                                            <label className={labelCls}>Shift Duration *</label>
+                                            <div className="flex gap-2">
+                                                {[
+                                                    { val: "8", label: "8 Hr", desc: "Gen Shift" },
+                                                    { val: "10", label: "10 Hr", desc: "Long Shift" },
+                                                    { val: "12", label: "12 Hr", desc: "Double Shift" },
+                                                ].map(opt => (
+                                                    <button key={opt.val} type="button"
+                                                        onClick={() => setForm(f => ({ ...f, shiftHours: opt.val }))}
+                                                        className={`flex-1 flex flex-col items-center py-2 rounded-[8px] border-2 text-center transition-all ${
+                                                            form.shiftHours === opt.val
+                                                                ? "border-[var(--accent)] bg-[var(--accent-light)]"
+                                                                : "border-[var(--border)] bg-white hover:border-[var(--accent)]"
+                                                        }`}>
+                                                        <span className={`text-[13px] font-bold ${form.shiftHours === opt.val ? "text-[var(--accent-text)]" : "text-[var(--text)]"}`}>{opt.label}</span>
+                                                        <span className="text-[10px] text-[var(--text3)]">{opt.desc}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            {form.dailyRate && (
+                                                <p className="text-[11px] text-[var(--text3)] mt-1">
+                                                    Hourly Rate: ₹{(parseFloat(form.dailyRate || "0") / parseInt(form.shiftHours || "8")).toFixed(0)}/hr · Monthly: ₹{(parseFloat(form.dailyRate || "0") * 30).toLocaleString()}
+                                                </p>
+                                            )}
                                             <p className="text-[11px] text-[var(--text3)] mt-1">Per day wage · Salary cycle: 1st to 1st</p>
                                         </div>
                                         <div>
