@@ -18,6 +18,7 @@ import {
     ClipboardList,
     IndianRupee,
     ScanFace,
+    Cpu,
 } from "lucide-react"
 
 export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
@@ -44,6 +45,7 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
         {
             title: "CONFIGURATION",
             links: [
+                { name: "Hardware Devices", href: "/hardware", icon: Cpu, roles: ["ADMIN", "MANAGER"] },
                 { name: "My Profile", href: "/profile", icon: UserCheck, roles: ["ADMIN", "MANAGER"] },
             ]
         }

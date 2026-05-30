@@ -478,6 +478,7 @@ model Employee {
   safetyShoes            Boolean                   @default(false)
   safetyShoesDate        DateTime?
   bankBranch             String?
+  hardwareUserId         String?   // Dahua device UserID mapping
   advances               AdvanceAndReimbursement[]
   attendances            Attendance[]
   punchLogs              PunchLog[]
@@ -1674,4 +1675,30 @@ enum HRDocStatus {
   APPROVED
   REJECTED
   ISSUED
+}
+
+// ─── Dahua Hardware Device ────────────────────────────────────────────────────
+model HardwareDevice {
+  id          String   @id @default(uuid())
+  name        String   // display name e.g. "Gate 1 Camera"
+  ip          String   // device IP address
+  port        Int      @default(80)
+  username    String   @default("admin")
+  password    String   // stored plaintext (internal network device)
+  enabled     Boolean  @default(true)
+  lastSyncAt  DateTime?
+  lastSyncRec String?  // last RecNo synced (to avoid duplicates)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─── Hardware Sync Log ────────────────────────────────────────────────────────
+model HardwareSyncLog {
+  id           String   @id @default(uuid())
+  deviceId     String
+  deviceName   String
+  recordCount  Int      @default(0)
+  newPunches   Int      @default(0)
+  errors       String?
+  syncedAt     DateTime @default(now())
 }
