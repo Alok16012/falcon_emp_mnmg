@@ -58,7 +58,14 @@ export async function POST(req: Request) {
             })
         } catch { /* PunchLog table might not exist */ }
 
-        const punchCount = existingPunches.length
+        // Fallback: if PunchLog empty but checkIn exists → this must be OUT
+        // if checkIn + checkOut both exist → this is IN again (3rd punch)
+        let punchCount = existingPunches.length
+        if (punchCount === 0) {
+            if (attendance.checkIn && !attendance.checkOut) punchCount = 1  // next = OUT
+            else if (attendance.checkIn && attendance.checkOut) punchCount = 2 // next = IN
+        }
+
         const nextPunchNumber = punchCount + 1
         // Odd punch = IN, Even punch = OUT
         const punchType = nextPunchNumber % 2 === 1 ? "IN" : "OUT"
@@ -171,6 +178,8 @@ export async function PUT(req: Request) {
         return NextResponse.json({
             punches,
             workingHrs: attendance?.workingHrs ?? 0,
+            checkIn: attendance?.checkIn ?? null,
+            checkOut: attendance?.checkOut ?? null,
         })
     } catch (err) {
         console.error("[PUNCH_PUT]", err)

@@ -37,6 +37,8 @@ export default function PunchKioskPage() {
     const [errorMsg, setErrorMsg] = useState("")
     const [currentTime, setCurrentTime] = useState(new Date())
     const [todayPunches, setTodayPunches] = useState<PunchLog[]>([])
+    const [todayCheckIn, setTodayCheckIn] = useState<string | null>(null)
+    const [todayCheckOut, setTodayCheckOut] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
     const [cameraError, setCameraError] = useState("")
     const [cameraActive, setCameraActive] = useState(false)
@@ -174,6 +176,8 @@ export default function PunchKioskPage() {
             })
             const data = await res.json()
             setTodayPunches(data.punches ?? [])
+            setTodayCheckIn(data.checkIn ?? null)
+            setTodayCheckOut(data.checkOut ?? null)
         } catch { /* ignore */ }
     }, [stopCamera])
 
@@ -220,6 +224,8 @@ export default function PunchKioskPage() {
         setPunchResult(null)
         setErrorMsg("")
         setTodayPunches([])
+        setTodayCheckIn(null)
+        setTodayCheckOut(null)
         setSearchQuery("")
         setCameraError("")
     }
@@ -282,7 +288,15 @@ export default function PunchKioskPage() {
         )
         : employees
 
-    const nextPunchType = todayPunches.length % 2 === 0 ? "IN" : "OUT"
+    // Determine next punch type:
+    // 1. From punchLogs count (most accurate)
+    // 2. Fallback: from attendance checkIn/checkOut
+    const nextPunchType: "IN" | "OUT" = (() => {
+        if (todayPunches.length > 0) return todayPunches.length % 2 === 0 ? "IN" : "OUT"
+        if (todayCheckIn && !todayCheckOut) return "OUT"   // checked in, not out yet
+        if (todayCheckIn && todayCheckOut) return "IN"     // both done, next is IN again
+        return "IN"                                         // fresh start
+    })()
 
     // ── Render ───────────────────────────────────────────────────────────────
     return (
