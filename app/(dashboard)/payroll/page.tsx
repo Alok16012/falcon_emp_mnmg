@@ -22,8 +22,10 @@ type EmpPayRow = {
     hourlyRate: number        // basicSalary field repurposed
     shiftHours: number
     totalWorkingHrs: number   // from attendance this month
+    otHrs: number             // overtime hours (manual input)
+    otPay: number             // otHrs × hourlyRate × 1.5
     advance: number           // from advances
-    totalSalary: number       // totalWorkingHrs × hourlyRate
+    totalSalary: number       // (totalWorkingHrs × hourlyRate) + otPay
     netSalary: number         // totalSalary - advance
     payrollId: string | null
     payrollStatus: string | null
@@ -40,8 +42,9 @@ export default function PayrollPage() {
     const [loading, setLoading]     = useState(true)
     const [processing, setProcessing] = useState(false)
     const [slipEmp, setSlipEmp]     = useState<SlipData | null>(null)
-    // editable advance overrides per employee
+    // editable overrides per employee
     const [advOverride, setAdvOverride] = useState<Record<string, number>>({})
+    const [otOverride, setOtOverride]   = useState<Record<string, number>>({})
 
     const loadData = useCallback(async () => {
         setLoading(true)
@@ -72,7 +75,9 @@ export default function PayrollPage() {
 
                 const hourlyRate = parseFloat(e.basicSalary) || 0
                 const shiftHours = parseInt(e.shiftHours) || 8
-                const totalSalary = parseFloat((totalWorkingHrs * hourlyRate).toFixed(2))
+                const otHrs = 0  // starts at 0, user can edit
+                const otPay = parseFloat((otHrs * hourlyRate * 1.5).toFixed(2))
+                const totalSalary = parseFloat(((totalWorkingHrs * hourlyRate) + otPay).toFixed(2))
                 const advance = autoAdvance
                 const netSalary = Math.max(0, totalSalary - advance)
 
@@ -86,6 +91,8 @@ export default function PayrollPage() {
                     hourlyRate,
                     shiftHours,
                     totalWorkingHrs: parseFloat(totalWorkingHrs.toFixed(2)),
+                    otHrs,
+                    otPay,
                     advance,
                     totalSalary,
                     netSalary,
@@ -95,10 +102,12 @@ export default function PayrollPage() {
             })
 
             setRows(newRows)
-            // init advance overrides from auto-values
-            const overrides: Record<string, number> = {}
-            newRows.forEach(r => { overrides[r.id] = r.advance })
-            setAdvOverride(overrides)
+            // init overrides from auto-values
+            const advInit: Record<string, number> = {}
+            const otInit: Record<string, number> = {}
+            newRows.forEach(r => { advInit[r.id] = r.advance; otInit[r.id] = 0 })
+            setAdvOverride(advInit)
+            setOtOverride(otInit)
         } catch (e) {
             console.error(e)
             toast.error("Failed to load payroll data")
@@ -111,11 +120,17 @@ export default function PayrollPage() {
     }, [status, router, loadData])
 
     const getRow = (r: EmpPayRow): EmpPayRow => {
-        const adv = advOverride[r.id] ?? r.advance
+        const adv   = advOverride[r.id] ?? r.advance
+        const ot    = otOverride[r.id]  ?? 0
+        const otPay = parseFloat((ot * r.hourlyRate * 1.5).toFixed(2))
+        const totalSalary = parseFloat(((r.totalWorkingHrs * r.hourlyRate) + otPay).toFixed(2))
         return {
             ...r,
+            otHrs: ot,
+            otPay,
             advance: adv,
-            netSalary: Math.max(0, r.totalSalary - adv),
+            totalSalary,
+            netSalary: Math.max(0, totalSalary - adv),
         }
     }
 
@@ -178,7 +193,9 @@ export default function PayrollPage() {
                 "Designation": r.designation,
                 "Hourly Rate (₹)": r.hourlyRate,
                 "Shift Hours": r.shiftHours,
-                "Total Working Hrs": r.totalWorkingHrs,
+                "Work Hrs": r.totalWorkingHrs,
+                "OT Hrs": row.otHrs,
+                "OT Pay (₹)": row.otPay,
                 "Total Salary (₹)": row.totalSalary,
                 "Advance (₹)": row.advance,
                 "Net Salary (₹)": row.netSalary,
@@ -261,8 +278,9 @@ export default function PayrollPage() {
                                 <th className="px-4 py-3 text-left font-semibold text-[var(--text3)]">#</th>
                                 <th className="px-4 py-3 text-left font-semibold text-[var(--text3)]">Employee</th>
                                 <th className="px-4 py-3 text-right font-semibold text-[var(--text3)]">Rate/Hr</th>
-                                <th className="px-4 py-3 text-right font-semibold text-[var(--text3)]">Shift</th>
-                                <th className="px-4 py-3 text-right font-semibold text-blue-600">Total Hrs</th>
+                                <th className="px-4 py-3 text-right font-semibold text-blue-600">Work Hrs</th>
+                                <th className="px-4 py-3 text-center font-semibold text-purple-600">OT Hrs <span className="text-[10px] font-normal">(×1.5)</span></th>
+                                <th className="px-4 py-3 text-right font-semibold text-purple-600">OT Pay</th>
                                 <th className="px-4 py-3 text-right font-semibold text-[var(--accent)]">Total Salary</th>
                                 <th className="px-4 py-3 text-center font-semibold text-orange-600">Advance</th>
                                 <th className="px-4 py-3 text-right font-semibold text-green-700">Net Salary</th>
@@ -280,16 +298,26 @@ export default function PayrollPage() {
                                     <td className="px-4 py-3 text-right font-medium">
                                         {row.hourlyRate ? `₹${row.hourlyRate}/hr` : <span className="text-[var(--text3)]">—</span>}
                                     </td>
-                                    <td className="px-4 py-3 text-right text-[var(--text2)]">
-                                        {row.shiftHours} hr
-                                    </td>
                                     <td className="px-4 py-3 text-right font-semibold text-blue-600">
                                         {row.totalWorkingHrs > 0 ? row.totalWorkingHrs.toFixed(2) : <span className="text-[var(--text3)]">0</span>}
+                                    </td>
+                                    <td className="px-3 py-2 text-center">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.5"
+                                            value={otOverride[row.id] ?? 0}
+                                            onChange={e => setOtOverride(prev => ({ ...prev, [row.id]: parseFloat(e.target.value) || 0 }))}
+                                            className="w-16 border border-[var(--border)] rounded px-2 py-1 text-center text-[12px] outline-none focus:border-purple-400"
+                                        />
+                                    </td>
+                                    <td className="px-4 py-3 text-right font-semibold text-purple-600">
+                                        {row.otPay > 0 ? fmt(row.otPay) : <span className="text-[var(--text3)]">—</span>}
                                     </td>
                                     <td className="px-4 py-3 text-right font-semibold text-[var(--accent)]">
                                         {row.hourlyRate > 0 ? fmt(row.totalSalary) : <span className="text-[var(--text3)]">—</span>}
                                     </td>
-                                    <td className="px-4 py-2 text-center">
+                                    <td className="px-3 py-2 text-center">
                                         <input
                                             type="number"
                                             min="0"
@@ -328,8 +356,10 @@ export default function PayrollPage() {
                         {/* Totals row */}
                         <tfoot>
                             <tr className="bg-[var(--surface)] border-t-2 border-[var(--border)] font-bold text-[12px]">
-                                <td colSpan={4} className="px-4 py-3 text-[var(--text3)]">TOTAL ({rows.length} employees)</td>
+                                <td colSpan={3} className="px-4 py-3 text-[var(--text3)]">TOTAL ({rows.length} employees)</td>
                                 <td className="px-4 py-3 text-right text-blue-600">{totalHrs.toFixed(2)}</td>
+                                <td />
+                                <td className="px-4 py-3 text-right text-purple-600">{fmt(displayRows.reduce((s,r) => s + r.otPay, 0))}</td>
                                 <td className="px-4 py-3 text-right text-[var(--accent)]">{fmt(totalSalarySum)}</td>
                                 <td className="px-4 py-3 text-right text-orange-600">{fmt(totalAdvance)}</td>
                                 <td className="px-4 py-3 text-right text-green-700">{fmt(totalNet)}</td>
@@ -375,9 +405,21 @@ export default function PayrollPage() {
                                         <span>₹{slipEmp.hourlyRate}/hr</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-[var(--text3)]">Total Hours Worked</span>
+                                        <span className="text-[var(--text3)]">Work Hours</span>
                                         <span className="font-semibold text-blue-600">{slipEmp.totalWorkingHrs.toFixed(2)} hrs</span>
                                     </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-[var(--text3)]">Regular Pay</span>
+                                        <span>{fmt(slipEmp.totalWorkingHrs * slipEmp.hourlyRate)}</span>
+                                    </div>
+                                    {slipEmp.otHrs > 0 && (
+                                        <>
+                                            <div className="flex justify-between text-purple-700">
+                                                <span>OT Hours ({slipEmp.otHrs} hrs × ₹{slipEmp.hourlyRate} × 1.5)</span>
+                                                <span className="font-semibold">+{fmt(slipEmp.otPay)}</span>
+                                            </div>
+                                        </>
+                                    )}
                                     <div className="flex justify-between border-t border-[var(--border)] pt-1.5 font-bold text-[var(--accent)]">
                                         <span>Total Salary</span>
                                         <span>{fmt(slipEmp.totalSalary)}</span>
