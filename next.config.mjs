@@ -4,6 +4,7 @@ const nextConfig = {
     poweredByHeader: false,
     experimental: {
         optimizePackageImports: ["lucide-react", "@radix-ui/react-icons", "recharts"],
+        instrumentationHook: true,
     },
     generateBuildId: async () => {
         return `build-${Date.now()}`;

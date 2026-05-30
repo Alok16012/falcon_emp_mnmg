@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import {
     Cpu, Plus, Trash2, RefreshCw, CheckCircle2, XCircle,
     Wifi, WifiOff, Link2, Link2Off, ChevronDown, ChevronUp,
-    Clock, AlertCircle, User, Search, Save, Play
+    Clock, AlertCircle, User, Search, Save, Play, Timer
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -64,6 +64,10 @@ export default function HardwarePage() {
     const [testingConn, setTestingConn] = useState<string | null>(null)
     const [connResults, setConnResults] = useState<Record<string, boolean | null>>({})
 
+    // Auto-sync countdown
+    const [nextSyncIn, setNextSyncIn] = useState<number>(30 * 60)
+    const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
     const fetchDevices = useCallback(async () => {
         const res = await fetch("/api/hardware/devices")
         if (res.ok) setDevices(await res.json())
@@ -82,6 +86,28 @@ export default function HardwarePage() {
     useEffect(() => {
         Promise.all([fetchDevices(), fetchLogs(), fetchMappings()]).finally(() => setLoading(false))
     }, [fetchDevices, fetchLogs, fetchMappings])
+
+    // Countdown timer display (purely visual — real sync happens server-side)
+    useEffect(() => {
+        countdownRef.current = setInterval(() => {
+            setNextSyncIn(prev => {
+                if (prev <= 1) {
+                    // Reset and refresh logs
+                    fetchLogs()
+                    fetchDevices()
+                    return 30 * 60
+                }
+                return prev - 1
+            })
+        }, 1000)
+        return () => { if (countdownRef.current) clearInterval(countdownRef.current) }
+    }, [fetchLogs, fetchDevices])
+
+    const fmtCountdown = (secs: number) => {
+        const m = Math.floor(secs / 60).toString().padStart(2, "0")
+        const s = (secs % 60).toString().padStart(2, "0")
+        return `${m}:${s}`
+    }
 
     // ── Add Device ──────────────────────────────────────────────────────────
 
@@ -219,7 +245,7 @@ export default function HardwarePage() {
             </div>
 
             {/* Stats Row */}
-            <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="grid grid-cols-4 gap-3 mb-6">
                 <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[10px] p-4">
                     <p className="text-[11px] text-[var(--text3)] mb-1">Devices</p>
                     <p className="text-[22px] font-bold text-[var(--text)]">{devices.length}</p>
@@ -238,6 +264,14 @@ export default function HardwarePage() {
                     <p className="text-[11px] text-[var(--text3)]">
                         {syncLogs[0] ? `${syncLogs[0].newPunches} new punches` : "—"}
                     </p>
+                </div>
+                <div className="bg-[var(--surface)] border border-emerald-200 rounded-[10px] p-4">
+                    <div className="flex items-center gap-1.5 mb-1">
+                        <Timer size={11} className="text-emerald-500" />
+                        <p className="text-[11px] text-[var(--text3)]">Auto-Sync</p>
+                    </div>
+                    <p className="text-[22px] font-bold text-emerald-600 font-mono">{fmtCountdown(nextSyncIn)}</p>
+                    <p className="text-[11px] text-emerald-600">● Running · every 30 min</p>
                 </div>
             </div>
 
