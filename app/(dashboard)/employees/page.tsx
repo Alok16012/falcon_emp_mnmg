@@ -1041,7 +1041,7 @@ export default function EmployeesPage() {
             const params = new URLSearchParams()
             if (statusFilter) params.set("status", statusFilter)
             if (deptFilter) params.set("departmentId", deptFilter)
-            if (empTypeFilter) params.set("employmentType", empTypeFilter)
+            if (empTypeFilter) params.set("shiftHours", empTypeFilter)
             if (search) params.set("search", search)
             const res = await fetch(`/api/employees?${params}`)
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -1294,8 +1294,10 @@ export default function EmployeesPage() {
                         onChange={e => setEmpTypeFilter(e.target.value)}
                         className="h-9 rounded-[8px] border border-[var(--border)] bg-white px-3 text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)] transition-colors"
                     >
-                        <option value="">All Employment Types</option>
-                        {EMPLOYMENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                        <option value="">All Shifts</option>
+                        <option value="8">8 Hr (Gen Shift)</option>
+                        <option value="10">10 Hr (Long Shift)</option>
+                        <option value="12">12 Hr (Double Shift)</option>
                     </select>
                 </div>
             </div>
@@ -1323,7 +1325,7 @@ export default function EmployeesPage() {
                                     <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Phone</th>
                                     <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Joined</th>
                                     {isAdmin && (
-                                        <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Salary</th>
+                                        <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Rate/Hr</th>
                                     )}
                                     <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Status</th>
                                     <th className="text-right text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-5 py-3">Actions</th>
@@ -1375,7 +1377,8 @@ export default function EmployeesPage() {
                                             </td>
                                             {isAdmin && (
                                                 <td className="px-4 py-3 text-[13px] text-[var(--text2)] whitespace-nowrap">
-                                                    {fmtRupee(emp.basicSalary)}
+                                                    {emp.basicSalary ? `₹${Number(emp.basicSalary)}/hr` : "—"}
+                                                    {emp.shiftHours && <span className="text-[11px] text-[var(--text3)] ml-1">· {emp.shiftHours}hr shift</span>}
                                                 </td>
                                             )}
                                             <td className="px-4 py-3">

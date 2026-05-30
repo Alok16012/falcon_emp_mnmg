@@ -18,6 +18,7 @@ export async function GET(req: Request) {
         const status = searchParams.get("status")
         const search = searchParams.get("search")
         const employmentType = searchParams.get("employmentType")
+        const shiftHoursFilter = searchParams.get("shiftHours")
         const companyId = searchParams.get("companyId")
 
         const where: Record<string, unknown> = {}
@@ -25,6 +26,7 @@ export async function GET(req: Request) {
         if (departmentId) where.departmentId = departmentId
         if (status) where.status = status
         if (employmentType) where.employmentType = employmentType
+        if (shiftHoursFilter) where.shiftHours = parseInt(shiftHoursFilter)
         if (companyId) {
             // filter via branch -> company
             where.branch = { companyId }
