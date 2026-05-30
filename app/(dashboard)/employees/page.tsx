@@ -1182,12 +1182,7 @@ export default function EmployeesPage() {
     const total = employees.length
     const active = employees.filter(e => e.status === "ACTIVE").length
     const onLeave = employees.filter(e => e.status === "ON_LEAVE").length
-    const now = new Date()
-    const terminatedResignedThisMonth = employees.filter(e => {
-        if (e.status !== "TERMINATED" && e.status !== "RESIGNED") return false
-        const updated = new Date(e.createdAt)
-        return updated.getMonth() === now.getMonth() && updated.getFullYear() === now.getFullYear()
-    }).length
+    const terminatedResigned = employees.filter(e => e.status === "TERMINATED" || e.status === "RESIGNED").length
 
 
     return (
@@ -1229,7 +1224,7 @@ export default function EmployeesPage() {
                     { label: "Total Employees", value: total, icon: <Users size={18} />, color: "#1a9e6e", bg: "#e8f7f1" },
                     { label: "Active", value: active, icon: <CheckCircle size={18} />, color: "#16a34a", bg: "#dcfce7" },
                     { label: "On Leave", value: onLeave, icon: <Clock size={18} />, color: "#f59e0b", bg: "#fffbeb" },
-                    { label: "Terminated/Resigned", value: terminatedResignedThisMonth, icon: <TrendingDown size={18} />, color: "#dc2626", bg: "#fef2f2" },
+                    { label: "Terminated/Resigned", value: terminatedResigned, icon: <TrendingDown size={18} />, color: "#dc2626", bg: "#fef2f2" },
                 ].map(stat => (
                     <div key={stat.label} className="bg-white border border-[var(--border)] rounded-[12px] p-4 flex items-center gap-3">
                         <div style={{ background: stat.bg, color: stat.color }} className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0">
