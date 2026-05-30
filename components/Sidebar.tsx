@@ -39,7 +39,6 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
                 { name: "Attendance", href: "/attendance", icon: ClipboardList, roles: ["ADMIN", "MANAGER"] },
                 { name: "Punch Kiosk", href: "/punch", icon: ScanFace, roles: ["ADMIN", "MANAGER"] },
                 { name: "Advance Salary", href: "/advances", icon: IndianRupee, roles: ["ADMIN", "MANAGER"] },
-                { name: "Leaves", href: "/leaves", icon: CalendarOff, roles: ["ADMIN", "MANAGER"] },
                 { name: "Payroll", href: "/payroll", icon: Wallet, roles: ["ADMIN", "MANAGER"] },
                 { name: "Expenses", href: "/expenses", icon: CreditCard, roles: ["ADMIN", "MANAGER"] },
             ]
