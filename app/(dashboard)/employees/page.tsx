@@ -1281,14 +1281,6 @@ export default function EmployeesPage() {
                         />
                     </div>
                     <select
-                        value={deptFilter}
-                        onChange={e => setDeptFilter(e.target.value)}
-                        className="h-9 rounded-[8px] border border-[var(--border)] bg-white px-3 text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)] transition-colors"
-                    >
-                        <option value="">All Departments</option>
-                        {allDepts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                    </select>
-                    <select
                         value={empTypeFilter}
                         onChange={e => setEmpTypeFilter(e.target.value)}
                         className="h-9 rounded-[8px] border border-[var(--border)] bg-white px-3 text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)] transition-colors"
@@ -1319,7 +1311,6 @@ export default function EmployeesPage() {
                             <thead>
                                 <tr className="border-b border-[var(--border)] bg-[var(--surface2)]/40">
                                     <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-5 py-3">Employee</th>
-                                    <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Department</th>
                                     <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Type</th>
                                     <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Phone</th>
                                     <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Joined</th>
@@ -1351,15 +1342,6 @@ export default function EmployeesPage() {
                                                         )}
                                                     </div>
                                                 </div>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                {emp.department ? (
-                                                    <span className="px-2 py-0.5 bg-[var(--surface2)] border border-[var(--border)] rounded-[6px] text-[12px] text-[var(--text2)] font-medium">
-                                                        {emp.department.name}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-[13px] text-[var(--text3)]">—</span>
-                                                )}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <span className={`px-2 py-0.5 rounded-[6px] text-[11px] font-semibold ${
