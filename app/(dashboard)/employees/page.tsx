@@ -933,7 +933,6 @@ function RowActions({
     onEdit,
     onTerminate,
     onDelete,
-    onHardDelete,
 }: {
     emp: Employee
     isAdmin: boolean
@@ -941,7 +940,6 @@ function RowActions({
     onEdit: () => void
     onTerminate: () => void
     onDelete: () => void
-    onHardDelete: () => void
 }) {
     const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
     const btnRef = useRef<HTMLButtonElement>(null)
@@ -990,13 +988,8 @@ function RowActions({
                         </button>
                     )}
                     {isAdmin && (
-                        <button onClick={() => { onDelete(); setPos(null) }} className="w-full text-left px-4 py-2 text-[13px] flex items-center gap-2.5 hover:bg-[#fef2f2] text-[#dc2626] transition-colors">
+                        <button onClick={() => { onDelete(); setPos(null) }} className="w-full text-left px-4 py-2 text-[13px] flex items-center gap-2.5 hover:bg-[#fef2f2] text-[#dc2626] font-semibold transition-colors border-t border-[var(--border)]">
                             <Trash2 size={14} /> Delete
-                        </button>
-                    )}
-                    {isAdmin && (
-                        <button onClick={() => { onHardDelete(); setPos(null) }} className="w-full text-left px-4 py-2 text-[13px] flex items-center gap-2.5 hover:bg-[#fef2f2] text-[#7f1d1d] font-semibold transition-colors border-t border-[var(--border)]">
-                            <Trash2 size={14} /> Hard Delete
                         </button>
                     )}
                 </div>
@@ -1252,22 +1245,6 @@ export default function EmployeesPage() {
 
             {/* Filters */}
             <div className="bg-white border border-[var(--border)] rounded-[12px] p-4 space-y-3">
-                {/* Status pills */}
-                <div className="flex flex-wrap gap-2">
-                    {[{ k: "", label: "All" }, ...Object.entries(STATUS_CONFIG).map(([k, v]) => ({ k, label: v.label }))].map(({ k, label }) => (
-                        <button
-                            key={k}
-                            onClick={() => setStatusFilter(k)}
-                            className={`px-3 py-1 rounded-full text-[12px] font-medium border transition-all ${statusFilter === k
-                                ? "bg-[var(--accent)] text-white border-[var(--accent)]"
-                                : "bg-white text-[var(--text2)] border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent-text)]"
-                                }`}
-                        >
-                            {label}
-                        </button>
-                    ))}
-                </div>
-
                 {/* Search + dropdowns */}
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="relative flex-1 min-w-[200px]">
@@ -1378,8 +1355,7 @@ export default function EmployeesPage() {
                                                         onView={() => setDrawerEmployee(emp)}
                                                         onEdit={() => { setEditEmployee(emp); setShowModal(true) }}
                                                         onTerminate={() => handleStatusChange(emp.id, "TERMINATED")}
-                                                        onDelete={() => handleDelete(emp.id)}
-                                                        onHardDelete={() => handleHardDelete(emp.id, `${emp.firstName} ${emp.lastName}`)}
+                                                        onDelete={() => handleHardDelete(emp.id, `${emp.firstName} ${emp.lastName}`)}
                                                     />
                                                 </div>
                                             </td>
