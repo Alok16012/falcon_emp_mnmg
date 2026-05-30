@@ -41,6 +41,28 @@ export async function POST(req: Request) {
         if (!employees.length) return new NextResponse("No active employees found", { status: 404 })
 
         const defaultMonthDays = new Date(year, month, 0).getDate()
+
+        // Auto-fetch attendance data from punch logs for this month
+        const attMonthStart = new Date(year, month - 1, 1)
+        const attMonthEnd   = new Date(year, month, 1)
+        const monthAttendances = await prisma.attendance.findMany({
+            where: {
+                date: { gte: attMonthStart, lt: attMonthEnd },
+                status: "PRESENT",
+            },
+            include: {
+                punchLogs: { orderBy: { punchNumber: "asc" } },
+            },
+        })
+
+        // Build per-employee summary: workedDays, totalWorkingHrs, otDays
+        const punchSummary: Record<string, { workedDays: number; totalWorkingHrs: number; otDays: number }> = {}
+        for (const att of monthAttendances) {
+            const empId = att.employeeId
+            if (!punchSummary[empId]) punchSummary[empId] = { workedDays: 0, totalWorkingHrs: 0, otDays: 0 }
+            punchSummary[empId].workedDays += 1
+            punchSummary[empId].totalWorkingHrs += att.workingHrs || 0
+        }
         let totalGross = 0, totalNet = 0, totalPfE = 0, totalEsiE = 0
 
         // Fetch all advances for this month/year in one query
@@ -64,6 +86,18 @@ export async function POST(req: Request) {
             if (!sal || sal.status !== "APPROVED") return null
 
             const attInput = (attendance as any[])?.find((a: any) => a.employeeId === emp.id) ?? {}
+
+            // Merge punch-based data into attInput (punch data wins if manual not provided)
+            const punch = punchSummary[emp.id]
+            const shiftHrs = (emp as any).shiftHours || 8
+            if (punch && attInput.workedDays === undefined) {
+                attInput.workedDays = punch.workedDays
+                // OT days: days where working hrs > shift hours
+                if (attInput.otDays === undefined) {
+                    const monthAtts = monthAttendances.filter(a => a.employeeId === emp.id)
+                    attInput.otDays = monthAtts.filter(a => (a.workingHrs || 0) > shiftHrs).length
+                }
+            }
 
             // Auto-sum approved advances for this employee this month
             const autoAdvance = monthAdvances

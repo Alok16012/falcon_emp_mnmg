@@ -42,6 +42,10 @@ export async function GET(req: Request) {
                         department: { select: { name: true } },
                     },
                 },
+                punchLogs: {
+                    orderBy: { punchNumber: "asc" },
+                    select: { punchNumber: true, punchType: true, punchTime: true },
+                },
             },
             orderBy: { date: "desc" },
         })

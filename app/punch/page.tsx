@@ -36,6 +36,7 @@ export default function PunchKioskPage() {
     const [currentTime, setCurrentTime] = useState(new Date())
     const [streamActive, setStreamActive] = useState(false)
     const [todayPunches, setTodayPunches] = useState<PunchLog[]>([])
+    const [isLate, setIsLate] = useState(false)
 
     const videoRef = useRef<HTMLVideoElement>(null)
     const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -177,6 +178,7 @@ export default function PunchKioskPage() {
                     time: format(new Date(data.time), "hh:mm:ss a"),
                     totalWorkingHrs: data.totalWorkingHrs,
                 })
+                setIsLate(data.isLate || false)
                 setState("success")
             }
         } catch {
@@ -341,6 +343,11 @@ export default function PunchKioskPage() {
                             <p className="text-slate-700 font-semibold mt-1">{matched.firstName} {matched.lastName}</p>
                             <p className="text-slate-500 text-sm mt-1">Time: <strong>{punchResult.time}</strong></p>
                             <p className="text-slate-500 text-sm">Punch #{punchResult.punchNumber}</p>
+                            {isLate && punchResult.punchType === "IN" && (
+                                <div className="mt-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-[10px] inline-block">
+                                    <p className="text-amber-700 font-bold text-sm">⚠️ Late Arrival — After 9:15 AM</p>
+                                </div>
+                            )}
                             {punchResult.punchType === "OUT" && punchResult.totalWorkingHrs > 0 && (
                                 <div className="mt-2 px-4 py-2 bg-blue-50 rounded-[10px] inline-block">
                                     <p className="text-blue-700 font-bold text-base">

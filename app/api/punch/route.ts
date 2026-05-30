@@ -60,6 +60,15 @@ export async function POST(req: Request) {
         // Odd punch = IN, Even punch = OUT
         const punchType = nextPunchNumber % 2 === 1 ? "IN" : "OUT"
 
+        // Late detection: if first punch IN after shift start time (default 09:15)
+        const SHIFT_START_HOUR = 9
+        const SHIFT_START_MIN  = 15
+        let isLate = false
+        if (punchType === "IN" && nextPunchNumber === 1) {
+            isLate = now.getHours() > SHIFT_START_HOUR ||
+                (now.getHours() === SHIFT_START_HOUR && now.getMinutes() > SHIFT_START_MIN)
+        }
+
         // Create punch log
         await prisma.punchLog.create({
             data: {
@@ -70,6 +79,14 @@ export async function POST(req: Request) {
                 punchTime: now,
             },
         })
+
+        // Mark attendance as late if first punch is late
+        if (isLate) {
+            await prisma.attendance.update({
+                where: { id: attendance.id },
+                data: { remarks: `Late arrival: ${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")}` },
+            })
+        }
 
         // Recalculate total working hours from all IN/OUT pairs
         const allPunches = [...attendance.punchLogs, {
@@ -109,6 +126,7 @@ export async function POST(req: Request) {
             time: now,
             totalWorkingHrs,
             totalPunches: nextPunchNumber,
+            isLate,
         })
     } catch (err) {
         console.error("[PUNCH_POST]", err)

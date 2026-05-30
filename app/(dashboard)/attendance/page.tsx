@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { format, parseISO } from "date-fns"
 import { toast } from "sonner"
-import { Calendar, Users, CheckCircle, XCircle, Clock, Save, ChevronLeft, ChevronRight, LogIn, LogOut } from "lucide-react"
+import { Calendar, Users, CheckCircle, XCircle, Clock, Save, ChevronLeft, ChevronRight, LogIn, LogOut, ChevronDown, AlertTriangle } from "lucide-react"
 
 type Employee = {
     id: string
@@ -15,6 +15,12 @@ type Employee = {
     basicSalary: number
     shiftHours?: number
     department?: { name: string }
+}
+
+type PunchLog = {
+    punchNumber: number
+    punchType: "IN" | "OUT"
+    punchTime: string
 }
 
 type AttendanceStatus = "PRESENT" | "ABSENT" | "HALF_DAY" | "HOLIDAY" | "WEEKLY_OFF"
@@ -65,6 +71,10 @@ export default function AttendancePage() {
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState<"ALL" | "LABOUR" | "STAFF">("ALL")
     const [saved, setSaved] = useState(false)
+    const [punchLogs, setPunchLogs] = useState<Record<string, PunchLog[]>>({})
+    const [workingHrsMap, setWorkingHrsMap] = useState<Record<string, number>>({})
+    const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
+    const [lateMap, setLateMap] = useState<Record<string, boolean>>({})
 
     const fetchEmployees = useCallback(async () => {
         try {
@@ -83,6 +93,10 @@ export default function AttendancePage() {
             const rem: Record<string, string> = {}
             const ci: Record<string, string> = {}
             const co: Record<string, string> = {}
+            const punches: Record<string, PunchLog[]> = {}
+            const wkHrs: Record<string, number> = {}
+            const late: Record<string, boolean> = {}
+
             if (Array.isArray(data)) {
                 data.forEach((a: {
                     employeeId: string
@@ -90,17 +104,31 @@ export default function AttendancePage() {
                     remarks?: string
                     checkIn?: string
                     checkOut?: string
+                    workingHrs?: number
+                    punchLogs?: PunchLog[]
                 }) => {
                     map[a.employeeId] = a.status
                     if (a.remarks) rem[a.employeeId] = a.remarks
                     if (a.checkIn) ci[a.employeeId] = extractTime(a.checkIn)
                     if (a.checkOut) co[a.employeeId] = extractTime(a.checkOut)
+                    if (a.punchLogs?.length) punches[a.employeeId] = a.punchLogs
+                    if (a.workingHrs) wkHrs[a.employeeId] = a.workingHrs
+
+                    // Late detection: first IN punch after 09:15
+                    const firstIn = a.punchLogs?.find(p => p.punchType === "IN")
+                    if (firstIn) {
+                        const t = new Date(firstIn.punchTime)
+                        late[a.employeeId] = t.getHours() > 9 || (t.getHours() === 9 && t.getMinutes() > 15)
+                    }
                 })
             }
             setAttendance(map)
             setRemarks(rem)
             setCheckIns(ci)
             setCheckOuts(co)
+            setPunchLogs(punches)
+            setWorkingHrsMap(wkHrs)
+            setLateMap(late)
             setSaved(Object.keys(map).length > 0)
         } catch { toast.error("Failed to load attendance") }
         finally { setLoading(false) }
@@ -270,8 +298,13 @@ export default function AttendancePage() {
                                 const ci = checkIns[emp.id] || ""
                                 const co = checkOuts[emp.id] || ""
                                 const dayCalc = isLabour && isPresent ? calcLabourDay(emp, ci, co) : null
+                                const empPunches = punchLogs[emp.id] || []
+                                const wkHrs = workingHrsMap[emp.id] || 0
+                                const isLate = lateMap[emp.id] || false
+                                const expanded = expandedRows[emp.id] || false
 
                                 return (
+                                    <>
                                     <tr key={emp.id} className="hover:bg-[var(--surface2)] transition-colors">
                                         {/* Employee */}
                                         <td className="px-4 py-3">
@@ -280,8 +313,22 @@ export default function AttendancePage() {
                                                     {emp.firstName[0]}{emp.lastName[0]}
                                                 </div>
                                                 <div>
-                                                    <p className="text-[13px] font-medium text-[var(--text)]">{emp.firstName} {emp.lastName}</p>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <p className="text-[13px] font-medium text-[var(--text)]">{emp.firstName} {emp.lastName}</p>
+                                                        {isLate && (
+                                                            <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-[4px] text-[10px] font-bold">
+                                                                <AlertTriangle size={9} /> LATE
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <p className="text-[11px] text-[var(--text3)]">{emp.employeeId}{emp.department ? ` · ${emp.department.name}` : ""}</p>
+                                                    {empPunches.length > 0 && (
+                                                        <button onClick={() => setExpandedRows(p => ({ ...p, [emp.id]: !expanded }))}
+                                                            className="flex items-center gap-0.5 text-[10px] text-[var(--accent-text)] mt-0.5 hover:underline">
+                                                            {empPunches.length} punch{empPunches.length > 1 ? "es" : ""} · {wkHrs.toFixed(1)} hrs
+                                                            <ChevronDown size={10} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
@@ -387,6 +434,33 @@ export default function AttendancePage() {
                                             />
                                         </td>
                                     </tr>
+
+                                    {/* Expandable punch log row */}
+                                    {expanded && empPunches.length > 0 && (
+                                        <tr key={`${emp.id}-punches`} className="bg-slate-50">
+                                            <td colSpan={5} className="px-6 py-2">
+                                                <div className="flex flex-wrap gap-2 items-center">
+                                                    <span className="text-[11px] font-semibold text-slate-500 mr-1">Punch Log:</span>
+                                                    {empPunches.map(p => (
+                                                        <span key={p.punchNumber}
+                                                            className={`flex items-center gap-1 px-2 py-0.5 rounded-[6px] text-[11px] font-semibold ${
+                                                                p.punchType === "IN"
+                                                                    ? "bg-emerald-100 text-emerald-700"
+                                                                    : "bg-red-100 text-red-600"
+                                                            }`}>
+                                                            {p.punchType === "IN" ? "🟢" : "🔴"} #{p.punchNumber} {p.punchType} · {format(new Date(p.punchTime), "hh:mm a")}
+                                                        </span>
+                                                    ))}
+                                                    {wkHrs > 0 && (
+                                                        <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-[6px] text-[11px] font-bold">
+                                                            ⏱ {wkHrs.toFixed(2)} hrs worked
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                    </>
                                 )
                             })}
                         </tbody>
