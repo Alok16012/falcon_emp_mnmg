@@ -457,16 +457,24 @@ function EmployeeModal({
                                     <input value={form.phone} onChange={set("phone")} className={inputCls} placeholder="Phone number" />
                                 </div>
                                 <div>
-                                    <label className={labelCls}>Email</label>
-                                    <input type="email" value={form.email} onChange={set("email")} className={inputCls} placeholder="Email address" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>Alternate Phone</label>
-                                    <input value={form.alternatePhone} onChange={set("alternatePhone")} className={inputCls} placeholder="Alternate phone" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>Date of Birth</label>
-                                    <input type="date" value={form.dateOfBirth} onChange={set("dateOfBirth")} className={inputCls} />
+                                    <label className={labelCls}>Age</label>
+                                    <input
+                                        type="number"
+                                        min="18" max="70"
+                                        value={form.dateOfBirth ? String(new Date().getFullYear() - new Date(form.dateOfBirth).getFullYear()) : ""}
+                                        onChange={e => {
+                                            const age = parseInt(e.target.value)
+                                            if (!isNaN(age) && age > 0) {
+                                                const dob = new Date()
+                                                dob.setFullYear(dob.getFullYear() - age)
+                                                setForm(f => ({ ...f, dateOfBirth: dob.toISOString().split("T")[0] }))
+                                            } else {
+                                                setForm(f => ({ ...f, dateOfBirth: "" }))
+                                            }
+                                        }}
+                                        placeholder="e.g. 25"
+                                        className={inputCls}
+                                    />
                                 </div>
                                 <div>
                                     <label className={labelCls}>Gender</label>
@@ -480,10 +488,6 @@ function EmployeeModal({
                                 <div>
                                     <label className={labelCls}>Aadhar Number</label>
                                     <input value={form.aadharNumber} onChange={set("aadharNumber")} className={inputCls} placeholder="XXXX XXXX XXXX" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>PAN Number</label>
-                                    <input value={form.panNumber} onChange={set("panNumber")} className={inputCls} placeholder="XXXXX0000X" />
                                 </div>
                             </div>
                         </div>
