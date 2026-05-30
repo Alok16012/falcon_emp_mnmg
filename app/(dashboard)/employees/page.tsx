@@ -176,6 +176,7 @@ type ModalForm = {
     address: string; city: string; state: string; pincode: string
     bankName: string; bankBranch: string; bankAccountNumber: string; bankIFSC: string
     status: string; notes: string
+    photo: string  // base64 face photo for kiosk punch
     // Compliance
     middleName: string; nameAsPerAadhar: string; fathersName: string; bloodGroup: string
     maritalStatus: string; nationality: string; religion: string; caste: string
@@ -194,6 +195,7 @@ const EMPTY_FORM: ModalForm = {
     address: "", city: "", state: "", pincode: "",
     bankName: "", bankBranch: "", bankAccountNumber: "", bankIFSC: "",
     status: "ACTIVE", notes: "",
+    photo: "",
     // Compliance
     middleName: "", nameAsPerAadhar: "", fathersName: "", bloodGroup: "",
     maritalStatus: "", nationality: "Indian", religion: "", caste: "",
@@ -212,6 +214,40 @@ function EmployeeModal({
     const [departments, setDepartments] = useState<Department[]>([])
     const [activeTab, setActiveTab] = useState<"personal" | "employment" | "bank" | "compliance">("personal")
     const [form, setForm] = useState<ModalForm>(EMPTY_FORM)
+    const [cameraOpen, setCameraOpen] = useState(false)
+    const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
+    const videoRef = useRef<HTMLVideoElement>(null)
+    const canvasRef = useRef<HTMLCanvasElement>(null)
+
+    const startCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+            setCameraStream(stream)
+            setCameraOpen(true)
+            setTimeout(() => { if (videoRef.current) videoRef.current.srcObject = stream }, 100)
+        } catch { toast.error("Camera access denied") }
+    }
+
+    const stopCamera = () => {
+        cameraStream?.getTracks().forEach(t => t.stop())
+        setCameraStream(null)
+        setCameraOpen(false)
+    }
+
+    const capturePhoto = () => {
+        if (!videoRef.current || !canvasRef.current) return
+        const v = videoRef.current
+        const c = canvasRef.current
+        c.width = v.videoWidth
+        c.height = v.videoHeight
+        c.getContext("2d")?.drawImage(v, 0, 0)
+        const dataUrl = c.toDataURL("image/jpeg", 0.8)
+        setForm(f => ({ ...f, photo: dataUrl }))
+        stopCamera()
+        toast.success("Photo captured!")
+    }
+
+    useEffect(() => { if (!open) stopCamera() }, [open])
 
     useEffect(() => {
         if (!open) return
@@ -264,6 +300,7 @@ function EmployeeModal({
                 emergencyContact1Phone: employee.emergencyContact1Phone || "",
                 emergencyContact2Name: employee.emergencyContact2Name || "",
                 emergencyContact2Phone: employee.emergencyContact2Phone || "",
+                photo: employee.photo || "",
             })
         } else {
             setForm(EMPTY_FORM)
@@ -369,6 +406,43 @@ function EmployeeModal({
                     {/* Personal Tab */}
                     {activeTab === "personal" && (
                         <div className="space-y-4">
+                            {/* Face Photo Capture */}
+                            <div className="border border-[var(--border)] rounded-[10px] p-3 bg-[var(--surface2)]/40">
+                                <p className="text-[12px] font-semibold text-[var(--text2)] mb-2">Face Photo <span className="text-[11px] font-normal text-[var(--text3)]">(Punch Kiosk ke liye)</span></p>
+                                {cameraOpen ? (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <video ref={videoRef} autoPlay playsInline className="w-48 h-36 rounded-[8px] object-cover bg-black" />
+                                        <canvas ref={canvasRef} className="hidden" />
+                                        <div className="flex gap-2">
+                                            <button type="button" onClick={capturePhoto}
+                                                className="px-3 py-1.5 bg-[var(--accent)] text-white text-[12px] font-semibold rounded-[7px]">
+                                                📸 Photo Lo
+                                            </button>
+                                            <button type="button" onClick={stopCamera}
+                                                className="px-3 py-1.5 bg-[var(--surface2)] text-[var(--text2)] text-[12px] rounded-[7px]">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : form.photo ? (
+                                    <div className="flex items-center gap-3">
+                                        <img src={form.photo} alt="face" className="w-16 h-16 rounded-full object-cover border-2 border-[var(--accent)]" />
+                                        <div>
+                                            <p className="text-[12px] text-green-600 font-semibold">✓ Photo saved</p>
+                                            <button type="button" onClick={startCamera}
+                                                className="text-[11px] text-[var(--accent-text)] underline mt-0.5">
+                                                Dobara lo
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button type="button" onClick={startCamera}
+                                        className="flex items-center gap-2 px-3 py-2 border border-dashed border-[var(--border)] rounded-[8px] text-[12px] text-[var(--text3)] hover:border-[var(--accent)] hover:text-[var(--accent-text)] transition-colors w-full justify-center">
+                                        📷 Camera se Photo lo
+                                    </button>
+                                )}
+                            </div>
+
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className={labelCls}>First Name *</label>
