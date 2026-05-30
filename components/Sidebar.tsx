@@ -46,7 +46,6 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
         {
             title: "CONFIGURATION",
             links: [
-                { name: "Users", href: "/admin/users", icon: Users, roles: ["ADMIN"] },
                 { name: "My Profile", href: "/profile", icon: UserCheck, roles: ["ADMIN", "MANAGER"] },
             ]
         }
