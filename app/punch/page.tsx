@@ -41,9 +41,19 @@ export default function PunchKioskPage() {
     // Load employees
     useEffect(() => {
         fetch("/api/punch")
-            .then(r => r.json())
-            .then(data => setEmployees(Array.isArray(data) ? data : []))
-            .catch(() => {})
+            .then(async r => {
+                const data = await r.json()
+                if (!r.ok) {
+                    setErrorMsg(`Employees load failed: ${data?.error || r.status}`)
+                    setState("error")
+                    return
+                }
+                setEmployees(Array.isArray(data) ? data : [])
+            })
+            .catch(e => {
+                setErrorMsg(`Network error: ${e.message}`)
+                setState("error")
+            })
     }, [])
 
     const startCamera = useCallback(async () => {

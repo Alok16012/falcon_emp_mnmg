@@ -19,7 +19,8 @@ export async function GET() {
         return NextResponse.json(employees)
     } catch (err) {
         console.error("[PUNCH_GET]", err)
-        return new NextResponse("Internal Error", { status: 500 })
+        const message = err instanceof Error ? err.message : "Internal Error"
+        return NextResponse.json({ error: message }, { status: 500 })
     }
 }
 
