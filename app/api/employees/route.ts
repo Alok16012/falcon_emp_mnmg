@@ -43,16 +43,38 @@ export async function GET(req: Request) {
 
         const employees = await prisma.employee.findMany({
             where,
-            include: {
+            select: {
+                id: true,
+                employeeId: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                phone: true,
+                photo: true,
+                designation: true,
+                status: true,
+                gender: true,
+                dateOfBirth: true,
+                dateOfJoining: true,
+                employmentType: true,
+                employeeCategory: true,
+                basicSalary: true,
+                dailyRate: true,
+                shiftHours: true,
+                hardwareUserId: true,
+                createdAt: true,
                 branch: { select: { id: true, name: true } },
                 department: { select: { id: true, name: true } },
-                employeeSalary: true,
-                _count: { select: { attendances: true, leaves: true } },
+                employeeSalary: { select: { basic: true, otRatePerHour: true } },
             },
             orderBy: { createdAt: "desc" },
         })
 
-        return NextResponse.json(employees)
+        return NextResponse.json(employees, {
+            headers: {
+                "Cache-Control": "no-store",
+            },
+        })
     } catch (error) {
         console.error("[EMPLOYEES_GET]", error)
         return new NextResponse("Internal Error", { status: 500 })

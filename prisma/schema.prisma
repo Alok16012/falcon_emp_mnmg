@@ -506,6 +506,8 @@ model Employee {
 
   @@index([branchId])
   @@index([status])
+  @@index([hardwareUserId])         // fast lookup during hardware sync
+  @@index([status, branchId])       // filtered employee list
 }
 
 model EmployeeDocument {
@@ -603,6 +605,8 @@ model Attendance {
   @@index([employeeId])
   @@index([date])
   @@index([status])
+  @@index([date, status])           // fast filtered queries (date range + status)
+  @@index([employeeId, date])       // already unique but explicit for query planner
 }
 
 model PunchLog {
