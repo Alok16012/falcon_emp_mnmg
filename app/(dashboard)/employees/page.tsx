@@ -212,7 +212,7 @@ function EmployeeModal({
 }) {
     const [loading, setLoading] = useState(false)
     const [departments, setDepartments] = useState<Department[]>([])
-    const [activeTab, setActiveTab] = useState<"personal" | "employment" | "bank" | "compliance">("personal")
+    const [activeTab, setActiveTab] = useState<"personal" | "employment">("personal")
     const [form, setForm] = useState<ModalForm>(EMPTY_FORM)
     const [cameraOpen, setCameraOpen] = useState(false)
     const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
@@ -395,9 +395,9 @@ function EmployeeModal({
 
                 {/* Tabs */}
                 <div className="flex border-b border-[var(--border)] px-6 overflow-x-auto">
-                    {(["personal", "employment", "bank", "compliance"] as const).map(t => (
+                    {(["personal", "employment"] as const).map(t => (
                         <button key={t} onClick={() => setActiveTab(t)} className={tabCls(t)}>
-                            {t === "personal" ? "Personal Info" : t === "employment" ? "Employment" : t === "bank" ? "Bank & Address" : "Compliance"}
+                            {t === "personal" ? "Personal Info" : "Employment"}
                         </button>
                     ))}
                 </div>
@@ -497,214 +497,39 @@ function EmployeeModal({
                     {activeTab === "employment" && (
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className={labelCls}>Designation</label>
-                                    <input value={form.designation} onChange={set("designation")} className={inputCls} placeholder="e.g. Security Guard" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>Department</label>
-                                    <select value={form.departmentId} onChange={set("departmentId")} className={inputCls}>
-                                        <option value="">No Department</option>
-                                        {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className={labelCls}>Manager</label>
-                                    <input value={form.managerId} onChange={set("managerId")} className={inputCls} placeholder="Manager name or ID" />
-                                </div>
-                                <div>
+                                <div className="col-span-2">
                                     <label className={labelCls}>Date of Joining</label>
                                     <input type="date" value={form.dateOfJoining} onChange={set("dateOfJoining")} className={inputCls} />
                                 </div>
-                                <div>
-                                    <label className={labelCls}>Employment Type</label>
-                                    <select value={form.employmentType} onChange={set("employmentType")} className={inputCls}>
-                                        {EMPLOYMENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                                    </select>
+                                <div className="col-span-2">
+                                    <label className={labelCls}>Hourly Rate (₹/hr)</label>
+                                    <input type="number" value={form.basicSalary} onChange={set("basicSalary")} className={inputCls} placeholder="e.g. 80" min="0" />
                                 </div>
-                                {form.employeeCategory === "LABOUR" ? (
-                                    <div className="col-span-2 grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className={labelCls}>Daily Rate (₹) *</label>
-                                            <input type="number" value={form.dailyRate} onChange={set("dailyRate")} className={inputCls} placeholder="e.g. 500" min="0" />
-                                        </div>
-                                        <div>
-                                            <label className={labelCls}>Shift Duration *</label>
-                                            <div className="flex gap-2">
-                                                {[
-                                                    { val: "8", label: "8 Hr", desc: "Gen Shift" },
-                                                    { val: "10", label: "10 Hr", desc: "Long Shift" },
-                                                    { val: "12", label: "12 Hr", desc: "Double Shift" },
-                                                ].map(opt => (
-                                                    <button key={opt.val} type="button"
-                                                        onClick={() => setForm(f => ({ ...f, shiftHours: opt.val }))}
-                                                        className={`flex-1 flex flex-col items-center py-2 rounded-[8px] border-2 text-center transition-all ${
-                                                            form.shiftHours === opt.val
-                                                                ? "border-[var(--accent)] bg-[var(--accent-light)]"
-                                                                : "border-[var(--border)] bg-white hover:border-[var(--accent)]"
-                                                        }`}>
-                                                        <span className={`text-[13px] font-bold ${form.shiftHours === opt.val ? "text-[var(--accent-text)]" : "text-[var(--text)]"}`}>{opt.label}</span>
-                                                        <span className="text-[10px] text-[var(--text3)]">{opt.desc}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            {form.dailyRate && (
-                                                <p className="text-[11px] text-[var(--text3)] mt-1">
-                                                    Hourly Rate: ₹{(parseFloat(form.dailyRate || "0") / parseInt(form.shiftHours || "8")).toFixed(0)}/hr · Monthly: ₹{(parseFloat(form.dailyRate || "0") * 30).toLocaleString()}
-                                                </p>
-                                            )}
-                                            <p className="text-[11px] text-[var(--text3)] mt-1">Per day wage · Salary cycle: 1st to 1st</p>
-                                        </div>
-                                        <div>
-                                            <label className={labelCls}>Labour Card No.</label>
-                                            <input value={form.labourCardNo} onChange={set("labourCardNo")} className={inputCls} placeholder="Labour card number" />
-                                        </div>
+                                <div className="col-span-2">
+                                    <label className={labelCls}>Shift Duration</label>
+                                    <div className="flex gap-2">
+                                        {[
+                                            { val: "8", label: "8 Hr", desc: "Gen Shift" },
+                                            { val: "10", label: "10 Hr", desc: "Long Shift" },
+                                            { val: "12", label: "12 Hr", desc: "Double Shift" },
+                                        ].map(opt => (
+                                            <button key={opt.val} type="button"
+                                                onClick={() => setForm(f => ({ ...f, shiftHours: opt.val }))}
+                                                className={`flex-1 flex flex-col items-center py-2.5 rounded-[8px] border-2 text-center transition-all ${
+                                                    form.shiftHours === opt.val
+                                                        ? "border-[var(--accent)] bg-[var(--accent-light)]"
+                                                        : "border-[var(--border)] bg-white hover:border-[var(--accent)]"
+                                                }`}>
+                                                <span className={`text-[14px] font-bold ${form.shiftHours === opt.val ? "text-[var(--accent-text)]" : "text-[var(--text)]"}`}>{opt.label}</span>
+                                                <span className="text-[10px] text-[var(--text3)]">{opt.desc}</span>
+                                            </button>
+                                        ))}
                                     </div>
-                                ) : (
-                                    <>
-                                        <div>
-                                            <label className={labelCls}>Salary Type</label>
-                                            <select value={form.salaryType} onChange={set("salaryType")} className={inputCls}>
-                                                {SALARY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className={labelCls}>Monthly Salary (₹)</label>
-                                            <input type="number" value={form.basicSalary} onChange={set("basicSalary")} className={inputCls} placeholder="0" min="0" />
-                                        </div>
-                                    </>
-                                )}
-                                <div>
-                                    <label className={labelCls}>Status</label>
-                                    <select value={form.status} onChange={set("status")} className={inputCls}>
-                                        {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-                            <div>
-                                <label className={labelCls}>Notes</label>
-                                <textarea value={form.notes} onChange={set("notes")} className="w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)] transition-colors resize-none" rows={3} placeholder="Additional notes..." />
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Bank & Address Tab */}
-                    {activeTab === "bank" && (
-                        <div className="space-y-4">
-                            <p className="text-[11px] font-semibold text-[var(--text3)] tracking-[0.5px] uppercase">Address</p>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="col-span-2">
-                                    <label className={labelCls}>Address</label>
-                                    <input value={form.address} onChange={set("address")} className={inputCls} placeholder="Street address" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>City</label>
-                                    <input value={form.city} onChange={set("city")} className={inputCls} placeholder="City" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>State</label>
-                                    <input value={form.state} onChange={set("state")} className={inputCls} placeholder="State" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>Pincode</label>
-                                    <input value={form.pincode} onChange={set("pincode")} className={inputCls} placeholder="Pincode" />
-                                </div>
-                            </div>
-                            <p className="text-[11px] font-semibold text-[var(--text3)] tracking-[0.5px] uppercase mt-2">Bank Details</p>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className={labelCls}>Bank Name</label>
-                                    <input value={form.bankName} onChange={set("bankName")} className={inputCls} placeholder="Bank name" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>Bank Branch</label>
-                                    <input value={form.bankBranch} onChange={set("bankBranch")} className={inputCls} placeholder="Branch name" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>IFSC Code</label>
-                                    <input value={form.bankIFSC} onChange={set("bankIFSC")} className={inputCls} placeholder="IFSC code" />
-                                </div>
-                                <div className="col-span-2">
-                                    <label className={labelCls}>Account Number</label>
-                                    <input value={form.bankAccountNumber} onChange={set("bankAccountNumber")} className={inputCls} placeholder="Account number" />
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Compliance Tab */}
-                    {activeTab === "compliance" && (
-                        <div className="space-y-4">
-                            <p className="text-[11px] font-semibold text-[var(--text3)] tracking-[0.5px] uppercase">Identity</p>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className={labelCls}>Middle Name</label>
-                                    <input value={form.middleName} onChange={set("middleName")} className={inputCls} placeholder="Middle name" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>Name as per Aadhar</label>
-                                    <input value={form.nameAsPerAadhar} onChange={set("nameAsPerAadhar")} className={inputCls} placeholder="As on Aadhar card" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>Father&apos;s Name</label>
-                                    <input value={form.fathersName} onChange={set("fathersName")} className={inputCls} placeholder="Father's full name" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>Blood Group</label>
-                                    <select value={form.bloodGroup} onChange={set("bloodGroup")} className={inputCls}>
-                                        <option value="">Select</option>
-                                        {["A+","A-","B+","B-","AB+","AB-","O+","O-"].map(g => <option key={g} value={g}>{g}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className={labelCls}>Nationality</label>
-                                    <input value={form.nationality} onChange={set("nationality")} className={inputCls} placeholder="Nationality" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>Religion</label>
-                                    <input value={form.religion} onChange={set("religion")} className={inputCls} placeholder="Religion" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>Caste</label>
-                                    <input value={form.caste} onChange={set("caste")} className={inputCls} placeholder="Caste category" />
-                                </div>
-                            </div>
-                            <p className="text-[11px] font-semibold text-[var(--text3)] tracking-[0.5px] uppercase mt-2">Statutory Numbers</p>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className={labelCls}>UAN (PF)</label>
-                                    <input value={form.uan} onChange={set("uan")} className={inputCls} placeholder="Universal Account Number" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>PF Number</label>
-                                    <input value={form.pfNumber} onChange={set("pfNumber")} className={inputCls} placeholder="PF number" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>ESI Number</label>
-                                    <input value={form.esiNumber} onChange={set("esiNumber")} className={inputCls} placeholder="ESI number" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>Labour Card No.</label>
-                                    <input value={form.labourCardNo} onChange={set("labourCardNo")} className={inputCls} placeholder="Labour card number" />
-                                </div>
-                            </div>
-                            <p className="text-[11px] font-semibold text-[var(--text3)] tracking-[0.5px] uppercase mt-2">Emergency Contacts</p>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className={labelCls}>EC1 Name</label>
-                                    <input value={form.emergencyContact1Name} onChange={set("emergencyContact1Name")} className={inputCls} placeholder="Contact person name" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>EC1 Phone</label>
-                                    <input value={form.emergencyContact1Phone} onChange={set("emergencyContact1Phone")} className={inputCls} placeholder="Contact phone" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>EC2 Name</label>
-                                    <input value={form.emergencyContact2Name} onChange={set("emergencyContact2Name")} className={inputCls} placeholder="Contact person name" />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>EC2 Phone</label>
-                                    <input value={form.emergencyContact2Phone} onChange={set("emergencyContact2Phone")} className={inputCls} placeholder="Contact phone" />
+                                    {form.basicSalary && (
+                                        <p className="text-[11px] text-[var(--text3)] mt-1.5">
+                                            Daily: ₹{(parseFloat(form.basicSalary || "0") * parseInt(form.shiftHours || "8")).toFixed(0)} · Monthly: ₹{(parseFloat(form.basicSalary || "0") * parseInt(form.shiftHours || "8") * 26).toLocaleString()}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -714,7 +539,7 @@ function EmployeeModal({
 
                 <div className="px-6 py-4 border-t border-[var(--border)] flex items-center justify-between">
                     <div className="flex gap-1">
-                        {(["personal", "employment", "bank", "compliance"] as const).map((t) => (
+                        {(["personal", "employment"] as const).map((t) => (
                             <div
                                 key={t}
                                 onClick={() => setActiveTab(t)}
@@ -726,14 +551,10 @@ function EmployeeModal({
                         <button onClick={onClose} type="button" className="px-4 py-2 text-[13px] font-medium text-[var(--text2)] hover:text-[var(--text)] rounded-[8px] hover:bg-[var(--surface2)] transition-colors">
                             Cancel
                         </button>
-                        {activeTab !== "compliance" ? (
+                        {activeTab === "personal" ? (
                             <button
                                 type="button"
-                                onClick={() => {
-                                    const order = ["personal", "employment", "bank", "compliance"] as const
-                                    const idx = order.indexOf(activeTab)
-                                    if (idx < order.length - 1) setActiveTab(order[idx + 1])
-                                }}
+                                onClick={() => setActiveTab("employment")}
                                 className="inline-flex items-center gap-2 px-5 py-2 bg-[var(--accent)] text-white rounded-[8px] text-[13px] font-medium hover:opacity-90 transition-opacity"
                             >
                                 Next
