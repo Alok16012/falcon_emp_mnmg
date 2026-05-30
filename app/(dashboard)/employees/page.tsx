@@ -75,6 +75,9 @@ type Employee = {
     safetyJacket?: boolean
     safetyEarMuffs?: boolean
     safetyShoes?: boolean
+    shiftHours?: string
+    dailyRate?: string
+    employeeCategory?: string
 }
 
 type Department = { id: string; name: string; branchId: string }
@@ -618,7 +621,7 @@ function EmployeeDrawer({
     onStatusChange: (id: string, status: string) => void
     isAdmin: boolean
 }) {
-    const [activeTab, setActiveTab] = useState<"personal" | "employment" | "bank" | "documents">("personal")
+    const [activeTab, setActiveTab] = useState<"personal" | "employment">("personal")
     const [detail, setDetail] = useState<Record<string, unknown> | null>(null)
     const [loadingDetail, setLoadingDetail] = useState(false)
     const [statusMenuOpen, setStatusMenuOpen] = useState(false)
@@ -797,7 +800,7 @@ function EmployeeDrawer({
                                 label: "Joined",
                                 value: employee.dateOfJoining ? format(new Date(employee.dateOfJoining), "dd MMM yyyy") : "—"
                             },
-                            { icon: <IndianRupee size={12} />, label: "Salary", value: fmtRupee(employee.basicSalary) },
+                            { icon: <IndianRupee size={12} />, label: "Hourly Rate", value: employee.basicSalary ? `₹${Number(employee.basicSalary)}/hr` : "—" },
                         ].map(s => (
                             <div key={s.label} className="flex items-center gap-1.5 bg-[var(--surface2)]/40 rounded-[8px] px-2.5 py-2 border border-[var(--border)]">
                                 <span className="text-[var(--text3)]">{s.icon}</span>
@@ -812,14 +815,9 @@ function EmployeeDrawer({
 
                 {/* Tabs */}
                 <div className="flex border-b border-[var(--border)] px-5 overflow-x-auto">
-                    {(["personal", "employment", "bank", "documents"] as const).map(t => (
-                        <button key={t} onClick={() => {
-                            setActiveTab(t)
-                            if (t === "documents" && employee && documents.length === 0 && !docsLoading) {
-                                fetchDocuments(employee.id)
-                            }
-                        }} className={tabCls(t)}>
-                            {t === "personal" ? "Personal" : t === "employment" ? "Employment" : t === "bank" ? "Bank" : "Documents"}
+                    {(["personal", "employment"] as const).map(t => (
+                        <button key={t} onClick={() => setActiveTab(t)} className={tabCls(t)}>
+                            {t === "personal" ? "Personal" : "Employment"}
                         </button>
                     ))}
                 </div>
@@ -849,160 +847,36 @@ function EmployeeDrawer({
                                 />
                             )}
                         </div>
-                    ) : activeTab === "employment" ? (
-                        <div className="space-y-2">
-                            <div className="grid grid-cols-2 gap-2">
-                                <InfoItem label="Employment Type" value={emp.employmentType} icon={<Briefcase size={13} />} />
-                                <InfoItem label="Salary Type" value={emp.salaryType || "—"} icon={<IndianRupee size={13} />} />
-                                <InfoItem label="Basic Salary" value={fmtRupee(emp.basicSalary)} icon={<IndianRupee size={13} />} />
-                                <InfoItem label="Manager" value={emp.managerId || "—"} icon={<User size={13} />} />
-                                <InfoItem
-                                    label="Date of Joining"
-                                    value={emp.dateOfJoining ? format(new Date(emp.dateOfJoining), "dd MMM yyyy") : "—"}
-                                    icon={<Calendar size={13} />}
-                                />
-                            </div>
-                            {emp.notes && (
-                                <div className="p-3 rounded-[10px] bg-[var(--surface2)]/40 border border-[var(--border)]">
-                                    <p className="text-[10.5px] text-[var(--text3)] font-medium uppercase tracking-[0.4px] mb-1">Notes</p>
-                                    <p className="text-[13px] text-[var(--text)]">{emp.notes}</p>
-                                </div>
-                            )}
-                        </div>
-                    ) : activeTab === "bank" ? (
-                        <div className="space-y-2">
-                            <div className="grid grid-cols-2 gap-2">
-                                <InfoItem label="Bank Name" value={emp.bankName || "—"} icon={<CreditCard size={13} />} />
-                                <InfoItem label="IFSC Code" value={emp.bankIFSC || "—"} icon={<FileText size={13} />} />
-                                <InfoItem label="Account No." value={maskBank(emp.bankAccountNumber)} icon={<CreditCard size={13} />} />
-                            </div>
-                            <div className="mt-3 p-3 rounded-[10px] bg-[#fffbeb] border border-[#fde68a]">
-                                <p className="text-[11px] text-[#92400e]">Account number is partially masked for security. Edit employee to update bank details.</p>
-                            </div>
-                        </div>
                     ) : (
-                        /* Documents Tab */
-                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                            {/* Upload button */}
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text3)", textTransform: "uppercase", letterSpacing: "0.4px" }}>Documents</p>
-                                <button
-                                    onClick={() => setShowUploadForm(v => !v)}
-                                    style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, background: "var(--accent)", color: "#fff", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
-                                >
-                                    <Plus size={13} /> Upload Document
-                                </button>
-                            </div>
-
-                            {/* Upload Form */}
-                            {showUploadForm && (
-                                <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
-                                    <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", margin: 0 }}>Upload Document</p>
-                                    <div>
-                                        <label style={{ fontSize: 11, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>Document Type</label>
-                                        <select
-                                            value={uploadForm.type}
-                                            onChange={e => setUploadForm(f => ({ ...f, type: e.target.value }))}
-                                            style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--surface)", color: "var(--text)", boxSizing: "border-box" }}
-                                        >
-                                            {Object.entries(DOC_TYPE_CONFIG).map(([k, v]) => (
-                                                <option key={k} value={k}>{v.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: 11, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>Select File</label>
-                                        <div
-                                            onClick={() => adminFileRef.current?.click()}
-                                            style={{ width: "100%", padding: "10px", borderRadius: 8, border: "2px dashed var(--border)", fontSize: 13, background: "var(--surface)", color: "var(--text3)", boxSizing: "border-box", cursor: "pointer", textAlign: "center" }}
-                                        >
-                                            {uploadForm.fileName
-                                                ? <span style={{ color: "var(--accent)", fontWeight: 500 }}>✓ {uploadForm.fileName}</span>
-                                                : "Click to choose file (PDF, JPG, PNG)"}
+                        <div className="space-y-3">
+                            <InfoItem
+                                label="Date of Joining"
+                                value={emp.dateOfJoining ? format(new Date(emp.dateOfJoining), "dd MMM yyyy") : "—"}
+                                icon={<Calendar size={13} />}
+                            />
+                            <InfoItem
+                                label="Hourly Rate"
+                                value={emp.basicSalary ? `₹${Number(emp.basicSalary).toLocaleString()}/hr` : "—"}
+                                icon={<IndianRupee size={13} />}
+                            />
+                            <InfoItem
+                                label="Shift Duration"
+                                value={emp.shiftHours ? `${emp.shiftHours} Hours` : "—"}
+                                icon={<Briefcase size={13} />}
+                            />
+                            {emp.basicSalary && emp.shiftHours && (
+                                <div className="p-3 rounded-[10px] bg-[var(--surface2)]/40 border border-[var(--border)]">
+                                    <p className="text-[10.5px] text-[var(--text3)] font-medium uppercase tracking-[0.4px] mb-1.5">Estimated Earnings</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <p className="text-[10px] text-[var(--text3)]">Daily</p>
+                                            <p className="text-[13px] font-semibold text-[var(--text)]">₹{(Number(emp.basicSalary) * Number(emp.shiftHours)).toLocaleString()}</p>
                                         </div>
-                                        <input ref={adminFileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
-                                            onChange={handleAdminFilePick} />
+                                        <div>
+                                            <p className="text-[10px] text-[var(--text3)]">Monthly (26 days)</p>
+                                            <p className="text-[13px] font-semibold text-[var(--text)]">₹{(Number(emp.basicSalary) * Number(emp.shiftHours) * 26).toLocaleString()}</p>
+                                        </div>
                                     </div>
-                                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                                        <button
-                                            onClick={() => { setShowUploadForm(false); setUploadForm({ type: "RESUME", fileName: "", fileUrl: "" }); if (adminFileRef.current) adminFileRef.current.value = "" }}
-                                            style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "none", cursor: "pointer", fontSize: 12, color: "var(--text)" }}
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={handleUpload}
-                                            disabled={uploadSaving}
-                                            style={{ padding: "7px 14px", borderRadius: 8, background: "var(--accent)", color: "#fff", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, opacity: uploadSaving ? 0.6 : 1 }}
-                                        >
-                                            {uploadSaving ? "Saving..." : "Save"}
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Documents List */}
-                            {docsLoading ? (
-                                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 0" }}>
-                                    <Loader2 size={22} className="animate-spin" style={{ color: "var(--accent)" }} />
-                                </div>
-                            ) : documents.length === 0 ? (
-                                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 0", gap: 8 }}>
-                                    <FileText size={32} style={{ color: "var(--text3)" }} />
-                                    <p style={{ fontSize: 13, color: "var(--text3)", margin: 0 }}>No documents uploaded yet</p>
-                                </div>
-                            ) : (
-                                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                                    {documents.map(doc => {
-                                        const typeConf = DOC_TYPE_CONFIG[doc.type] || DOC_TYPE_CONFIG.OTHER
-                                        const statusConf = DOC_STATUS_CONFIG[doc.status] || DOC_STATUS_CONFIG.PENDING
-                                        return (
-                                            <div key={doc.id} style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px", background: "var(--surface)", display: "flex", flexDirection: "column", gap: 8 }}>
-                                                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                                                        <span style={{ fontSize: 11, fontWeight: 600, color: typeConf.color, background: typeConf.bg, padding: "2px 8px", borderRadius: 20 }}>
-                                                            {typeConf.label}
-                                                        </span>
-                                                        <span style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{doc.fileName}</span>
-                                                    </div>
-                                                    <span style={{ fontSize: 11, fontWeight: 600, color: statusConf.color, background: statusConf.bg, border: `1px solid ${statusConf.border}`, padding: "2px 8px", borderRadius: 20, whiteSpace: "nowrap", flexShrink: 0 }}>
-                                                        {statusConf.label}
-                                                    </span>
-                                                </div>
-                                                {doc.rejectionReason && (
-                                                    <p style={{ fontSize: 11, color: "#991b1b", margin: 0, background: "#fef2f2", padding: "4px 8px", borderRadius: 6 }}>
-                                                        Reason: {doc.rejectionReason}
-                                                    </p>
-                                                )}
-                                                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                                                    <button
-                                                        onClick={() => downloadDoc(doc.fileUrl, doc.fileName)}
-                                                        style={{ fontSize: 12, color: "var(--accent)", textDecoration: "underline", background: "none", border: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, padding: 0 }}
-                                                    >
-                                                        <FileText size={12} /> View / Download
-                                                    </button>
-                                                    {isAdmin && doc.status !== "VERIFIED" && (
-                                                        <button
-                                                            onClick={() => handleVerify(doc.id)}
-                                                            disabled={actionLoading === doc.id + "_verify"}
-                                                            style={{ fontSize: 11, fontWeight: 600, color: "#14532d", background: "#dcfce7", border: "1px solid #86efac", padding: "3px 10px", borderRadius: 6, cursor: "pointer", opacity: actionLoading === doc.id + "_verify" ? 0.6 : 1 }}
-                                                        >
-                                                            {actionLoading === doc.id + "_verify" ? "..." : "Verify"}
-                                                        </button>
-                                                    )}
-                                                    {isAdmin && doc.status !== "REJECTED" && (
-                                                        <button
-                                                            onClick={() => handleReject(doc.id)}
-                                                            disabled={actionLoading === doc.id + "_reject"}
-                                                            style={{ fontSize: 11, fontWeight: 600, color: "#991b1b", background: "#fef2f2", border: "1px solid #fecaca", padding: "3px 10px", borderRadius: 6, cursor: "pointer", opacity: actionLoading === doc.id + "_reject" ? 0.6 : 1 }}
-                                                        >
-                                                            {actionLoading === doc.id + "_reject" ? "..." : "Reject"}
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
                                 </div>
                             )}
                         </div>
