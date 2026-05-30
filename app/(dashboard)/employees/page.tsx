@@ -1028,28 +1028,49 @@ export default function EmployeesPage() {
         }
     }, [status, session, router])
 
+    // Fetch ALL employees once — filter client-side (instant, no API call per keystroke)
+    const [allEmployees, setAllEmployees] = useState<Employee[]>([])
+
     const fetchEmployees = useCallback(async () => {
         setLoading(true)
         try {
-            const params = new URLSearchParams()
-            if (statusFilter) params.set("status", statusFilter)
-            if (deptFilter) params.set("departmentId", deptFilter)
-            if (empTypeFilter) params.set("shiftHours", empTypeFilter)
-            if (search) params.set("search", search)
-            const res = await fetch(`/api/employees?${params}`)
+            const res = await fetch("/api/employees")
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data = await res.json()
-            setEmployees(Array.isArray(data) ? data : [])
+            const list = Array.isArray(data) ? data : []
+            setAllEmployees(list)
+            setEmployees(list)
         } catch (err) {
             const msg = err instanceof Error ? err.message : "Unknown error"
             toast.error(`Failed to load employees: ${msg}`)
         } finally {
             setLoading(false)
         }
-    }, [statusFilter, deptFilter, empTypeFilter, search])
+    }, [])
+
+    // Client-side filtering — instant, no network round-trip
+    useEffect(() => {
+        let filtered = allEmployees
+        if (statusFilter) filtered = filtered.filter(e => e.status === statusFilter)
+        if (deptFilter) filtered = filtered.filter(e => (e.department as { id: string } | null)?.id === deptFilter)
+        if (empTypeFilter) filtered = filtered.filter(e => String(e.shiftHours) === empTypeFilter)
+        if (search) {
+            const q = search.toLowerCase()
+            filtered = filtered.filter(e =>
+                e.firstName?.toLowerCase().includes(q) ||
+                e.lastName?.toLowerCase().includes(q) ||
+                e.employeeId?.toLowerCase().includes(q) ||
+                e.phone?.toLowerCase().includes(q) ||
+                e.designation?.toLowerCase().includes(q)
+            )
+        }
+        setEmployees(filtered)
+    }, [search, statusFilter, deptFilter, empTypeFilter, allEmployees])
 
     useEffect(() => {
-        if (status !== "unauthenticated") fetchEmployees()
+        if (status !== "unauthenticated") {
+            fetchEmployees()
+        }
     }, [status, fetchEmployees])
 
     useEffect(() => {
@@ -1267,8 +1288,39 @@ export default function EmployeesPage() {
 
             {/* Employee Table */}
             {loading ? (
-                <div className="flex items-center justify-center py-16">
-                    <Loader2 size={28} className="animate-spin text-[var(--accent)]" />
+                <div className="bg-white border border-[var(--border)] rounded-[12px] overflow-hidden">
+                    <table className="w-full">
+                        <thead>
+                            <tr className="border-b border-[var(--border)] bg-[var(--surface2)]/40">
+                                {["Employee","Type","Phone","Joined","Rate/Hr","Status","Actions"].map(h => (
+                                    <th key={h} className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-5 py-3">{h}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {Array.from({ length: 8 }).map((_, i) => (
+                                <tr key={i} className="border-b border-[var(--border)] last:border-0">
+                                    <td className="px-5 py-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-9 w-9 rounded-full bg-[var(--surface2)] animate-pulse" />
+                                            <div className="space-y-1.5">
+                                                <div className="h-3 w-28 bg-[var(--surface2)] rounded animate-pulse" />
+                                                <div className="h-2.5 w-16 bg-[var(--surface2)] rounded animate-pulse" />
+                                            </div>
+                                        </div>
+                                    </td>
+                                    {Array.from({ length: 5 }).map((_, j) => (
+                                        <td key={j} className="px-4 py-3">
+                                            <div className="h-3 w-20 bg-[var(--surface2)] rounded animate-pulse" />
+                                        </td>
+                                    ))}
+                                    <td className="px-5 py-3 text-right">
+                                        <div className="h-7 w-16 bg-[var(--surface2)] rounded-[6px] animate-pulse ml-auto" />
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             ) : employees.length === 0 ? (
                 <div className="flex min-h-[300px] flex-col items-center justify-center rounded-[14px] bg-white border border-dashed border-[var(--border)] shadow-sm">

@@ -72,7 +72,9 @@ export async function GET(req: Request) {
 
         return NextResponse.json(employees, {
             headers: {
-                "Cache-Control": "no-store",
+                // Browser/CDN caches for 30s, serves stale while revalidating for 60s
+                // This means 2nd page load within 30s = instant (from cache)
+                "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
             },
         })
     } catch (error) {

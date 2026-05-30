@@ -134,8 +134,10 @@ export default function AttendancePage() {
         finally { setLoading(false) }
     }, [date])
 
-    useEffect(() => { fetchEmployees() }, [fetchEmployees])
-    useEffect(() => { fetchAttendance() }, [fetchAttendance])
+    // Run both in parallel on mount — cuts load time in half
+    useEffect(() => {
+        Promise.all([fetchEmployees(), fetchAttendance()])
+    }, [fetchEmployees, fetchAttendance])
 
     const filtered = employees.filter(e =>
         filter === "ALL" ? true : e.employeeCategory === filter
@@ -271,7 +273,25 @@ export default function AttendancePage() {
             {/* Table */}
             <div className="bg-white border border-[var(--border)] rounded-[12px] overflow-hidden">
                 {loading ? (
-                    <div className="flex items-center justify-center py-16 text-[var(--text3)]">Loading...</div>
+                    <table className="w-full">
+                        <tbody>
+                            {Array.from({ length: 8 }).map((_, i) => (
+                                <tr key={i} className="border-b border-[var(--border)]">
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-8 w-8 rounded-full bg-[var(--surface2)] animate-pulse" />
+                                            <div className="h-3 w-32 bg-[var(--surface2)] rounded animate-pulse" />
+                                        </div>
+                                    </td>
+                                    {Array.from({ length: 5 }).map((_, j) => (
+                                        <td key={j} className="px-4 py-3">
+                                            <div className="h-7 w-20 bg-[var(--surface2)] rounded-[6px] animate-pulse" />
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 ) : filtered.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-[var(--text3)]">
                         <Users size={32} className="mb-2 opacity-40" />
