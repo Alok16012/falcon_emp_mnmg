@@ -18,7 +18,7 @@ type PunchLog = {
     punchTime: string
 }
 
-type KioskState = "idle" | "camera" | "matched" | "success" | "error"
+type KioskState = "idle" | "camera" | "matched" | "success" | "error" | "update_photo"
 
 const RESET_DELAY = 5000
 const SHIFT_START = "09:15"
@@ -40,6 +40,11 @@ export default function PunchKioskPage() {
     const [searchQuery, setSearchQuery] = useState("")
     const [cameraError, setCameraError] = useState("")
     const [cameraActive, setCameraActive] = useState(false)
+    const [photoUpdating, setPhotoUpdating] = useState(false)
+    const [photoCameraActive, setPhotoCameraActive] = useState(false)
+    const photoVideoRef = useRef<HTMLVideoElement>(null)
+    const photoCanvasRef = useRef<HTMLCanvasElement>(null)
+    const photoStreamRef = useRef<MediaStream | null>(null)
 
     const videoRef = useRef<HTMLVideoElement>(null)
     const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -217,6 +222,57 @@ export default function PunchKioskPage() {
         setTodayPunches([])
         setSearchQuery("")
         setCameraError("")
+    }
+
+    // ── Photo update ─────────────────────────────────────────────────────────
+
+    const startPhotoCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+            photoStreamRef.current = stream
+            setPhotoCameraActive(true)
+            setTimeout(() => {
+                if (photoVideoRef.current) {
+                    photoVideoRef.current.srcObject = stream
+                    photoVideoRef.current.play().catch(() => {})
+                }
+            }, 100)
+        } catch {
+            alert("Camera access denied")
+        }
+    }
+
+    const stopPhotoCamera = () => {
+        photoStreamRef.current?.getTracks().forEach(t => t.stop())
+        photoStreamRef.current = null
+        setPhotoCameraActive(false)
+    }
+
+    const captureAndSavePhoto = async () => {
+        if (!photoVideoRef.current || !photoCanvasRef.current || !matched) return
+        const v = photoVideoRef.current
+        const c = photoCanvasRef.current
+        c.width = v.videoWidth; c.height = v.videoHeight
+        c.getContext("2d")?.drawImage(v, 0, 0)
+        const dataUrl = c.toDataURL("image/jpeg", 0.8)
+        setPhotoUpdating(true)
+        try {
+            const res = await fetch(`/api/employees/${matched.id}/photo`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ photo: dataUrl }),
+            })
+            if (!res.ok) throw new Error()
+            // Update local state
+            setMatched(m => m ? { ...m, photo: dataUrl } : m)
+            setEmployees(list => list.map(e => e.id === matched.id ? { ...e, photo: dataUrl } : e))
+            stopPhotoCamera()
+            setState("matched")
+        } catch {
+            alert("Photo save failed")
+        } finally {
+            setPhotoUpdating(false)
+        }
     }
 
     // ── Filter employees ─────────────────────────────────────────────────────
@@ -409,9 +465,52 @@ export default function PunchKioskPage() {
                             </span>
                         </button>
 
-                        <button onClick={resetKiosk} className="text-slate-400 text-sm underline">
-                            ← Back / Not me
-                        </button>
+                        <div className="flex gap-3 w-full">
+                            <button onClick={resetKiosk} className="flex-1 py-2 text-slate-400 text-sm border border-slate-200 rounded-[10px]">
+                                ← Back
+                            </button>
+                            <button onClick={() => { setState("update_photo"); startPhotoCamera() }}
+                                className="flex-1 py-2 text-slate-500 text-sm border border-slate-200 rounded-[10px] hover:bg-slate-50">
+                                📷 Update Photo
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── UPDATE PHOTO ── */}
+                {state === "update_photo" && matched && (
+                    <div className="p-6 flex flex-col items-center gap-4">
+                        <p className="text-slate-700 font-semibold text-base">
+                            📷 {matched.firstName} {matched.lastName} — Update Face Photo
+                        </p>
+                        {photoCameraActive ? (
+                            <>
+                                <div className="relative">
+                                    <video ref={photoVideoRef} autoPlay playsInline muted
+                                        className="w-64 h-48 rounded-[14px] object-cover bg-black" />
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                        <div className="w-36 h-44 border-2 border-dashed border-emerald-300 rounded-full opacity-70" />
+                                    </div>
+                                </div>
+                                <canvas ref={photoCanvasRef} className="hidden" />
+                                <p className="text-slate-500 text-sm text-center">Apna chehra frame mein rakhkar photo lo</p>
+                                <div className="flex gap-3 w-full">
+                                    <button onClick={() => { stopPhotoCamera(); setState("matched") }}
+                                        className="flex-1 py-3 border border-slate-200 rounded-[12px] text-slate-500 text-sm">
+                                        Cancel
+                                    </button>
+                                    <button onClick={captureAndSavePhoto} disabled={photoUpdating}
+                                        className="flex-1 py-3 bg-emerald-500 text-white font-bold rounded-[12px] text-sm disabled:opacity-60">
+                                        {photoUpdating ? "Saving..." : "📸 Capture & Save"}
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <button onClick={startPhotoCamera}
+                                className="w-full py-4 bg-slate-800 text-white rounded-[12px] font-semibold">
+                                Open Camera
+                            </button>
+                        )}
                     </div>
                 )}
 

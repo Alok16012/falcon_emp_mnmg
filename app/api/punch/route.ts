@@ -41,21 +41,24 @@ export async function POST(req: Request) {
         // Get or create today's attendance record
         let attendance = await prisma.attendance.findFirst({
             where: { employeeId, date: { gte: todayStart, lt: todayEnd } },
-            include: { punchLogs: { orderBy: { punchNumber: "asc" } } },
         })
 
         if (!attendance) {
             attendance = await prisma.attendance.create({
-                data: {
-                    employeeId,
-                    date: todayStart,
-                    status: "PRESENT",
-                },
-                include: { punchLogs: true },
+                data: { employeeId, date: todayStart, status: "PRESENT" },
             })
         }
 
-        const punchCount = attendance.punchLogs.length
+        // Fetch existing punch logs separately (safe fallback)
+        let existingPunches: { punchNumber: number; punchType: string; punchTime: Date }[] = []
+        try {
+            existingPunches = await prisma.punchLog.findMany({
+                where: { attendanceId: attendance.id },
+                orderBy: { punchNumber: "asc" },
+            })
+        } catch { /* PunchLog table might not exist */ }
+
+        const punchCount = existingPunches.length
         const nextPunchNumber = punchCount + 1
         // Odd punch = IN, Even punch = OUT
         const punchType = nextPunchNumber % 2 === 1 ? "IN" : "OUT"
@@ -89,7 +92,7 @@ export async function POST(req: Request) {
         }
 
         // Recalculate total working hours from all IN/OUT pairs
-        const allPunches = [...attendance.punchLogs, {
+        const allPunches = [...existingPunches, {
             punchNumber: nextPunchNumber,
             punchType,
             punchTime: now,
@@ -148,11 +151,21 @@ export async function PUT(req: Request) {
 
         const attendance = await prisma.attendance.findFirst({
             where: { employeeId, date: { gte: todayStart, lt: todayEnd } },
-            include: { punchLogs: { orderBy: { punchNumber: "asc" } } },
         })
 
+        let punches: unknown[] = []
+        try {
+            if (attendance) {
+                punches = await prisma.punchLog.findMany({
+                    where: { attendanceId: attendance.id },
+                    orderBy: { punchNumber: "asc" },
+                    select: { punchNumber: true, punchType: true, punchTime: true },
+                })
+            }
+        } catch { /* safe fallback */ }
+
         return NextResponse.json({
-            punches: attendance?.punchLogs ?? [],
+            punches,
             workingHrs: attendance?.workingHrs ?? 0,
         })
     } catch (err) {

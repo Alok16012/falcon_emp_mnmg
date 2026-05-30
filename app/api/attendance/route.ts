@@ -42,15 +42,29 @@ export async function GET(req: Request) {
                         department: { select: { name: true } },
                     },
                 },
-                punchLogs: {
-                    orderBy: { punchNumber: "asc" },
-                    select: { punchNumber: true, punchType: true, punchTime: true },
-                },
             },
             orderBy: { date: "desc" },
         })
 
-        return NextResponse.json(records)
+        // Fetch punch logs separately — safe fallback if table missing
+        let punchMap: Record<string, unknown[]> = {}
+        try {
+            const ids = records.map(r => r.id)
+            if (ids.length > 0) {
+                const punches = await prisma.punchLog.findMany({
+                    where: { attendanceId: { in: ids } },
+                    orderBy: { punchNumber: "asc" },
+                    select: { attendanceId: true, punchNumber: true, punchType: true, punchTime: true },
+                })
+                for (const p of punches) {
+                    if (!punchMap[p.attendanceId]) punchMap[p.attendanceId] = []
+                    punchMap[p.attendanceId].push({ punchNumber: p.punchNumber, punchType: p.punchType, punchTime: p.punchTime })
+                }
+            }
+        } catch { /* PunchLog table might not exist yet */ }
+
+        const result = records.map(r => ({ ...r, punchLogs: punchMap[r.id] ?? [] }))
+        return NextResponse.json(result)
     } catch (err) {
         console.error("[ATTENDANCE_GET]", err)
         return new NextResponse("Internal Error", { status: 500 })
