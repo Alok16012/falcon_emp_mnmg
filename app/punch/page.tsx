@@ -37,6 +37,7 @@ export default function PunchKioskPage() {
     const [errorMsg, setErrorMsg] = useState("")
     const [currentTime, setCurrentTime] = useState(new Date())
     const [todayPunches, setTodayPunches] = useState<PunchLog[]>([])
+    const [todayPunchCount, setTodayPunchCount] = useState(0)
     const [todayCheckIn, setTodayCheckIn] = useState<string | null>(null)
     const [todayCheckOut, setTodayCheckOut] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
@@ -176,6 +177,7 @@ export default function PunchKioskPage() {
             })
             const data = await res.json()
             setTodayPunches(data.punches ?? [])
+            setTodayPunchCount(data.punchCount ?? 0)
             setTodayCheckIn(data.checkIn ?? null)
             setTodayCheckOut(data.checkOut ?? null)
         } catch { /* ignore */ }
@@ -224,6 +226,7 @@ export default function PunchKioskPage() {
         setPunchResult(null)
         setErrorMsg("")
         setTodayPunches([])
+        setTodayPunchCount(0)
         setTodayCheckIn(null)
         setTodayCheckOut(null)
         setSearchQuery("")
@@ -288,15 +291,9 @@ export default function PunchKioskPage() {
         )
         : employees
 
-    // Determine next punch type:
-    // 1. From punchLogs count (most accurate)
-    // 2. Fallback: from attendance checkIn/checkOut
-    const nextPunchType: "IN" | "OUT" = (() => {
-        if (todayPunches.length > 0) return todayPunches.length % 2 === 0 ? "IN" : "OUT"
-        if (todayCheckIn && !todayCheckOut) return "OUT"   // checked in, not out yet
-        if (todayCheckIn && todayCheckOut) return "IN"     // both done, next is IN again
-        return "IN"                                         // fresh start
-    })()
+    // Next punch type from punchCount (odd=IN, even=OUT)
+    // punchCount is the CURRENT count, next will be punchCount+1
+    const nextPunchType: "IN" | "OUT" = (todayPunchCount + 1) % 2 === 1 ? "IN" : "OUT"
 
     // ── Render ───────────────────────────────────────────────────────────────
     return (
@@ -475,7 +472,7 @@ export default function PunchKioskPage() {
                             <span className="text-4xl">{nextPunchType === "IN" ? "🟢" : "🔴"}</span>
                             <span>PUNCH {nextPunchType}</span>
                             <span className="text-base font-normal opacity-80">
-                                Tap #{todayPunches.length + 1} · {nextPunchType === "IN" ? "Clock In" : "Clock Out"}
+                                Tap #{todayPunchCount + 1} · {nextPunchType === "IN" ? "Clock In" : "Clock Out"}
                             </span>
                         </button>
 

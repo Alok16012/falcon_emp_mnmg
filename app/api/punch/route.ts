@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 
-// GET: all active employees with photos (for kiosk face matching)
+// GET: all active employees with photos (for kiosk)
 export async function GET() {
     try {
         const employees = await prisma.employee.findMany({
@@ -18,128 +18,81 @@ export async function GET() {
         })
         return NextResponse.json(employees)
     } catch (err) {
-        console.error("[PUNCH_GET]", err)
         const message = err instanceof Error ? err.message : "Internal Error"
         return NextResponse.json({ error: message }, { status: 500 })
     }
 }
 
-// POST: single tap punch — odd = IN, even = OUT
+// POST: single tap punch — punchCount odd=IN, even=OUT
 export async function POST(req: Request) {
     try {
         const { employeeId } = await req.json()
-
-        if (!employeeId) {
-            return new NextResponse("employeeId required", { status: 400 })
-        }
+        if (!employeeId) return new NextResponse("employeeId required", { status: 400 })
 
         const now = new Date()
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-        const todayEnd = new Date(todayStart)
-        todayEnd.setDate(todayEnd.getDate() + 1)
+        const todayEnd   = new Date(todayStart); todayEnd.setDate(todayEnd.getDate() + 1)
 
         // Get or create today's attendance record
         let attendance = await prisma.attendance.findFirst({
             where: { employeeId, date: { gte: todayStart, lt: todayEnd } },
         })
-
         if (!attendance) {
             attendance = await prisma.attendance.create({
-                data: { employeeId, date: todayStart, status: "PRESENT" },
+                data: { employeeId, date: todayStart, status: "PRESENT", punchCount: 0 },
             })
         }
 
-        // Fetch existing punch logs separately (safe fallback)
-        let existingPunches: { punchNumber: number; punchType: string; punchTime: Date }[] = []
-        try {
-            existingPunches = await prisma.punchLog.findMany({
-                where: { attendanceId: attendance.id },
-                orderBy: { punchNumber: "asc" },
-            })
-        } catch { /* PunchLog table might not exist */ }
+        const newPunchCount = (attendance.punchCount ?? 0) + 1
+        // Odd = IN, Even = OUT
+        const punchType: "IN" | "OUT" = newPunchCount % 2 === 1 ? "IN" : "OUT"
 
-        // Fallback: if PunchLog empty but checkIn exists → this must be OUT
-        // if checkIn + checkOut both exist → this is IN again (3rd punch)
-        let punchCount = existingPunches.length
-        if (punchCount === 0) {
-            if (attendance.checkIn && !attendance.checkOut) punchCount = 1  // next = OUT
-            else if (attendance.checkIn && attendance.checkOut) punchCount = 2 // next = IN
+        // Late check: first punch IN after 09:15
+        const SHIFT_H = 9, SHIFT_M = 15
+        const isLate = punchType === "IN" && newPunchCount === 1 &&
+            (now.getHours() > SHIFT_H || (now.getHours() === SHIFT_H && now.getMinutes() > SHIFT_M))
+
+        // Calculate working hours for OUT punches
+        // Each OUT = now - lastPunchTime (which is the IN time)
+        let addedWorkMs = 0
+        if (punchType === "OUT" && attendance.lastPunchTime) {
+            addedWorkMs = now.getTime() - new Date(attendance.lastPunchTime).getTime()
         }
+        const newWorkingHrs = parseFloat(
+            ((attendance.workingHrs ?? 0) + addedWorkMs / (1000 * 60 * 60)).toFixed(2)
+        )
 
-        const nextPunchNumber = punchCount + 1
-        // Odd punch = IN, Even punch = OUT
-        const punchType = nextPunchNumber % 2 === 1 ? "IN" : "OUT"
-
-        // Late detection: if first punch IN after shift start time (default 09:15)
-        const SHIFT_START_HOUR = 9
-        const SHIFT_START_MIN  = 15
-        let isLate = false
-        if (punchType === "IN" && nextPunchNumber === 1) {
-            isLate = now.getHours() > SHIFT_START_HOUR ||
-                (now.getHours() === SHIFT_START_HOUR && now.getMinutes() > SHIFT_START_MIN)
-        }
-
-        // Create punch log (safe — if table missing, attendance still saves)
-        try {
-            await prisma.punchLog.create({
-                data: {
-                    employeeId,
-                    attendanceId: attendance.id,
-                    punchNumber: nextPunchNumber,
-                    punchType,
-                    punchTime: now,
-                },
-            })
-        } catch (punchErr) {
-            console.warn("[PUNCH] PunchLog create failed (table may not exist):", punchErr)
-        }
-
-        // Mark attendance as late if first punch is late
-        if (isLate) {
-            await prisma.attendance.update({
-                where: { id: attendance.id },
-                data: { remarks: `Late arrival: ${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")}` },
-            })
-        }
-
-        // Recalculate total working hours from all IN/OUT pairs
-        const allPunches = [...existingPunches, {
-            punchNumber: nextPunchNumber,
-            punchType,
-            punchTime: now,
-        }].sort((a, b) => a.punchNumber - b.punchNumber)
-
-        let totalWorkingMs = 0
-        for (let i = 0; i < allPunches.length - 1; i += 2) {
-            const inPunch = allPunches[i]
-            const outPunch = allPunches[i + 1]
-            if (inPunch && outPunch && inPunch.punchType === "IN" && outPunch.punchType === "OUT") {
-                totalWorkingMs += new Date(outPunch.punchTime).getTime() - new Date(inPunch.punchTime).getTime()
-            }
-        }
-        const totalWorkingHrs = parseFloat((totalWorkingMs / (1000 * 60 * 60)).toFixed(2))
-
-        // Update attendance: first IN as checkIn, last OUT as checkOut, working hrs
-        const firstIn = allPunches.find(p => p.punchType === "IN")
-        const lastOut = [...allPunches].reverse().find(p => p.punchType === "OUT")
-
-        await prisma.attendance.update({
+        // Update attendance
+        const updated = await prisma.attendance.update({
             where: { id: attendance.id },
             data: {
-                checkIn: firstIn ? new Date(firstIn.punchTime) : undefined,
-                checkOut: lastOut ? new Date(lastOut.punchTime) : undefined,
-                workingHrs: totalWorkingHrs,
+                punchCount: newPunchCount,
+                lastPunchTime: now,
+                workingHrs: punchType === "OUT" ? newWorkingHrs : (attendance.workingHrs ?? 0),
+                checkIn:  newPunchCount === 1 ? now : attendance.checkIn,  // first IN only
+                checkOut: punchType === "OUT" ? now : attendance.checkOut, // update on every OUT
                 status: "PRESENT",
+                ...(isLate ? { remarks: `Late arrival: ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}` } : {}),
             },
         })
 
+        // Save to PunchLog (non-blocking — if table missing, punch still works)
+        prisma.punchLog.create({
+            data: {
+                employeeId,
+                attendanceId: attendance.id,
+                punchNumber: newPunchCount,
+                punchType,
+                punchTime: now,
+            },
+        }).catch(() => {})
+
         return NextResponse.json({
             ok: true,
-            punchNumber: nextPunchNumber,
             punchType,
+            punchNumber: newPunchCount,
             time: now,
-            totalWorkingHrs,
-            totalPunches: nextPunchNumber,
+            totalWorkingHrs: updated.workingHrs,
             isLate,
         })
     } catch (err) {
@@ -149,7 +102,7 @@ export async function POST(req: Request) {
     }
 }
 
-// GET today's punches for an employee
+// PUT: get today's punch info for an employee
 export async function PUT(req: Request) {
     try {
         const { employeeId } = await req.json()
@@ -157,13 +110,13 @@ export async function PUT(req: Request) {
 
         const now = new Date()
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-        const todayEnd = new Date(todayStart)
-        todayEnd.setDate(todayEnd.getDate() + 1)
+        const todayEnd   = new Date(todayStart); todayEnd.setDate(todayEnd.getDate() + 1)
 
         const attendance = await prisma.attendance.findFirst({
             where: { employeeId, date: { gte: todayStart, lt: todayEnd } },
         })
 
+        // Fetch punch logs for display
         let punches: unknown[] = []
         try {
             if (attendance) {
@@ -177,8 +130,9 @@ export async function PUT(req: Request) {
 
         return NextResponse.json({
             punches,
+            punchCount: attendance?.punchCount ?? 0,
             workingHrs: attendance?.workingHrs ?? 0,
-            checkIn: attendance?.checkIn ?? null,
+            checkIn:  attendance?.checkIn  ?? null,
             checkOut: attendance?.checkOut ?? null,
         })
     } catch (err) {

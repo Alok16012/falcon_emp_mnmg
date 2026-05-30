@@ -585,16 +585,18 @@ model Attendance {
   checkInLng  Float?
   checkOutLat Float?
   checkOutLng Float?
-  status      String     @default("PRESENT")
-  overtimeHrs Float      @default(0)
-  workingHrs  Float      @default(0)
-  remarks     String?
-  markedBy    String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  employee    Employee   @relation(fields: [employeeId], references: [id])
-  site        Site?      @relation(fields: [siteId], references: [id])
-  punchLogs   PunchLog[]
+  status        String     @default("PRESENT")
+  overtimeHrs   Float      @default(0)
+  workingHrs    Float      @default(0)
+  punchCount    Int        @default(0)
+  lastPunchTime DateTime?
+  remarks       String?
+  markedBy      String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  employee      Employee   @relation(fields: [employeeId], references: [id])
+  site          Site?      @relation(fields: [siteId], references: [id])
+  punchLogs     PunchLog[]
 
   @@unique([employeeId, date])
   @@index([employeeId])
