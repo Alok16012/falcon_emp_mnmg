@@ -72,16 +72,20 @@ export async function POST(req: Request) {
                 (now.getHours() === SHIFT_START_HOUR && now.getMinutes() > SHIFT_START_MIN)
         }
 
-        // Create punch log
-        await prisma.punchLog.create({
-            data: {
-                employeeId,
-                attendanceId: attendance.id,
-                punchNumber: nextPunchNumber,
-                punchType,
-                punchTime: now,
-            },
-        })
+        // Create punch log (safe — if table missing, attendance still saves)
+        try {
+            await prisma.punchLog.create({
+                data: {
+                    employeeId,
+                    attendanceId: attendance.id,
+                    punchNumber: nextPunchNumber,
+                    punchType,
+                    punchTime: now,
+                },
+            })
+        } catch (punchErr) {
+            console.warn("[PUNCH] PunchLog create failed (table may not exist):", punchErr)
+        }
 
         // Mark attendance as late if first punch is late
         if (isLate) {
