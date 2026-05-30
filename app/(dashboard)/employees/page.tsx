@@ -1203,7 +1203,6 @@ export default function EmployeesPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-[24px] font-semibold tracking-[-0.4px] text-[var(--text)]">Employees</h1>
-                    <p className="text-[13px] text-[var(--text3)] mt-0.5">Manage your workforce</p>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <button
