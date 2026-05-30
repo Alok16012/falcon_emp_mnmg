@@ -18,7 +18,7 @@ type PunchLog = {
     punchTime: string
 }
 
-type KioskState = "idle" | "camera" | "matched" | "success" | "error" | "update_photo"
+type KioskState = "idle" | "matched" | "success" | "error" | "update_photo"
 
 const RESET_DELAY = 5000
 const SHIFT_START = "09:15"
@@ -94,7 +94,6 @@ export default function PunchKioskPage() {
             }
             streamRef.current = stream
             setCameraActive(true)
-            setState("camera")
             // Wait for video element to mount
             setTimeout(() => {
                 if (videoRef.current) {
@@ -116,49 +115,8 @@ export default function PunchKioskPage() {
         }
     }, [])
 
-    // Pixel-based face matching (improved: compare multiple regions)
-    const captureAndMatch = useCallback(async () => {
-        if (!videoRef.current || !canvasRef.current) return
-        const v = videoRef.current
-        if (v.readyState < 2) return // video not ready yet
-
-        const c = canvasRef.current
-        c.width = v.videoWidth || 320
-        c.height = v.videoHeight || 240
-        const ctx = c.getContext("2d")
-        if (!ctx) return
-        ctx.drawImage(v, 0, 0)
-
-        const captured = c.toDataURL("image/jpeg", 0.7)
-        const withPhotos = employees.filter(e => e.photo)
-        if (!withPhotos.length) return
-
-        try {
-            const img1 = await loadImageBrightness(captured)
-            let bestEmp: Employee | null = null
-            let bestScore = Infinity
-
-            for (const emp of withPhotos) {
-                try {
-                    const img2 = await loadImageBrightness(emp.photo!)
-                    const score = compareImages(img1, img2)
-                    if (score < bestScore) { bestScore = score; bestEmp = emp }
-                } catch { /* skip */ }
-            }
-
-            // Stricter threshold — only match if very similar
-            if (bestEmp && bestScore < 5000) {
-                stopCamera()
-                selectEmployee(bestEmp)
-            }
-        } catch { /* skip */ }
-    }, [employees, stopCamera])
-
-    useEffect(() => {
-        if (!cameraActive || state !== "camera") return
-        const interval = setInterval(captureAndMatch, 1000)
-        return () => clearInterval(interval)
-    }, [cameraActive, state, captureAndMatch])
+    // Auto face scan DISABLED — pixel comparison is unreliable
+    // Camera is only used for photo capture (Update Photo feature)
 
     // ── Employee selection ───────────────────────────────────────────────────
 
@@ -326,10 +284,6 @@ export default function PunchKioskPage() {
                                 className="flex-1 h-11 border-2 border-slate-200 focus:border-emerald-400 rounded-[12px] px-4 text-sm outline-none transition-colors"
                                 autoComplete="off"
                             />
-                            <button onClick={startCamera}
-                                className="h-11 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-[12px] text-sm font-semibold transition-colors whitespace-nowrap">
-                                📷 Scan
-                            </button>
                         </div>
 
                         {cameraError && (
@@ -374,52 +328,6 @@ export default function PunchKioskPage() {
                 )}
 
                 {/* ── CAMERA ── */}
-                {state === "camera" && (
-                    <div className="p-6 flex flex-col items-center gap-4">
-                        <p className="text-slate-600 text-sm font-medium">Stand in front of the camera...</p>
-                        <div className="relative">
-                            <video
-                                ref={videoRef}
-                                autoPlay
-                                playsInline
-                                muted
-                                className="w-full max-w-xs rounded-[14px] object-cover bg-black"
-                                style={{ minHeight: 200 }}
-                            />
-                            <div className="absolute inset-0 rounded-[14px] border-4 border-emerald-400 animate-pulse pointer-events-none" />
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <div className="w-36 h-44 border-2 border-dashed border-emerald-300 rounded-full opacity-70" />
-                            </div>
-                        </div>
-                        <canvas ref={canvasRef} className="hidden" />
-                        <p className="text-emerald-500 text-sm font-semibold animate-pulse">Scanning...</p>
-                        <p className="text-slate-400 text-xs text-center">If face not detected, tap your photo below</p>
-                        <button onClick={() => { stopCamera(); setState("idle") }}
-                            className="text-slate-400 text-sm underline">Cancel</button>
-
-                        {/* Also show grid below camera as fallback */}
-                        <div className="w-full border-t pt-4">
-                            <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
-                                {employees.slice(0, 12).map(emp => (
-                                    <button key={emp.id} onClick={() => selectEmployee(emp)}
-                                        className="flex flex-col items-center gap-1 p-2 rounded-[10px] hover:bg-slate-50 active:scale-95 transition-all">
-                                        {emp.photo ? (
-                                            <img src={emp.photo} alt="" className="w-12 h-12 rounded-full object-cover" />
-                                        ) : (
-                                            <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-sm font-bold text-emerald-600">
-                                                {emp.firstName[0]}{emp.lastName[0]}
-                                            </div>
-                                        )}
-                                        <p className="text-[10px] text-slate-600 font-medium leading-tight text-center line-clamp-2">
-                                            {emp.firstName}
-                                        </p>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 {/* ── MATCHED: Confirm + Punch button ── */}
                 {state === "matched" && matched && (
                     <div className="p-8 flex flex-col items-center gap-5">
