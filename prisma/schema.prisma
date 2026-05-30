@@ -480,6 +480,7 @@ model Employee {
   bankBranch             String?
   advances               AdvanceAndReimbursement[]
   attendances            Attendance[]
+  punchLogs              PunchLog[]
   enrollments            CourseEnrollment[]
   courseFeedbacks        CourseFeedback[]
   deployments            Deployment[]
@@ -574,7 +575,7 @@ model Deployment {
 }
 
 model Attendance {
-  id          String    @id @default(uuid())
+  id          String     @id @default(uuid())
   employeeId  String
   siteId      String?
   date        DateTime
@@ -584,20 +585,36 @@ model Attendance {
   checkInLng  Float?
   checkOutLat Float?
   checkOutLng Float?
-  status      String    @default("PRESENT")
-  overtimeHrs Float     @default(0)
-  workingHrs  Float     @default(0)
+  status      String     @default("PRESENT")
+  overtimeHrs Float      @default(0)
+  workingHrs  Float      @default(0)
   remarks     String?
   markedBy    String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  employee    Employee  @relation(fields: [employeeId], references: [id])
-  site        Site?     @relation(fields: [siteId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  employee    Employee   @relation(fields: [employeeId], references: [id])
+  site        Site?      @relation(fields: [siteId], references: [id])
+  punchLogs   PunchLog[]
 
   @@unique([employeeId, date])
   @@index([employeeId])
   @@index([date])
   @@index([status])
+}
+
+model PunchLog {
+  id           String     @id @default(uuid())
+  employeeId   String
+  attendanceId String
+  punchNumber  Int
+  punchType    String     // "IN" or "OUT"
+  punchTime    DateTime
+  createdAt    DateTime   @default(now())
+  employee     Employee   @relation(fields: [employeeId], references: [id])
+  attendance   Attendance @relation(fields: [attendanceId], references: [id])
+
+  @@index([employeeId])
+  @@index([attendanceId])
 }
 
 model Leave {
