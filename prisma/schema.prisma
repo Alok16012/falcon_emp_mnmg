@@ -769,6 +769,7 @@ model AdvanceAndReimbursement {
   employeeId    String
   type          String
   amount        Float
+  advanceDate   DateTime?     // actual date advance was given (user-selected)
   monthToImpact Int
   yearToImpact  Int
   reason        String?

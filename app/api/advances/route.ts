@@ -50,7 +50,7 @@ export async function POST(req: Request) {
             return new NextResponse("Forbidden", { status: 403 })
         }
 
-        const { employeeId, amount, reason, monthToImpact, yearToImpact } = await req.json()
+        const { employeeId, amount, reason, monthToImpact, yearToImpact, advanceDate } = await req.json()
 
         if (!employeeId || !amount || !monthToImpact || !yearToImpact) {
             return new NextResponse("employeeId, amount, monthToImpact, yearToImpact required", { status: 400 })
@@ -62,6 +62,7 @@ export async function POST(req: Request) {
                 type: "ADVANCE",
                 amount: parseFloat(amount),
                 reason: reason || null,
+                advanceDate: advanceDate ? new Date(advanceDate) : new Date(),
                 monthToImpact: parseInt(monthToImpact),
                 yearToImpact: parseInt(yearToImpact),
                 status: "APPROVED",
