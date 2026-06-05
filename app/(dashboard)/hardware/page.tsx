@@ -63,6 +63,11 @@ export default function HardwarePage() {
     const [mapSearch, setMapSearch] = useState("")
     const [testingConn, setTestingConn] = useState<string | null>(null)
     const [connResults, setConnResults] = useState<Record<string, boolean | null>>({})
+    const [configuring, setConfiguring] = useState<string | null>(null)
+    const [configResults, setConfigResults] = useState<Record<string, { ok: boolean; steps: { step: string; ok: boolean; response?: string }[] } | null>>({})
+
+    // Auto-Reg TCP sessions
+    const [tcpSessions, setTcpSessions] = useState<{ deviceId: string; ip: string; connected: boolean }[]>([])
 
     // Auto-sync countdown
     const [nextSyncIn, setNextSyncIn] = useState<number>(30 * 60)
@@ -83,9 +88,17 @@ export default function HardwarePage() {
         if (res.ok) setMappings(await res.json())
     }, [])
 
+    const fetchSessions = useCallback(async () => {
+        const res = await fetch("/api/hardware/sessions")
+        if (res.ok) {
+            const data = await res.json()
+            setTcpSessions(data.devices || [])
+        }
+    }, [])
+
     useEffect(() => {
-        Promise.all([fetchDevices(), fetchLogs(), fetchMappings()]).finally(() => setLoading(false))
-    }, [fetchDevices, fetchLogs, fetchMappings])
+        Promise.all([fetchDevices(), fetchLogs(), fetchMappings(), fetchSessions()]).finally(() => setLoading(false))
+    }, [fetchDevices, fetchLogs, fetchMappings, fetchSessions])
 
     // Countdown timer display (purely visual — real sync happens server-side)
     useEffect(() => {
@@ -164,6 +177,25 @@ export default function HardwarePage() {
             setConnResults(prev => ({ ...prev, [id]: false }))
         }
         setTestingConn(null)
+    }
+
+    // ── Configure Device Auto-Push ───────────────────────────────────────────
+
+    const handleConfigureDevice = async (id: string) => {
+        setConfiguring(id)
+        setConfigResults(prev => ({ ...prev, [id]: null }))
+        try {
+            const res = await fetch("/api/hardware/configure", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ deviceId: id }),
+            })
+            const data = await res.json()
+            setConfigResults(prev => ({ ...prev, [id]: { ok: data.ok, steps: data.results || [] } }))
+        } catch {
+            setConfigResults(prev => ({ ...prev, [id]: { ok: false, steps: [{ step: "Network error", ok: false }] } }))
+        }
+        setConfiguring(null)
     }
 
     // ── Sync Device ──────────────────────────────────────────────────────────
@@ -245,7 +277,7 @@ export default function HardwarePage() {
             </div>
 
             {/* Stats Row */}
-            <div className="grid grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-5 gap-3 mb-6">
                 <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[10px] p-4">
                     <p className="text-[11px] text-[var(--text3)] mb-1">Devices</p>
                     <p className="text-[22px] font-bold text-[var(--text)]">{devices.length}</p>
@@ -264,6 +296,14 @@ export default function HardwarePage() {
                     <p className="text-[11px] text-[var(--text3)]">
                         {syncLogs[0] ? `${syncLogs[0].newPunches} new punches` : "—"}
                     </p>
+                </div>
+                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[10px] p-4">
+                    <div className="flex items-center gap-1.5 mb-1">
+                        <Link2 size={11} className={tcpSessions.filter(s => s.connected).length > 0 ? "text-emerald-500" : "text-[var(--text3)]"} />
+                        <p className="text-[11px] text-[var(--text3)]">TCP Connected</p>
+                    </div>
+                    <p className="text-[22px] font-bold text-[var(--text)]">{tcpSessions.filter(s => s.connected).length}</p>
+                    <p className="text-[11px] text-[var(--text3)]">Auto-Reg devices live</p>
                 </div>
                 <div className="bg-[var(--surface)] border border-emerald-200 rounded-[10px] p-4">
                     <div className="flex items-center gap-1.5 mb-1">
@@ -297,17 +337,43 @@ export default function HardwarePage() {
             {tab === "devices" && (
                 <div className="space-y-3">
                     {devices.map(device => (
-                        <DeviceCard
-                            key={device.id}
-                            device={device}
-                            syncing={syncing === device.id}
-                            testingConn={testingConn === device.id}
-                            connResult={connResults[device.id]}
-                            onSync={() => handleSync(device.id)}
-                            onTest={() => handleTestConn(device.id)}
-                            onToggle={(enabled) => handleToggleDevice(device.id, enabled)}
-                            onDelete={() => handleDeleteDevice(device.id)}
-                        />
+                        <div key={device.id}>
+                            <DeviceCard
+                                device={device}
+                                syncing={syncing === device.id}
+                                testingConn={testingConn === device.id}
+                                connResult={connResults[device.id]}
+                                configuring={configuring === device.id}
+                                tcpConnected={tcpSessions.some(s => s.ip === device.ip && s.connected)}
+                                onSync={() => handleSync(device.id)}
+                                onTest={() => handleTestConn(device.id)}
+                                onConfigure={() => handleConfigureDevice(device.id)}
+                                onToggle={(enabled) => handleToggleDevice(device.id, enabled)}
+                                onDelete={() => handleDeleteDevice(device.id)}
+                            />
+                            {/* Configure result */}
+                            {configResults[device.id] && (
+                                <div className={cn(
+                                    "mt-2 rounded-[10px] p-4 border text-[12px]",
+                                    configResults[device.id]?.ok
+                                        ? "bg-emerald-50 border-emerald-200"
+                                        : "bg-red-50 border-red-200"
+                                )}>
+                                    <p className={cn("font-semibold mb-2", configResults[device.id]?.ok ? "text-emerald-700" : "text-red-700")}>
+                                        {configResults[device.id]?.ok ? "✅ Device configured! Auto-push active." : "⚠️ Some steps failed — check below"}
+                                    </p>
+                                    <div className="space-y-1">
+                                        {configResults[device.id]?.steps.map((s, i) => (
+                                            <div key={i} className="flex items-center gap-2">
+                                                <span>{s.ok ? "✓" : "✗"}</span>
+                                                <span className={s.ok ? "text-emerald-700" : "text-red-600"}>{s.step}</span>
+                                                {s.response && <span className="text-[var(--text3)] ml-1">— {s.response}</span>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     ))}
 
                     {/* Add Device */}
@@ -393,12 +459,12 @@ export default function HardwarePage() {
                     <div className="mt-6 bg-[var(--surface2)] border border-[var(--border)] rounded-[12px] p-4">
                         <h4 className="text-[12px] font-semibold text-[var(--text)] mb-2">Setup Guide</h4>
                         <ol className="text-[11.5px] text-[var(--text2)] space-y-1.5 list-decimal list-inside">
-                            <li>Add your Dahua ASI device with its LAN IP address</li>
-                            <li>Make sure device and server are on the same network (or use port forwarding)</li>
-                            <li>Test connection to verify credentials</li>
+                            <li>Add your Dahua ASI device with its LAN IP and credentials</li>
+                            <li>Test connection to verify credentials are correct</li>
                             <li>Go to <strong>Employee Mapping</strong> tab — assign a Hardware User ID to each employee</li>
-                            <li>Click <strong>Sync All Devices</strong> to import today's punch records</li>
-                            <li><strong>Auto Push (optional):</strong> On the device web interface, set Event Upload URL to: <code className="bg-[var(--surface)] px-1 rounded">https://yourdomain.com/api/hardware/event</code></li>
+                            <li>Click <strong>Sync All Devices</strong> to import punch records</li>
+                            <li><strong>Auto Registration (recommended):</strong> On the device, set <em>Auto Registration</em> → Server IP = your server, Port = <code className="bg-[var(--surface)] px-1 rounded">8099</code>. Device will connect automatically and show <strong>TCP Live</strong> badge above.</li>
+                            <li><strong>HTTP Push (alternative):</strong> On the device, set Event Upload URL to <code className="bg-[var(--surface)] px-1 rounded">/api/hardware/event</code> — punch events pushed in real-time.</li>
                         </ol>
                     </div>
                 </div>
@@ -522,8 +588,11 @@ function DeviceCard({
     syncing,
     testingConn,
     connResult,
+    configuring,
+    tcpConnected,
     onSync,
     onTest,
+    onConfigure,
     onToggle,
     onDelete,
 }: {
@@ -531,8 +600,11 @@ function DeviceCard({
     syncing: boolean
     testingConn: boolean
     connResult?: boolean | null
+    configuring: boolean
+    tcpConnected: boolean
     onSync: () => void
     onTest: () => void
+    onConfigure: () => void
     onToggle: (enabled: boolean) => void
     onDelete: () => void
 }) {
@@ -552,7 +624,15 @@ function DeviceCard({
                         <Cpu size={16} />
                     </div>
                     <div>
-                        <p className="text-[14px] font-semibold text-[var(--text)]">{device.name}</p>
+                        <div className="flex items-center gap-2">
+                            <p className="text-[14px] font-semibold text-[var(--text)]">{device.name}</p>
+                            {tcpConnected && (
+                                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-semibold rounded-full">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                                    TCP Live
+                                </span>
+                            )}
+                        </div>
                         <p className="text-[11.5px] text-[var(--text3)] font-mono">{device.ip}:{device.port}</p>
                     </div>
                 </div>
@@ -570,6 +650,16 @@ function DeviceCard({
                     >
                         {testingConn ? <RefreshCw size={12} className="animate-spin" /> : <Wifi size={12} />}
                         Test
+                    </button>
+
+                    <button
+                        onClick={onConfigure}
+                        disabled={configuring || !device.enabled}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-emerald-600 text-white rounded-[6px] hover:bg-emerald-700 disabled:opacity-50 font-medium"
+                        title="Auto-configure device to push attendance to this server"
+                    >
+                        {configuring ? <RefreshCw size={12} className="animate-spin" /> : <Link2 size={12} />}
+                        {configuring ? "Connecting…" : "Connect"}
                     </button>
 
                     <button
