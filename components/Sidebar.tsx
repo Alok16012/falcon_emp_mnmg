@@ -19,6 +19,7 @@ import {
     IndianRupee,
     ScanFace,
     Cpu,
+    PackageSearch,
 } from "lucide-react"
 
 export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
@@ -40,6 +41,12 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
                 { name: "Attendance", href: "/attendance", icon: ClipboardList, roles: ["ADMIN", "MANAGER"] },
                 { name: "Advance Salary", href: "/advances", icon: IndianRupee, roles: ["ADMIN", "MANAGER"] },
                 { name: "Payroll", href: "/payroll", icon: Wallet, roles: ["ADMIN", "MANAGER"] },
+            ]
+        },
+        {
+            title: "SALES",
+            links: [
+                { name: "Product Inquiry", href: "/inquiries", icon: PackageSearch, roles: ["ADMIN", "MANAGER"] },
             ]
         },
         {

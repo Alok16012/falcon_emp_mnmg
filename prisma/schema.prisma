@@ -1707,3 +1707,26 @@ model HardwareSyncLog {
   errors       String?
   syncedAt     DateTime @default(now())
 }
+
+// ─── Product Inquiry ──────────────────────────────────────────────────────────
+enum InquiryStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+model ProductInquiry {
+  id          String        @id @default(uuid())
+  name        String
+  productName String
+  quantity    Int
+  rate        Float
+  location    String
+  partyName   String
+  status      InquiryStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
