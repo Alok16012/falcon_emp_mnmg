@@ -133,6 +133,28 @@ export async function POST(req: Request) {
             ? `EMP-${String(nextNum + 1).padStart(4, "0")}`
             : employeeId
 
+        // Auto-assign a numeric Hardware (biometric device) User ID derived from
+        // the employee number — e.g. EMP-0007 → "7". Keeps it unique & ready for
+        // the attendance device without manual mapping. Falls back to next free
+        // number if that ID is already taken.
+        const hwBase = String(parseInt(finalId.match(/\d+$/)?.[0] || String(nextNum)))
+        const hwTaken = await prisma.employee.findFirst({
+            where: { hardwareUserId: hwBase },
+            select: { id: true },
+        })
+        let hardwareUserId = hwBase
+        if (hwTaken) {
+            const maxHw = await prisma.employee.findMany({
+                where: { hardwareUserId: { not: null } },
+                select: { hardwareUserId: true },
+            })
+            const maxNum = maxHw.reduce((m, e) => {
+                const n = parseInt(e.hardwareUserId || "0")
+                return isNaN(n) ? m : Math.max(m, n)
+            }, 0)
+            hardwareUserId = String(maxNum + 1)
+        }
+
         // ── Auto-create User account ──────────────────────────────────────────
         // Email: use provided email, else phone@cims.local
         // Password: phone number (employee can change later)
@@ -161,6 +183,7 @@ export async function POST(req: Request) {
         const employee = await prisma.employee.create({
             data: {
                 employeeId: finalId,
+                hardwareUserId,
                 firstName,
                 lastName,
                 email,
