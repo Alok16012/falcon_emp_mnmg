@@ -25,7 +25,10 @@ import {
 export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
     const pathname = usePathname()
     const { data: session } = useSession()
-    const role = session?.user?.role
+    const [mounted, setMounted] = useState(false)
+    useEffect(() => setMounted(true), [])
+    // Gate role until mounted so SSR and first client render match (avoids hydration mismatch)
+    const role = mounted ? session?.user?.role : undefined
 
     const navigation = [
         {
