@@ -2,9 +2,11 @@
 const nextConfig = {
     compress: true,
     poweredByHeader: false,
+    transpilePackages: ["@react-pdf/renderer"],
     experimental: {
         optimizePackageImports: ["lucide-react", "@radix-ui/react-icons", "recharts"],
         instrumentationHook: true,
+        esmExternals: "loose",
     },
     generateBuildId: async () => {
         return `build-${Date.now()}`;
