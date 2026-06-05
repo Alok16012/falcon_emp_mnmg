@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import {
     Cpu, Plus, Trash2, RefreshCw, CheckCircle2, XCircle,
     Wifi, WifiOff, Link2, Link2Off, ChevronDown, ChevronUp,
-    Clock, AlertCircle, User, Search, Save, Play, Timer
+    Clock, AlertCircle, User, UserPlus, Search, Save, Play, Timer
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -64,6 +65,7 @@ export default function HardwarePage() {
     const [testingConn, setTestingConn] = useState<string | null>(null)
     const [connResults, setConnResults] = useState<Record<string, boolean | null>>({})
     const [configuring, setConfiguring] = useState<string | null>(null)
+    const [enrolling, setEnrolling] = useState<string | null>(null)
     const [configResults, setConfigResults] = useState<Record<string, { ok: boolean; steps: { step: string; ok: boolean; response?: string }[] } | null>>({})
 
     // Auto-Reg TCP sessions
@@ -196,6 +198,29 @@ export default function HardwarePage() {
             setConfigResults(prev => ({ ...prev, [id]: { ok: false, steps: [{ step: "Network error", ok: false }] } }))
         }
         setConfiguring(null)
+    }
+
+    // ── Push Employees to Device ─────────────────────────────────────────────
+
+    const handleEnroll = async (id: string) => {
+        setEnrolling(id)
+        try {
+            const res = await fetch("/api/hardware/enroll", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ deviceId: id }),
+            })
+            const data = await res.json()
+            if (res.ok) {
+                toast.success(data.message || `Pushed ${data.pushed} employees`)
+                if (data.failed > 0) toast.error(`${data.failed} failed — check device connection`)
+            } else {
+                toast.error(data.error || "Failed to push employees")
+            }
+        } catch {
+            toast.error("Network error while pushing employees")
+        }
+        setEnrolling(null)
     }
 
     // ── Sync Device ──────────────────────────────────────────────────────────
@@ -344,10 +369,12 @@ export default function HardwarePage() {
                                 testingConn={testingConn === device.id}
                                 connResult={connResults[device.id]}
                                 configuring={configuring === device.id}
+                                enrolling={enrolling === device.id}
                                 tcpConnected={tcpSessions.some(s => s.ip === device.ip && s.connected)}
                                 onSync={() => handleSync(device.id)}
                                 onTest={() => handleTestConn(device.id)}
                                 onConfigure={() => handleConfigureDevice(device.id)}
+                                onEnroll={() => handleEnroll(device.id)}
                                 onToggle={(enabled) => handleToggleDevice(device.id, enabled)}
                                 onDelete={() => handleDeleteDevice(device.id)}
                             />
@@ -589,10 +616,12 @@ function DeviceCard({
     testingConn,
     connResult,
     configuring,
+    enrolling,
     tcpConnected,
     onSync,
     onTest,
     onConfigure,
+    onEnroll,
     onToggle,
     onDelete,
 }: {
@@ -601,10 +630,12 @@ function DeviceCard({
     testingConn: boolean
     connResult?: boolean | null
     configuring: boolean
+    enrolling: boolean
     tcpConnected: boolean
     onSync: () => void
     onTest: () => void
     onConfigure: () => void
+    onEnroll: () => void
     onToggle: (enabled: boolean) => void
     onDelete: () => void
 }) {
@@ -660,6 +691,16 @@ function DeviceCard({
                     >
                         {configuring ? <RefreshCw size={12} className="animate-spin" /> : <Link2 size={12} />}
                         {configuring ? "Connecting…" : "Connect"}
+                    </button>
+
+                    <button
+                        onClick={onEnroll}
+                        disabled={enrolling || !device.enabled}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-indigo-600 text-white rounded-[6px] hover:bg-indigo-700 disabled:opacity-50 font-medium"
+                        title="Push mapped employees (name + ID) to this device so their name appears when enrolling fingerprints"
+                    >
+                        {enrolling ? <RefreshCw size={12} className="animate-spin" /> : <UserPlus size={12} />}
+                        {enrolling ? "Pushing…" : "Push Staff"}
                     </button>
 
                     <button
