@@ -271,15 +271,22 @@ export default function HardwarePage() {
 
     const handleSync = async (deviceId?: string) => {
         setSyncing(deviceId || "all")
-        const res = await fetch("/api/hardware/sync", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ deviceId, hours: 24 }),
-        })
-        if (res.ok) {
+        try {
+            // Channel-based sync (works through the Railway TCP proxy)
+            const res = await fetch("/api/hardware/sync-punches", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ deviceId }),
+            })
             const data = await res.json()
-            console.log("Sync result:", data)
+            if (res.ok && data.ok) {
+                toast.success(data.message || "Synced")
+            } else {
+                toast.error(data.error || "Sync failed — device connected?")
+            }
             await Promise.all([fetchDevices(), fetchLogs()])
+        } catch {
+            toast.error("Network error during sync")
         }
         setSyncing(null)
     }

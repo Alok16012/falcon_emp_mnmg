@@ -30,7 +30,7 @@ type DeviceSession = {
     ip: string
     deviceId: string
     // Set while awaiting a command response over the persistent socket
-    pending?: { resolve: (raw: string) => void; timer: ReturnType<typeof setTimeout> }
+    pending?: { resolve: (raw: string) => void; timer: ReturnType<typeof setTimeout>; buf: string }
 }
 const g = globalThis as unknown as {
     __dahuaSessions?: Map<string, DeviceSession>
@@ -78,20 +78,28 @@ function handleSocket(socket: net.Socket) {
         const msg = buf.toString("latin1")
         console.log(`[DAHUA_REG] Received from ${remoteIp}:\n${msg.slice(0, 300)}`)
 
-        // ── Command response capture ──────────────────────────────────────────
-        // If we sent a CGI command via sendToDeviceAwait() and are waiting for
-        // the reply, resolve it. We only treat HTTP responses WITH a body as the
-        // command reply, so empty heartbeat ACKs (Content-Length: 0) are ignored.
+        // ── Command response capture (multi-packet safe) ──────────────────────
+        // A single HTTP response can arrive in several TCP chunks. Accumulate
+        // until the body reaches Content-Length, then resolve. Empty heartbeat
+        // ACKs (Content-Length: 0) never satisfy our CL>0 commands, so they are
+        // effectively ignored.
         const sess = deviceId ? deviceSessions.get(deviceId) : null
-        if (sess?.pending && msg.startsWith("HTTP/1.1") && !msg.includes("401 Unauthorized")) {
-            const parsed = parseHttpMessage(msg)
-            if (parsed.body.trim().length > 0) {
-                const p = sess.pending
-                sess.pending = undefined
-                clearTimeout(p.timer)
-                p.resolve(msg)
-                return
+        if (sess?.pending && !msg.includes("401 Unauthorized")) {
+            const p = sess.pending
+            if (msg.startsWith("HTTP/1.1")) p.buf = msg
+            else p.buf += msg
+            const he = p.buf.indexOf("\r\n\r\n")
+            if (he >= 0) {
+                const clm = p.buf.slice(0, he).match(/content-length:\s*(\d+)/i)
+                const expected = clm ? parseInt(clm[1]) : -1
+                const bodyLen = Buffer.byteLength(p.buf.slice(he + 4), "latin1")
+                if (expected > 0 && bodyLen >= expected) {
+                    sess.pending = undefined
+                    clearTimeout(p.timer)
+                    p.resolve(p.buf)
+                }
             }
+            return
         }
 
         // ── Step 1: Device auto-registration connect ──────────────────────────
@@ -279,6 +287,7 @@ export async function sendToDeviceAwait(
 
         session.pending = {
             timer,
+            buf: "",
             resolve: (raw: string) => {
                 const statusM = raw.match(/^HTTP\/1\.1 (\d+)/)
                 const status = statusM ? parseInt(statusM[1]) : 0
