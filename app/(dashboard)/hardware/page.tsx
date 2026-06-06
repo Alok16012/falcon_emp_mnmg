@@ -48,7 +48,7 @@ interface EmployeeMapping {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function HardwarePage() {
-    const [tab, setTab] = useState<"devices" | "mapping" | "logs">("devices")
+    const [tab, setTab] = useState<"devices" | "deviceUsers" | "mapping" | "logs">("devices")
     const [devices, setDevices] = useState<HardwareDevice[]>([])
     const [syncLogs, setSyncLogs] = useState<SyncLog[]>([])
     const [mappings, setMappings] = useState<EmployeeMapping[]>([])
@@ -70,6 +70,11 @@ export default function HardwarePage() {
 
     // Auto-Reg TCP sessions
     const [tcpSessions, setTcpSessions] = useState<{ deviceId: string; ip: string; connected: boolean }[]>([])
+    // Live users read from the physical device
+    const [deviceUsers, setDeviceUsers] = useState<{ userId: string; name: string; cardNo: string; valid: boolean; userType: string }[]>([])
+    const [duLoading, setDuLoading] = useState(false)
+    const [duConnected, setDuConnected] = useState(false)
+    const [duError, setDuError] = useState<string | null>(null)
 
     // Auto-sync countdown
     const [nextSyncIn, setNextSyncIn] = useState<number>(30 * 60)
@@ -98,9 +103,29 @@ export default function HardwarePage() {
         }
     }, [])
 
+    const fetchDeviceUsers = useCallback(async () => {
+        setDuLoading(true)
+        try {
+            const res = await fetch("/api/hardware/device-users")
+            const data = await res.json()
+            setDeviceUsers(data.users || [])
+            setDuConnected(!!data.connected)
+            setDuError(data.error || null)
+        } catch {
+            setDuError("Failed to reach server")
+        } finally {
+            setDuLoading(false)
+        }
+    }, [])
+
     useEffect(() => {
         Promise.all([fetchDevices(), fetchLogs(), fetchMappings(), fetchSessions()]).finally(() => setLoading(false))
     }, [fetchDevices, fetchLogs, fetchMappings, fetchSessions])
+
+    // Load live device users whenever the Device Users tab is opened
+    useEffect(() => {
+        if (tab === "deviceUsers") fetchDeviceUsers()
+    }, [tab, fetchDeviceUsers])
 
     // Countdown timer display (purely visual — real sync happens server-side)
     useEffect(() => {
@@ -342,18 +367,18 @@ export default function HardwarePage() {
 
             {/* Tabs */}
             <div className="flex gap-1 border-b border-[var(--border)] mb-5">
-                {(["devices", "mapping", "logs"] as const).map(t => (
+                {(["devices", "deviceUsers", "mapping", "logs"] as const).map(t => (
                     <button
                         key={t}
                         onClick={() => setTab(t)}
                         className={cn(
-                            "px-4 py-2 text-[13px] font-medium border-b-2 -mb-px transition-colors capitalize",
+                            "px-4 py-2 text-[13px] font-medium border-b-2 -mb-px transition-colors",
                             tab === t
                                 ? "border-[var(--accent)] text-[var(--accent-text)]"
                                 : "border-transparent text-[var(--text2)] hover:text-[var(--text)]"
                         )}
                     >
-                        {t === "mapping" ? "Employee Mapping" : t === "logs" ? "Sync Logs" : "Devices"}
+                        {t === "deviceUsers" ? "Device Users" : t === "mapping" ? "Employee Mapping" : t === "logs" ? "Sync Logs" : "Devices"}
                     </button>
                 ))}
             </div>
@@ -494,6 +519,86 @@ export default function HardwarePage() {
                             <li><strong>HTTP Push (alternative):</strong> On the device, set Event Upload URL to <code className="bg-[var(--surface)] px-1 rounded">/api/hardware/event</code> — punch events pushed in real-time.</li>
                         </ol>
                     </div>
+                </div>
+            )}
+
+            {/* ── DEVICE USERS TAB ─────────────────────────────────────────── */}
+            {tab === "deviceUsers" && (
+                <div>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <span className={cn(
+                                "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-semibold",
+                                duConnected ? "bg-emerald-100 text-emerald-700" : "bg-[var(--surface2)] text-[var(--text3)]"
+                            )}>
+                                <span className={cn("w-2 h-2 rounded-full", duConnected ? "bg-emerald-500 animate-pulse" : "bg-[var(--text3)]")} />
+                                {duConnected ? `${deviceUsers.length} users on device` : "Device not connected"}
+                            </span>
+                        </div>
+                        <button
+                            onClick={fetchDeviceUsers}
+                            disabled={duLoading}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-[var(--accent)] text-white rounded-[7px] hover:opacity-90 disabled:opacity-50"
+                        >
+                            <RefreshCw size={12} className={duLoading ? "animate-spin" : ""} />
+                            {duLoading ? "Reading device…" : "Refresh from Device"}
+                        </button>
+                    </div>
+
+                    {duError && (
+                        <div className="mb-3 flex items-center gap-2 text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded-[8px] px-3 py-2">
+                            <AlertCircle size={13} /> {duError}
+                        </div>
+                    )}
+
+                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[12px] overflow-hidden">
+                        <table className="w-full text-[12.5px]">
+                            <thead>
+                                <tr className="border-b border-[var(--border)] bg-[var(--surface2)]">
+                                    <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-wide w-[120px]">User ID</th>
+                                    <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-wide">Name</th>
+                                    <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-wide">Card No.</th>
+                                    <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-wide">Type</th>
+                                    <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-wide">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {duLoading ? (
+                                    <tr><td colSpan={5} className="text-center py-10 text-[var(--text3)] text-[12px]">Reading users from device…</td></tr>
+                                ) : deviceUsers.length === 0 ? (
+                                    <tr><td colSpan={5} className="text-center py-10 text-[var(--text3)] text-[12px]">
+                                        {duConnected ? "No users enrolled on device yet." : "Device offline — connect it to read users."}
+                                    </td></tr>
+                                ) : deviceUsers.map((u) => (
+                                    <tr key={u.userId} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface2)]">
+                                        <td className="px-4 py-3 font-mono font-semibold text-[var(--text)]">{u.userId}</td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-7 w-7 rounded-full bg-[var(--surface2)] flex items-center justify-center shrink-0">
+                                                    <User size={13} className="text-[var(--text3)]" />
+                                                </div>
+                                                <span className="text-[var(--text)] font-medium">{u.name || "—"}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-[var(--text2)] font-mono text-[11.5px]">{u.cardNo || "—"}</td>
+                                        <td className="px-4 py-3 text-[var(--text2)]">{u.userType === "1" ? "Admin" : "User"}</td>
+                                        <td className="px-4 py-3">
+                                            <span className={cn(
+                                                "px-2 py-0.5 rounded-[5px] text-[11px] font-semibold",
+                                                u.valid ? "bg-emerald-50 text-emerald-700" : "bg-[var(--surface2)] text-[var(--text3)]"
+                                            )}>
+                                                {u.valid ? "Active" : "Inactive"}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <p className="mt-3 text-[11px] text-[var(--text3)]">
+                        💡 Yeh list seedhe device se live aati hai. Inke <strong>User ID</strong> ko Employee Mapping me match karein taaki attendance sahi employee se jude.
+                    </p>
                 </div>
             )}
 
