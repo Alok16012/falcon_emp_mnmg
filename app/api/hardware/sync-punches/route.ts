@@ -49,6 +49,10 @@ export async function POST(req: Request) {
         deviceId = conn[0].deviceId
     }
 
+    // First import any new device users so their punches can attach to an employee
+    const { importDeviceUsers } = await import("@/lib/channelSync")
+    const imp = await importDeviceUsers(deviceId)
+
     const res = await sendToDeviceAwait(
         deviceId,
         "GET",
@@ -89,6 +93,7 @@ export async function POST(req: Request) {
         withUser: scanned,
         skippedNoUser,
         newPunches,
-        message: `${newPunches} new punch(es) from ${scanned} user record(s)`,
+        imported: imp.imported + imp.linked,
+        message: `${imp.imported + imp.linked} new employee(s), ${newPunches} new punch(es)`,
     })
 }
