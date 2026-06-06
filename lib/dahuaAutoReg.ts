@@ -102,6 +102,7 @@ function handleSocket(socket: net.Socket) {
 
             const username = device?.username || process.env.DAHUA_REG_USER || "admin"
             const password = device?.password || process.env.DAHUA_REG_PASS || "admin"
+            console.log(`[DAHUA_REG][DEBUG] creds → user="${username}" passLen=${password.length} src=${device ? "db" : (process.env.DAHUA_REG_PASS ? "env" : "fallback")}`)
 
             // Parse digest params
             const nonceM = msg.match(/nonce="([^"]*)"/)
@@ -131,6 +132,7 @@ function handleSocket(socket: net.Socket) {
 
             socket.write(authReq, "latin1")
             console.log(`[DAHUA_REG] Sent Digest auth to ${deviceId}`)
+            console.log(`[DAHUA_REG][DEBUG] realm="${realm}" nonce="${nonce}" qop="${qop}" response="${response}"`)
         }
 
         // ── Step 3: Device returns Token ──────────────────────────────────────
