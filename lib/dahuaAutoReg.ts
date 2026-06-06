@@ -100,8 +100,8 @@ function handleSocket(socket: net.Socket) {
                 where: { ip: remoteIp, enabled: true }
             })
 
-            const username = device?.username || "admin"
-            const password = device?.password || "admin"
+            const username = device?.username || process.env.DAHUA_REG_USER || "admin"
+            const password = device?.password || process.env.DAHUA_REG_PASS || "admin"
 
             // Parse digest params
             const nonceM = msg.match(/nonce="([^"]*)"/)
