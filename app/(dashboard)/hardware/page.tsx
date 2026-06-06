@@ -103,6 +103,25 @@ export default function HardwarePage() {
         }
     }, [])
 
+    const [importing, setImporting] = useState(false)
+    const handleImportDeviceUsers = async () => {
+        setImporting(true)
+        try {
+            const res = await fetch("/api/hardware/import-device-users", { method: "POST" })
+            const data = await res.json()
+            if (res.ok && data.ok) {
+                toast.success(data.message || "Imported from device")
+                fetchMappings()
+            } else {
+                toast.error(data.error || "Import failed")
+            }
+        } catch {
+            toast.error("Network error")
+        } finally {
+            setImporting(false)
+        }
+    }
+
     const fetchDeviceUsers = useCallback(async () => {
         setDuLoading(true)
         try {
@@ -535,14 +554,25 @@ export default function HardwarePage() {
                                 {duConnected ? `${deviceUsers.length} users on device` : "Device not connected"}
                             </span>
                         </div>
-                        <button
-                            onClick={fetchDeviceUsers}
-                            disabled={duLoading}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-[var(--accent)] text-white rounded-[7px] hover:opacity-90 disabled:opacity-50"
-                        >
-                            <RefreshCw size={12} className={duLoading ? "animate-spin" : ""} />
-                            {duLoading ? "Reading device…" : "Refresh from Device"}
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={fetchDeviceUsers}
+                                disabled={duLoading}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] border border-[var(--border)] text-[var(--text2)] rounded-[7px] hover:bg-[var(--surface2)] disabled:opacity-50"
+                            >
+                                <RefreshCw size={12} className={duLoading ? "animate-spin" : ""} />
+                                {duLoading ? "Reading…" : "Refresh"}
+                            </button>
+                            <button
+                                onClick={handleImportDeviceUsers}
+                                disabled={importing || !duConnected || deviceUsers.length === 0}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-[var(--accent)] text-white rounded-[7px] hover:opacity-90 disabled:opacity-50"
+                                title="Create/link employees in the web app for every user on the device (auto-sets Hardware ID)"
+                            >
+                                {importing ? <RefreshCw size={12} className="animate-spin" /> : <UserPlus size={12} />}
+                                {importing ? "Importing…" : "Import to Web App"}
+                            </button>
+                        </div>
                     </div>
 
                     {duError && (
