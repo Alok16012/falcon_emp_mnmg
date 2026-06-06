@@ -21,14 +21,21 @@ import { processHardwareRecord } from "@/app/api/hardware/sync/route"
 const AUTO_REG_PORT = parseInt(process.env.DAHUA_AUTO_REG_PORT || "8099")
 
 // Active device sessions: deviceId → { socket, token, ip }
-export const deviceSessions: Map<string, {
+// Stored on globalThis so the TCP server (started from instrumentation.ts) and
+// the API route handlers — which Next.js may load as SEPARATE module copies —
+// share the SAME Map instance. Without this, /api/hardware/sessions sees 0.
+type DeviceSession = {
     socket: net.Socket
     token: string
     ip: string
     deviceId: string
-}> = new Map()
-
-let server: net.Server | null = null
+}
+const g = globalThis as unknown as {
+    __dahuaSessions?: Map<string, DeviceSession>
+    __dahuaServer?: net.Server | null
+}
+export const deviceSessions: Map<string, DeviceSession> =
+    g.__dahuaSessions ?? (g.__dahuaSessions = new Map())
 
 // ─── MD5 helper ──────────────────────────────────────────────────────────────
 function md5(str: string): string {
@@ -231,24 +238,25 @@ export async function sendToDevice(deviceId: string, method: string, uri: string
 
 // ─── Start TCP server ─────────────────────────────────────────────────────────
 export function startAutoRegServer() {
-    if (server) return
+    if (g.__dahuaServer) return
 
-    server = net.createServer(handleSocket)
+    const srv = net.createServer(handleSocket)
+    g.__dahuaServer = srv
 
-    server.listen(AUTO_REG_PORT, "0.0.0.0", () => {
+    srv.listen(AUTO_REG_PORT, "0.0.0.0", () => {
         console.log(`[DAHUA_REG] 🔌 Auto-Registration TCP server listening on port ${AUTO_REG_PORT}`)
         console.log(`[DAHUA_REG]    Configure device: Server IP = your_server_ip, Port = ${AUTO_REG_PORT}`)
     })
 
-    server.on("error", (err) => {
+    srv.on("error", (err) => {
         console.error(`[DAHUA_REG] Server error:`, err.message)
     })
 }
 
 export function stopAutoRegServer() {
-    if (server) {
-        server.close()
-        server = null
+    if (g.__dahuaServer) {
+        g.__dahuaServer.close()
+        g.__dahuaServer = null
     }
 }
 
