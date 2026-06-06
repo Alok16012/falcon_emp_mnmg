@@ -29,6 +29,8 @@ type DeviceSession = {
     token: string
     ip: string
     deviceId: string
+    // Set while awaiting a command response over the persistent socket
+    pending?: { resolve: (raw: string) => void; timer: ReturnType<typeof setTimeout> }
 }
 const g = globalThis as unknown as {
     __dahuaSessions?: Map<string, DeviceSession>
@@ -75,6 +77,22 @@ function handleSocket(socket: net.Socket) {
     socket.on("data", async (buf) => {
         const msg = buf.toString("latin1")
         console.log(`[DAHUA_REG] Received from ${remoteIp}:\n${msg.slice(0, 300)}`)
+
+        // ── Command response capture ──────────────────────────────────────────
+        // If we sent a CGI command via sendToDeviceAwait() and are waiting for
+        // the reply, resolve it. We only treat HTTP responses WITH a body as the
+        // command reply, so empty heartbeat ACKs (Content-Length: 0) are ignored.
+        const sess = deviceId ? deviceSessions.get(deviceId) : null
+        if (sess?.pending && msg.startsWith("HTTP/1.1") && !msg.includes("401 Unauthorized")) {
+            const parsed = parseHttpMessage(msg)
+            if (parsed.body.trim().length > 0) {
+                const p = sess.pending
+                sess.pending = undefined
+                clearTimeout(p.timer)
+                p.resolve(msg)
+                return
+            }
+        }
 
         // ── Step 1: Device auto-registration connect ──────────────────────────
         if (msg.includes("/cgi-bin/api/autoRegist/connect")) {
@@ -234,6 +252,52 @@ export async function sendToDevice(deviceId: string, method: string, uri: string
 
     session.socket.write(req, "latin1")
     return true
+}
+
+// ─── Send a CGI command AND wait for the device's response ────────────────────
+export async function sendToDeviceAwait(
+    deviceId: string,
+    method: string,
+    uri: string,
+    body = "",
+    timeoutMs = 12000
+): Promise<{ ok: boolean; status: number; body: string; raw: string }> {
+    const session = deviceSessions.get(deviceId)
+    if (!session || !session.socket.writable) {
+        return { ok: false, status: 0, body: "device not connected", raw: "" }
+    }
+    // One command at a time per device
+    if (session.pending) {
+        return { ok: false, status: 0, body: "busy (another command in flight)", raw: "" }
+    }
+
+    return new Promise((resolve) => {
+        const timer = setTimeout(() => {
+            if (session.pending) session.pending = undefined
+            resolve({ ok: false, status: 0, body: "timeout", raw: "" })
+        }, timeoutMs)
+
+        session.pending = {
+            timer,
+            resolve: (raw: string) => {
+                const statusM = raw.match(/^HTTP\/1\.1 (\d+)/)
+                const status = statusM ? parseInt(statusM[1]) : 0
+                const parsed = parseHttpMessage(raw)
+                resolve({ ok: status >= 200 && status < 300, status, body: parsed.body, raw })
+            },
+        }
+
+        const req =
+            `${method} ${uri} HTTP/1.1\r\n` +
+            `Host: ${session.ip}\r\n` +
+            `X-cgi-token: ${session.token}\r\n` +
+            `Connection: keep-alive\r\n` +
+            `Content-Type: application/json\r\n` +
+            `Content-Length: ${Buffer.byteLength(body)}\r\n\r\n` +
+            body
+        session.socket.write(req, "latin1")
+        console.log(`[DAHUA_REG] → cmd ${method} ${uri} (body ${Buffer.byteLength(body)}b)`)
+    })
 }
 
 // ─── Start TCP server ─────────────────────────────────────────────────────────
