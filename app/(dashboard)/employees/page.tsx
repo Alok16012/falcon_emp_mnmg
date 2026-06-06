@@ -1199,6 +1199,53 @@ export default function EmployeesPage() {
         }
     }
 
+    // ── Multi-select & bulk delete ───────────────────────────────────────────
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+    const [bulkDeleting, setBulkDeleting] = useState(false)
+
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev)
+            if (next.has(id)) next.delete(id); else next.add(id)
+            return next
+        })
+    }
+    const allVisibleSelected = employees.length > 0 && employees.every(e => selectedIds.has(e.id))
+    const toggleSelectAll = () => {
+        setSelectedIds(prev => {
+            if (employees.every(e => prev.has(e.id))) {
+                const next = new Set(prev)
+                employees.forEach(e => next.delete(e.id))
+                return next
+            }
+            const next = new Set(prev)
+            employees.forEach(e => next.add(e.id))
+            return next
+        })
+    }
+    const handleBulkDelete = async () => {
+        const ids = Array.from(selectedIds)
+        if (ids.length === 0) return
+        if (!confirm(`PERMANENTLY DELETE ${ids.length} employee(s)?\n\nUnke saare records (attendance, leaves, payroll) bhi hamesha ke liye delete ho jaayenge. Yeh undo nahi ho sakta.`)) return
+        setBulkDeleting(true)
+        try {
+            const res = await fetch("/api/employees/bulk-delete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ids, force: true }),
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || "Failed")
+            toast.success(data.message || "Deleted")
+            setSelectedIds(new Set())
+            fetchEmployees()
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "Bulk delete failed")
+        } finally {
+            setBulkDeleting(false)
+        }
+    }
+
     // Stats
     const total = employees.length
     const active = employees.filter(e => e.status === "ACTIVE").length
@@ -1330,10 +1377,43 @@ export default function EmployeesPage() {
                 </div>
             ) : (
                 <div className="bg-white border border-[var(--border)] rounded-[12px] overflow-hidden">
+                    {isAdmin && selectedIds.size > 0 && (
+                        <div className="flex items-center justify-between px-5 py-3 bg-[var(--accent-light)]/50 border-b border-[var(--border)]">
+                            <span className="text-[13px] font-semibold text-[var(--text)]">
+                                {selectedIds.size} selected
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setSelectedIds(new Set())}
+                                    className="px-3 py-1.5 text-[12px] border border-[var(--border)] rounded-[7px] text-[var(--text2)] hover:bg-white"
+                                >
+                                    Clear
+                                </button>
+                                <button
+                                    onClick={handleBulkDelete}
+                                    disabled={bulkDeleting}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-red-600 text-white rounded-[7px] hover:bg-red-700 disabled:opacity-50 font-medium"
+                                >
+                                    <Trash2 size={13} />
+                                    {bulkDeleting ? "Deleting…" : `Delete ${selectedIds.size}`}
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-[var(--border)] bg-[var(--surface2)]/40">
+                                    {isAdmin && (
+                                        <th className="px-4 py-3 w-10">
+                                            <input
+                                                type="checkbox"
+                                                checked={allVisibleSelected}
+                                                onChange={toggleSelectAll}
+                                                className="h-4 w-4 cursor-pointer accent-[var(--accent)]"
+                                            />
+                                        </th>
+                                    )}
                                     <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-5 py-3">Employee</th>
                                     <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Type</th>
                                     <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Phone</th>
@@ -1351,8 +1431,18 @@ export default function EmployeesPage() {
                                     return (
                                         <tr
                                             key={emp.id}
-                                            className={`border-b border-[var(--border)] hover:bg-[var(--surface2)]/30 transition-colors ${i === employees.length - 1 ? "border-b-0" : ""}`}
+                                            className={`border-b border-[var(--border)] hover:bg-[var(--surface2)]/30 transition-colors ${i === employees.length - 1 ? "border-b-0" : ""} ${selectedIds.has(emp.id) ? "bg-[var(--accent-light)]/40" : ""}`}
                                         >
+                                            {isAdmin && (
+                                                <td className="px-4 py-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedIds.has(emp.id)}
+                                                        onChange={() => toggleSelect(emp.id)}
+                                                        className="h-4 w-4 cursor-pointer accent-[var(--accent)]"
+                                                    />
+                                                </td>
+                                            )}
                                             <td className="px-5 py-3">
                                                 <div className="flex items-center gap-3">
                                                     <Avatar firstName={emp.firstName} lastName={emp.lastName} photo={emp.photo} size={36} />
