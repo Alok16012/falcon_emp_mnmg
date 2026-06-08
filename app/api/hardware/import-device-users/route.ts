@@ -118,7 +118,7 @@ export async function POST(req: Request) {
                 lastName: last,
                 phone: "",
                 status: "ACTIVE",
-                employeeCategory: "STAFF",
+                employeeCategory: "LABOUR",
             },
         })
         imported++
