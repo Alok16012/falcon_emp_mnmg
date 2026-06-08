@@ -1,10 +1,11 @@
 "use client"
 import { useState, useEffect, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { format, parseISO } from "date-fns"
 import { toast } from "sonner"
 import {
     Calendar, Users, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight,
-    LogIn, LogOut, Search, Download, X, AlertTriangle
+    LogIn, LogOut, Search, Download, AlertTriangle, ChevronRight as ChevronRightIcon
 } from "lucide-react"
 
 type Employee = {
@@ -73,17 +74,13 @@ function isLateIn(rec?: AttRecord): boolean {
 }
 
 export default function AttendancePage() {
+    const router = useRouter()
     const [employees, setEmployees] = useState<Employee[]>([])
     const [attMap, setAttMap] = useState<Record<string, AttRecord>>({})
     const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"))
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState<"ALL" | "LABOUR" | "STAFF">("ALL")
     const [search, setSearch] = useState("")
-
-    // Detail modal
-    const [selected, setSelected] = useState<Employee | null>(null)
-    const [history, setHistory] = useState<AttRecord[]>([])
-    const [historyLoading, setHistoryLoading] = useState(false)
 
     const fetchEmployees = useCallback(async () => {
         try {
@@ -107,18 +104,8 @@ export default function AttendancePage() {
 
     useEffect(() => { Promise.all([fetchEmployees(), fetchAttendance()]) }, [fetchEmployees, fetchAttendance])
 
-    // Open employee detail → fetch full history
-    const openEmployee = async (emp: Employee) => {
-        setSelected(emp)
-        setHistory([])
-        setHistoryLoading(true)
-        try {
-            const r = await fetch(`/api/attendance?employeeId=${emp.id}`)
-            const data = await r.json()
-            setHistory(Array.isArray(data) ? data : [])
-        } catch { toast.error("Failed to load history") }
-        finally { setHistoryLoading(false) }
-    }
+    // Open employee's full attendance page
+    const openEmployee = (emp: Employee) => router.push(`/attendance/${emp.id}`)
 
     const changeDate = (days: number) => {
         const d = new Date(date); d.setDate(d.getDate() + days)
@@ -326,10 +313,13 @@ export default function AttendancePage() {
                                             </span>
                                         </td>
                                         {/* Status */}
-                                        <td className="px-4 py-3 text-center">
-                                            <span className="px-2.5 py-1 rounded-[6px] text-[11px] font-bold" style={{ background: cfg.bg, color: cfg.color }}>
-                                                {cfg.label}
-                                            </span>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <span className="px-2.5 py-1 rounded-[6px] text-[11px] font-bold" style={{ background: cfg.bg, color: cfg.color }}>
+                                                    {cfg.label}
+                                                </span>
+                                                <ChevronRightIcon size={15} className="text-[var(--text3)]" />
+                                            </div>
                                         </td>
                                     </tr>
                                 )
@@ -339,90 +329,6 @@ export default function AttendancePage() {
                 )}
             </div>
 
-            {/* Employee Detail Modal — full attendance log */}
-            {selected && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setSelected(null)}>
-                    <div className="bg-white rounded-[16px] border border-[var(--border)] w-full max-w-2xl max-h-[85vh] flex flex-col shadow-xl" onClick={e => e.stopPropagation()}>
-                        {/* Modal header */}
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-[var(--accent-light)] flex items-center justify-center text-[14px] font-bold text-[var(--accent-text)]">
-                                    {selected.firstName[0]}{selected.lastName[0]}
-                                </div>
-                                <div>
-                                    <h2 className="text-[16px] font-semibold text-[var(--text)]">{selected.firstName} {selected.lastName}</h2>
-                                    <p className="text-[12px] text-[var(--text3)]">{selected.employeeId} · Full attendance log</p>
-                                </div>
-                            </div>
-                            <button onClick={() => setSelected(null)} className="text-[var(--text3)] hover:text-[var(--text)] p-1 rounded-md hover:bg-[var(--surface2)]">
-                                <X size={18} />
-                            </button>
-                        </div>
-
-                        {/* Modal body */}
-                        <div className="overflow-y-auto p-6">
-                            {historyLoading ? (
-                                <div className="space-y-2">
-                                    {Array.from({ length: 6 }).map((_, i) => (
-                                        <div key={i} className="h-10 bg-[var(--surface2)] rounded-[8px] animate-pulse" />
-                                    ))}
-                                </div>
-                            ) : history.length === 0 ? (
-                                <div className="py-12 text-center text-[var(--text3)]">
-                                    <Calendar size={28} className="mx-auto mb-2 opacity-30" />
-                                    <p className="text-[13px]">No attendance records yet</p>
-                                </div>
-                            ) : (
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="border-b border-[var(--border)]">
-                                            <th className="text-left py-2 text-[11px] font-semibold text-[var(--text3)] uppercase">Date</th>
-                                            <th className="text-left py-2 text-[11px] font-semibold text-[var(--text3)] uppercase">Punch In</th>
-                                            <th className="text-left py-2 text-[11px] font-semibold text-[var(--text3)] uppercase">Punch Out</th>
-                                            <th className="text-left py-2 text-[11px] font-semibold text-[var(--text3)] uppercase">Total Hrs</th>
-                                            <th className="text-center py-2 text-[11px] font-semibold text-[var(--text3)] uppercase">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-[var(--border)]">
-                                        {history.map((rec, i) => {
-                                            const cfg = STATUS_COLOR[rec.status] || STATUS_COLOR.ABSENT
-                                            const pin = punchIn(rec)
-                                            const pout = punchOut(rec)
-                                            return (
-                                                <tr key={i} className="hover:bg-[var(--surface2)]">
-                                                    <td className="py-2.5 text-[13px] font-medium text-[var(--text)]">
-                                                        {rec.date ? format(new Date(rec.date), "dd MMM yyyy, EEE") : "—"}
-                                                    </td>
-                                                    <td className="py-2.5 text-[13px] text-green-700">{fmtTime(pin)}</td>
-                                                    <td className="py-2.5 text-[13px] text-red-600">{fmtTime(pout)}</td>
-                                                    <td className="py-2.5 text-[13px] font-bold text-[var(--text)]">
-                                                        {rec.workingHrs ? `${rec.workingHrs.toFixed(2)}` : "—"}
-                                                    </td>
-                                                    <td className="py-2.5 text-center">
-                                                        <span className="px-2 py-0.5 rounded-[5px] text-[10px] font-bold" style={{ background: cfg.bg, color: cfg.color }}>
-                                                            {cfg.label}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            )
-                                        })}
-                                    </tbody>
-                                </table>
-                            )}
-                        </div>
-
-                        {/* Modal footer summary */}
-                        {!historyLoading && history.length > 0 && (
-                            <div className="px-6 py-3 border-t border-[var(--border)] bg-[var(--surface2)] flex items-center justify-between text-[12px]">
-                                <span className="text-[var(--text3)]">{history.length} days recorded</span>
-                                <span className="font-semibold text-[var(--text)]">
-                                    Total: {history.reduce((s, r) => s + (r.workingHrs || 0), 0).toFixed(2)} hrs
-                                </span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
         </div>
     )
 }
