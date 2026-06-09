@@ -178,11 +178,34 @@ function handleSocket(socket: net.Socket) {
                 // Store session
                 deviceSessions.set(deviceId, { socket, token, ip: remoteIp, deviceId })
 
-                // Update DB lastSyncAt
-                await prisma.hardwareDevice.updateMany({
-                    where: { ip: remoteIp },
-                    data: { lastSyncAt: new Date() },
-                })
+                // Self-healing: ensure a HardwareDevice record exists for this
+                // auto-registered device so it always shows up in the UI (even if
+                // it was deleted). Keyed by name = deviceId; ip tracks the latest
+                // proxy address. No record needed for sync — it runs over the
+                // socket — but the dashboard reads devices from the DB.
+                try {
+                    const existing = await prisma.hardwareDevice.findFirst({ where: { name: deviceId } })
+                    if (existing) {
+                        await prisma.hardwareDevice.update({
+                            where: { id: existing.id },
+                            data: { ip: remoteIp, enabled: true, lastSyncAt: new Date() },
+                        })
+                    } else {
+                        await prisma.hardwareDevice.create({
+                            data: {
+                                name: deviceId,
+                                ip: remoteIp,
+                                username: process.env.DAHUA_REG_USER || "admin",
+                                password: process.env.DAHUA_REG_PASS || "admin",
+                                enabled: true,
+                                lastSyncAt: new Date(),
+                            },
+                        })
+                        console.log(`[DAHUA_REG] 🆕 Auto-created device record: ${deviceId}`)
+                    }
+                } catch (e) {
+                    console.error("[DAHUA_REG] device upsert failed:", e instanceof Error ? e.message : e)
+                }
 
                 // Heartbeat every 20 seconds (from C# demo)
                 heartbeatTimer = setInterval(() => {

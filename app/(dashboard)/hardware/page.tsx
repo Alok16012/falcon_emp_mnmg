@@ -421,7 +421,7 @@ export default function HardwarePage() {
                                 connResult={connResults[device.id]}
                                 configuring={configuring === device.id}
                                 enrolling={enrolling === device.id}
-                                tcpConnected={tcpSessions.some(s => s.ip === device.ip && s.connected)}
+                                tcpConnected={tcpSessions.some(s => s.connected && (s.deviceId === device.name || s.ip === device.ip))}
                                 onSync={() => handleSync(device.id)}
                                 onTest={() => handleTestConn(device.id)}
                                 onConfigure={() => handleConfigureDevice(device.id)}

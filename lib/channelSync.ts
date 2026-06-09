@@ -78,7 +78,7 @@ export async function importDeviceUsers(deviceId: string): Promise<{ imported: n
                     lastName: last,
                     phone: "",
                     status: "ACTIVE",
-                    employeeCategory: "STAFF",
+                    employeeCategory: "LABOUR",
                 },
             })
             imported++
