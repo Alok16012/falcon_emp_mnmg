@@ -80,6 +80,7 @@ export default function AttendancePage() {
     const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"))
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState<"ALL" | "LABOUR" | "STAFF">("ALL")
+    const [statusFilter, setStatusFilter] = useState<"ALL" | "PRESENT" | "ABSENT">("ALL")
     const [search, setSearch] = useState("")
 
     const fetchEmployees = useCallback(async () => {
@@ -121,16 +122,26 @@ export default function AttendancePage() {
         return true
     })
 
+    const isPresent = (e: Employee) => attMap[e.id]?.status === "PRESENT"
+    const isAbsent = (e: Employee) => !attMap[e.id] || attMap[e.id]?.status === "ABSENT"
+
     const counts = {
-        present: filtered.filter(e => attMap[e.id]?.status === "PRESENT").length,
-        absent: filtered.filter(e => !attMap[e.id] || attMap[e.id]?.status === "ABSENT").length,
+        present: filtered.filter(isPresent).length,
+        absent: filtered.filter(isAbsent).length,
         totalHrs: filtered.reduce((s, e) => s + (attMap[e.id]?.workingHrs || 0), 0),
     }
+
+    // Table + export respect the clicked status card (Present / Absent)
+    const visible = filtered.filter(e => {
+        if (statusFilter === "PRESENT") return isPresent(e)
+        if (statusFilter === "ABSENT") return isAbsent(e)
+        return true
+    })
 
     // CSV export of today's table
     const exportCSV = () => {
         const rows = [["Employee", "ID", "Type", "Punch In", "Punch Out", "Total Hours", "Status"]]
-        filtered.forEach(e => {
+        visible.forEach(e => {
             const rec = attMap[e.id]
             rows.push([
                 `${e.firstName} ${e.lastName}`,
@@ -146,7 +157,8 @@ export default function AttendancePage() {
         const blob = new Blob([csv], { type: "text/csv" })
         const url = URL.createObjectURL(blob)
         const a = document.createElement("a")
-        a.href = url; a.download = `attendance-${date}.csv`; a.click()
+        const tag = statusFilter === "ALL" ? "" : `-${statusFilter.toLowerCase()}`
+        a.href = url; a.download = `attendance-${date}${tag}.csv`; a.click()
         URL.revokeObjectURL(url)
     }
 
@@ -158,7 +170,7 @@ export default function AttendancePage() {
                     <h1 className="text-[22px] font-bold text-[var(--text)]">Attendance</h1>
                     <p className="text-[13px] text-[var(--text3)] mt-0.5">Punch in / out &amp; working hours · click an employee for full log</p>
                 </div>
-                <button onClick={exportCSV} disabled={filtered.length === 0}
+                <button onClick={exportCSV} disabled={visible.length === 0}
                     className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-[9px] text-[13px] font-semibold disabled:opacity-60 hover:bg-[#158a5e] transition-colors">
                     <Download size={15} /> Export Excel
                 </button>
@@ -186,20 +198,32 @@ export default function AttendancePage() {
 
             {/* Stats */}
             <div className="grid grid-cols-4 gap-3">
-                {[
-                    { label: "Present", count: counts.present, icon: <CheckCircle size={16} />, color: "#16a34a", bg: "#dcfce7" },
-                    { label: "Absent", count: counts.absent, icon: <XCircle size={16} />, color: "#dc2626", bg: "#fee2e2" },
-                    { label: "Total Hours", count: counts.totalHrs.toFixed(1), icon: <Clock size={16} />, color: "#2563eb", bg: "#dbeafe" },
-                    { label: "Employees", count: filtered.length, icon: <Users size={16} />, color: "#6b7280", bg: "#f3f4f6" },
-                ].map(s => (
-                    <div key={s.label} className="bg-white border border-[var(--border)] rounded-[12px] p-4">
-                        <div className="flex items-center justify-between">
-                            <p className="text-[12px] text-[var(--text3)] font-medium">{s.label}</p>
-                            <div className="p-1.5 rounded-[6px]" style={{ background: s.bg, color: s.color }}>{s.icon}</div>
-                        </div>
-                        <p className="text-[24px] font-bold mt-1" style={{ color: s.color }}>{s.count}</p>
-                    </div>
-                ))}
+                {([
+                    { label: "Present", count: counts.present, icon: <CheckCircle size={16} />, color: "#16a34a", bg: "#dcfce7", sf: "PRESENT" as const },
+                    { label: "Absent", count: counts.absent, icon: <XCircle size={16} />, color: "#dc2626", bg: "#fee2e2", sf: "ABSENT" as const },
+                    { label: "Total Hours", count: counts.totalHrs.toFixed(1), icon: <Clock size={16} />, color: "#2563eb", bg: "#dbeafe", sf: null },
+                    { label: "Employees", count: filtered.length, icon: <Users size={16} />, color: "#6b7280", bg: "#f3f4f6", sf: null },
+                ]).map(s => {
+                    const clickable = s.sf !== null
+                    const active = clickable && statusFilter === s.sf
+                    return (
+                        <button key={s.label} type="button"
+                            onClick={() => clickable && setStatusFilter(active ? "ALL" : s.sf!)}
+                            disabled={!clickable}
+                            className={`text-left bg-white border rounded-[12px] p-4 transition-all ${
+                                clickable ? "cursor-pointer hover:shadow-sm" : "cursor-default"
+                            }`}
+                            style={{ borderColor: active ? s.color : "var(--border)", boxShadow: active ? `0 0 0 1px ${s.color}` : undefined }}>
+                            <div className="flex items-center justify-between">
+                                <p className="text-[12px] text-[var(--text3)] font-medium">
+                                    {s.label}{active ? " · filtering" : ""}
+                                </p>
+                                <div className="p-1.5 rounded-[6px]" style={{ background: s.bg, color: s.color }}>{s.icon}</div>
+                            </div>
+                            <p className="text-[24px] font-bold mt-1" style={{ color: s.color }}>{s.count}</p>
+                        </button>
+                    )
+                })}
             </div>
 
             {/* Controls */}
@@ -236,10 +260,13 @@ export default function AttendancePage() {
                             ))}
                         </tbody>
                     </table>
-                ) : filtered.length === 0 ? (
+                ) : visible.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-[var(--text3)]">
                         <Users size={32} className="mb-2 opacity-40" />
-                        <p className="text-[14px]">No employees found</p>
+                        <p className="text-[14px]">
+                            {statusFilter === "ABSENT" ? "No absent employees" :
+                             statusFilter === "PRESENT" ? "No present employees" : "No employees found"}
+                        </p>
                     </div>
                 ) : (
                     <table className="w-full">
@@ -254,7 +281,7 @@ export default function AttendancePage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--border)]">
-                            {filtered.map(emp => {
+                            {visible.map(emp => {
                                 const rec = attMap[emp.id]
                                 const status = rec?.status || "ABSENT"
                                 const cfg = STATUS_COLOR[status] || STATUS_COLOR.ABSENT
