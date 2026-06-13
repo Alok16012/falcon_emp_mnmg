@@ -9,12 +9,13 @@
 export async function register() {
     // Only run in Node.js runtime (not Edge), and only on the server
     if (process.env.NEXT_RUNTIME === "nodejs") {
-        const { startHardwareSyncScheduler } = await import("@/lib/hardwareScheduler")
         const { startAutoRegServer } = await import("@/lib/dahuaAutoReg")
         const { startChannelSyncScheduler } = await import("@/lib/channelSync")
-        startHardwareSyncScheduler()
         startAutoRegServer()
-        // Auto import device users + pull punches every 90s (works via TCP proxy)
+        // Auto import device users + pull punches every 90s (works via TCP proxy).
+        // NOTE: the legacy hardwareScheduler (direct device-IP fetch) is intentionally
+        // NOT started — it cannot reach the device over the cloud proxy and only
+        // produced misleading "fetch failed" sync logs. Channel sync replaces it.
         startChannelSyncScheduler()
     }
 }

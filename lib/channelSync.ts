@@ -88,14 +88,20 @@ export async function importDeviceUsers(deviceId: string): Promise<{ imported: n
 }
 
 export async function syncPunches(deviceId: string): Promise<{ newPunches: number; scanned: number }> {
-    const res = await sendToDeviceAwait(deviceId, "GET", "/cgi-bin/recordFinder.cgi?action=find&name=AccessControlCardRec&count=500")
+    // The device returns records oldest-first (RecNo ascending), so a small
+    // count only ever yields the OLDEST records and today's punches are never
+    // reached. Request a large count to get the full set, then only process
+    // recent ones (last 3 days) — processHardwareRecord dedupes the rest.
+    const res = await sendToDeviceAwait(deviceId, "GET", "/cgi-bin/recordFinder.cgi?action=find&name=AccessControlCardRec&count=20000")
     if (!res.ok) return { newPunches: 0, scanned: 0 }
 
+    const RECENT_CUTOFF = Math.floor(Date.now() / 1000) - 3 * 24 * 60 * 60 // last 3 days
     let newPunches = 0, scanned = 0
     for (const r of parseRecords(res.body)) {
         const userId = (r["UserID"] || "").trim()
         const ct = parseInt(r["CreateTime"] || r["CreateTimeRealUTC"] || "0")
         if (!userId || !ct) continue
+        if (ct < RECENT_CUTOFF) continue // skip old records, keeps DB load low
         scanned++
         try {
             const created = await processHardwareRecord({
@@ -136,6 +142,24 @@ export async function runChannelSyncAll(): Promise<{ devices: number; imported: 
             imported += imp.imported; linked += imp.linked
             const sync = await syncPunches(d.deviceId)
             newPunches += sync.newPunches
+
+            // Log to Sync Logs only when real new punches were recorded — keeps
+            // the tab meaningful (no 90s spam) and replaces the old "fetch failed".
+            try {
+                const dev = await prisma.hardwareDevice.findFirst({ where: { name: d.deviceId }, select: { id: true } })
+                if (dev) await prisma.hardwareDevice.update({ where: { id: dev.id }, data: { lastSyncAt: new Date() } })
+                if (sync.newPunches > 0) {
+                    await prisma.hardwareSyncLog.create({
+                        data: {
+                            deviceId: d.deviceId,
+                            deviceName: d.deviceId,
+                            recordCount: sync.scanned,
+                            newPunches: sync.newPunches,
+                            errors: null,
+                        },
+                    })
+                }
+            } catch { /* log table optional */ }
         }
         if (imported || linked || newPunches) {
             console.log(`[CHANNEL_SYNC] devices=${devices.length} imported=${imported} linked=${linked} newPunches=${newPunches}`)
