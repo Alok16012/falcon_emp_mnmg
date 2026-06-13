@@ -37,6 +37,28 @@ export async function GET(req: Request) {
     }
     const apply = url.searchParams.get("apply") === "1"
 
+    // Diagnostic: ?check=<name> → dump matching employees + their recent attendance
+    const check = url.searchParams.get("check")
+    if (check) {
+        const parts = check.trim().split(/\s+/)
+        const emps = await prisma.employee.findMany({
+            where: {
+                OR: [
+                    { AND: [{ firstName: { equals: parts[0], mode: "insensitive" } }, { lastName: { equals: parts.slice(1).join(" "), mode: "insensitive" } }] },
+                    { firstName: { equals: check.trim(), mode: "insensitive" } },
+                ],
+            },
+            select: {
+                id: true, employeeId: true, firstName: true, lastName: true, hardwareUserId: true, status: true,
+                attendances: {
+                    orderBy: { date: "desc" }, take: 5,
+                    select: { date: true, status: true, checkIn: true, checkOut: true, punchCount: true, workingHrs: true, markedBy: true },
+                },
+            },
+        })
+        return NextResponse.json({ check, found: emps.length, employees: emps })
+    }
+
     const conn = getConnectedDevices().filter(d => d.connected)
     if (conn.length === 0) return NextResponse.json({ error: "no device connected" }, { status: 200 })
 
