@@ -88,22 +88,24 @@ export async function importDeviceUsers(deviceId: string): Promise<{ imported: n
 }
 
 export async function syncPunches(deviceId: string): Promise<{ newPunches: number; scanned: number }> {
-    // The device returns records oldest-first (RecNo ascending), so a small
-    // count only ever yields the OLDEST records and today's punches are never
-    // reached. Request a large count to get the full set, then only process
-    // recent ones (last 3 days) — processHardwareRecord dedupes the rest.
-    // 30s timeout — the full record dump is large and the default 12s could cut
-    // it off mid-transfer, dropping the newest (today's) records.
-    const res = await sendToDeviceAwait(deviceId, "GET", "/cgi-bin/recordFinder.cgi?action=find&name=AccessControlCardRec&count=20000", "", 30000)
+    // The device caps a plain `find` at the OLDEST ~1024 records and IGNORES
+    // `offset`, so the newest (today's) punches get truncated and people who
+    // punched later in the day wrongly show absent. The only reliable way to
+    // fetch recent records is a time window — and this device honours
+    // StartTime/EndTime ONLY as UNIX EPOCH seconds (formatted date strings
+    // return 0 / "Bad Request").
+    const now = Math.floor(Date.now() / 1000)
+    const start = now - 3 * 24 * 60 * 60   // last 3 days
+    const end = now + 24 * 60 * 60         // +1 day buffer for any device clock skew
+    const uri = `/cgi-bin/recordFinder.cgi?action=find&name=AccessControlCardRec&StartTime=${start}&EndTime=${end}&count=5000`
+    const res = await sendToDeviceAwait(deviceId, "GET", uri, "", 30000)
     if (!res.ok) return { newPunches: 0, scanned: 0 }
 
-    const RECENT_CUTOFF = Math.floor(Date.now() / 1000) - 3 * 24 * 60 * 60 // last 3 days
     let newPunches = 0, scanned = 0
     for (const r of parseRecords(res.body)) {
         const userId = (r["UserID"] || "").trim()
         const ct = parseInt(r["CreateTime"] || r["CreateTimeRealUTC"] || "0")
         if (!userId || !ct) continue
-        if (ct < RECENT_CUTOFF) continue // skip old records, keeps DB load low
         scanned++
         try {
             const created = await processHardwareRecord({
