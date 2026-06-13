@@ -62,6 +62,17 @@ export async function GET(req: Request) {
     const conn = getConnectedDevices().filter(d => d.connected)
     if (conn.length === 0) return NextResponse.json({ error: "no device connected" }, { status: 200 })
 
+    // Diagnostic: ?sync=1 → run punch sync directly and report the raw result
+    if (url.searchParams.get("sync") === "1") {
+        try {
+            const { syncPunches } = await import("@/lib/channelSync")
+            const r = await syncPunches(conn[0].deviceId)
+            return NextResponse.json({ ran: "syncPunches", deviceId: conn[0].deviceId, ...r })
+        } catch (e) {
+            return NextResponse.json({ ran: "syncPunches", error: e instanceof Error ? e.message : String(e), stack: e instanceof Error ? e.stack : undefined })
+        }
+    }
+
     const res = await sendToDeviceAwait(conn[0].deviceId, "GET",
         "/cgi-bin/recordFinder.cgi?action=find&name=AccessControlCard&count=2000", "", 30000)
     if (!res.ok) return NextResponse.json({ error: "device fetch failed", detail: res.body }, { status: 200 })
