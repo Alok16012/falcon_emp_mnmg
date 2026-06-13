@@ -113,11 +113,41 @@ export async function POST(req: Request) {
 export async function processHardwareRecord(rec: AccessControlRecord): Promise<boolean> {
     if (!rec.UserID || !rec.CreateTime) return false
 
-    // Find employee by hardwareUserId
-    const employee = await prisma.employee.findFirst({
-        where: { hardwareUserId: rec.UserID },
+    // Find employee by hardwareUserId (exact, then zero-pad/strip variants)
+    const raw = String(rec.UserID).trim()
+    const stripped = raw.replace(/^0+/, "") || "0"
+    const idCandidates = Array.from(new Set([
+        raw, stripped, stripped.padStart(2, "0"), stripped.padStart(3, "0"), stripped.padStart(4, "0"),
+    ]))
+    let employee = await prisma.employee.findFirst({
+        where: { hardwareUserId: { in: idCandidates } },
         select: { id: true, shiftHours: true },
     })
+
+    // Fallback: match by the punch record's name (CardName). Employees added via
+    // the form get an auto-assigned hardwareUserId from their EMP number, which
+    // won't match the device's own enrolment ID. Match on name, then bind the
+    // device UserID so future punches match directly (self-healing mapping).
+    if (!employee && rec.CardName && rec.CardName.trim()) {
+        const full = rec.CardName.trim()
+        const parts = full.split(/\s+/)
+        const first = parts[0]
+        const last = parts.slice(1).join(" ")
+        employee = await prisma.employee.findFirst({
+            where: {
+                hardwareUserId: { notIn: idCandidates },
+                OR: [
+                    { AND: [{ firstName: { equals: first, mode: "insensitive" } }, { lastName: { equals: last, mode: "insensitive" } }] },
+                    { firstName: { equals: full, mode: "insensitive" } },
+                ],
+            },
+            select: { id: true, shiftHours: true },
+        })
+        if (employee) {
+            await prisma.employee.update({ where: { id: employee.id }, data: { hardwareUserId: raw } }).catch(() => {})
+        }
+    }
+
     if (!employee) return false // not mapped
 
     // Parse punch time (device time is local IST, stored as naive string)
