@@ -62,6 +62,39 @@ export async function GET(req: Request) {
     const conn = getConnectedDevices().filter(d => d.connected)
     if (conn.length === 0) return NextResponse.json({ error: "no device connected" }, { status: 200 })
 
+    // Diagnostic: ?testrec=<userId> → fetch that user's latest punch and run
+    // processHardwareRecord on it directly, surfacing any thrown error.
+    const testrec = url.searchParams.get("testrec")
+    if (testrec) {
+        const now = Math.floor(Date.now() / 1000)
+        const q = `/cgi-bin/recordFinder.cgi?action=find&name=AccessControlCardRec&StartTime=${now - 3 * 86400}&EndTime=${now + 86400}&count=5000`
+        const rr = await sendToDeviceAwait(conn[0].deviceId, "GET", q, "", 30000)
+        const map = new Map<string, Record<string, string>>()
+        for (const raw of rr.body.split("\n")) {
+            const m = raw.trim().match(/^records\[(\d+)\]\.([\w[\]]+)=(.*)$/)
+            if (!m) continue
+            if (!map.has(m[1])) map.set(m[1], {})
+            map.get(m[1])![m[2]] = m[3]
+        }
+        const recs = Array.from(map.values()).filter(r => (r["UserID"] || "").trim() === testrec)
+        recs.sort((a, b) => parseInt(b["CreateTime"] || "0") - parseInt(a["CreateTime"] || "0"))
+        const r = recs[0]
+        if (!r) return NextResponse.json({ testrec, error: "no punch found for this user in window", totalRecs: map.size })
+        const ct = parseInt(r["CreateTime"] || "0")
+        const rec = {
+            UserID: testrec, CardNo: r["CardNo"] || testrec, CardName: r["CardName"] || "",
+            CreateTime: new Date(ct * 1000).toISOString().slice(0, 19).replace("T", " "),
+            RecNo: parseInt(r["RecNo"] || "0"), Door: 0, Direction: 0, Method: 0,
+        }
+        try {
+            const { processHardwareRecord } = await import("@/app/api/hardware/sync/route")
+            const result = await processHardwareRecord(rec)
+            return NextResponse.json({ testrec, rec, result })
+        } catch (e) {
+            return NextResponse.json({ testrec, rec, error: e instanceof Error ? e.message : String(e), stack: e instanceof Error ? e.stack?.split("\n").slice(0, 6) : undefined })
+        }
+    }
+
     // Diagnostic: ?sync=1 → run punch sync directly and report the raw result
     if (url.searchParams.get("sync") === "1") {
         try {
