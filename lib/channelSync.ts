@@ -43,7 +43,7 @@ async function nextEmployeeId(): Promise<string> {
 }
 
 export async function importDeviceUsers(deviceId: string): Promise<{ imported: number; linked: number }> {
-    const res = await sendToDeviceAwait(deviceId, "GET", "/cgi-bin/recordFinder.cgi?action=find&name=AccessControlCard&count=1000")
+    const res = await sendToDeviceAwait(deviceId, "GET", "/cgi-bin/recordFinder.cgi?action=find&name=AccessControlCard&count=1000", "", 30000)
     if (!res.ok) return { imported: 0, linked: 0 }
 
     let imported = 0, linked = 0
@@ -92,7 +92,9 @@ export async function syncPunches(deviceId: string): Promise<{ newPunches: numbe
     // count only ever yields the OLDEST records and today's punches are never
     // reached. Request a large count to get the full set, then only process
     // recent ones (last 3 days) — processHardwareRecord dedupes the rest.
-    const res = await sendToDeviceAwait(deviceId, "GET", "/cgi-bin/recordFinder.cgi?action=find&name=AccessControlCardRec&count=20000")
+    // 30s timeout — the full record dump is large and the default 12s could cut
+    // it off mid-transfer, dropping the newest (today's) records.
+    const res = await sendToDeviceAwait(deviceId, "GET", "/cgi-bin/recordFinder.cgi?action=find&name=AccessControlCardRec&count=20000", "", 30000)
     if (!res.ok) return { newPunches: 0, scanned: 0 }
 
     const RECENT_CUTOFF = Math.floor(Date.now() / 1000) - 3 * 24 * 60 * 60 // last 3 days

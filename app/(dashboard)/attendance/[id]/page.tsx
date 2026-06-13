@@ -1,10 +1,10 @@
 "use client"
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, Fragment } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import {
-    ArrowLeft, Download, Calendar, Clock, CheckCircle, XCircle, LogIn, LogOut
+    ArrowLeft, Download, Calendar, Clock, CheckCircle, XCircle, LogIn, LogOut, ChevronDown
 } from "lucide-react"
 
 type PunchLog = { punchNumber: number; punchType: "IN" | "OUT"; punchTime: string }
@@ -56,6 +56,7 @@ export default function EmployeeAttendancePage() {
     const [history, setHistory] = useState<AttRecord[]>([])
     const [loading, setLoading] = useState(true)
     const [month, setMonth] = useState("ALL") // "ALL" or "YYYY-MM"
+    const [expanded, setExpanded] = useState<number | null>(null)
 
     const load = useCallback(async () => {
         setLoading(true)
@@ -202,10 +203,22 @@ export default function EmployeeAttendancePage() {
                                 const cfg = STATUS_COLOR[r.status] || STATUS_COLOR.ABSENT
                                 const pin = punchIn(r)
                                 const pout = punchOut(r)
+                                const punches = (r.punchLogs || []).slice().sort((a, b) => +new Date(a.punchTime) - +new Date(b.punchTime))
+                                const isOpen = expanded === i
                                 return (
-                                    <tr key={i} className="hover:bg-[var(--surface2)] transition-colors">
+                                    <Fragment key={i}>
+                                    <tr onClick={() => punches.length > 0 && setExpanded(isOpen ? null : i)}
+                                        className={`hover:bg-[var(--surface2)] transition-colors ${punches.length > 0 ? "cursor-pointer" : ""}`}>
                                         <td className="px-4 py-3 text-[13px] font-medium text-[var(--text)]">
-                                            {r.date ? format(new Date(r.date), "dd MMM yyyy, EEE") : "—"}
+                                            <div className="flex items-center gap-1.5">
+                                                {r.date ? format(new Date(r.date), "dd MMM yyyy, EEE") : "—"}
+                                                {punches.length > 0 && (
+                                                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-[var(--accent-light)] text-[var(--accent-text)] rounded-[4px] text-[10px] font-bold">
+                                                        {punches.length} punch{punches.length > 1 ? "es" : ""}
+                                                        <ChevronDown size={10} className={`transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className={`inline-flex items-center gap-1.5 text-[13px] ${pin ? "text-green-700 font-medium" : "text-[var(--text3)]"}`}>
@@ -227,6 +240,24 @@ export default function EmployeeAttendancePage() {
                                         </td>
                                         <td className="px-4 py-3 text-[12px] text-[var(--text2)]">{r.remarks || "—"}</td>
                                     </tr>
+                                    {isOpen && punches.length > 0 && (
+                                        <tr className="bg-slate-50">
+                                            <td colSpan={6} className="px-6 py-2.5">
+                                                <div className="flex flex-wrap gap-2 items-center">
+                                                    <span className="text-[11px] font-semibold text-slate-500 mr-1">All punches:</span>
+                                                    {punches.map((p, pi) => (
+                                                        <span key={pi}
+                                                            className={`flex items-center gap-1 px-2 py-0.5 rounded-[6px] text-[11px] font-semibold ${
+                                                                p.punchType === "IN" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"
+                                                            }`}>
+                                                            {p.punchType === "IN" ? "🟢 IN" : "🔴 OUT"} · {fmtTime(p.punchTime)}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                    </Fragment>
                                 )
                             })}
                         </tbody>
