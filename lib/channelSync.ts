@@ -88,16 +88,19 @@ export async function importDeviceUsers(deviceId: string): Promise<{ imported: n
 }
 
 export async function syncPunches(deviceId: string): Promise<{ newPunches: number; scanned: number }> {
-    // The device caps a plain `find` at the OLDEST ~1024 records and IGNORES
-    // `offset`, so the newest (today's) punches get truncated and people who
-    // punched later in the day wrongly show absent. The only reliable way to
-    // fetch recent records is a time window — and this device honours
-    // StartTime/EndTime ONLY as UNIX EPOCH seconds (formatted date strings
-    // return 0 / "Bad Request").
+    // Device quirks (verified live):
+    //  - StartTime/EndTime work ONLY as UNIX EPOCH seconds (date strings = 0/Bad Request).
+    //  - The time filter is honoured ONLY with a MODEST count. With a large count
+    //    (e.g. 5000) the device IGNORES the filter and returns the OLDEST ~1024
+    //    records, truncating today's latest punches (people who punched later in
+    //    the day wrongly show absent). count=1000 keeps the filter working.
+    //  - Records come oldest-first, capped at `count`. So the window must hold
+    //    fewer than `count` records — a ~30h window (< ~1000 punches/day) ensures
+    //    every recent/today punch is returned, newest included.
     const now = Math.floor(Date.now() / 1000)
-    const start = now - 3 * 24 * 60 * 60   // last 3 days
+    const start = now - 30 * 60 * 60       // last ~30 hours
     const end = now + 24 * 60 * 60         // +1 day buffer for any device clock skew
-    const uri = `/cgi-bin/recordFinder.cgi?action=find&name=AccessControlCardRec&StartTime=${start}&EndTime=${end}&count=5000`
+    const uri = `/cgi-bin/recordFinder.cgi?action=find&name=AccessControlCardRec&StartTime=${start}&EndTime=${end}&count=1000`
     const res = await sendToDeviceAwait(deviceId, "GET", uri, "", 30000)
     if (!res.ok) return { newPunches: 0, scanned: 0 }
 
