@@ -52,15 +52,15 @@ export async function POST(req: Request) {
         const isLate = punchType === "IN" && newPunchCount === 1 &&
             (now.getHours() > SHIFT_H || (now.getHours() === SHIFT_H && now.getMinutes() > SHIFT_M))
 
-        // Calculate working hours for OUT punches
-        // Each OUT = now - lastPunchTime (which is the IN time)
-        let addedWorkMs = 0
-        if (punchType === "OUT" && attendance.lastPunchTime) {
-            addedWorkMs = now.getTime() - new Date(attendance.lastPunchTime).getTime()
+        // Working hours = (last OUT − first IN) − 35 min lunch break, never negative.
+        const newCheckIn  = newPunchCount === 1 ? now : attendance.checkIn  // first IN only
+        const newCheckOut = punchType === "OUT" ? now : attendance.checkOut // update on every OUT
+        const LUNCH_BREAK_HRS = 35 / 60
+        let newWorkingHrs = attendance.workingHrs ?? 0
+        if (newCheckIn && newCheckOut && newCheckOut > newCheckIn) {
+            const spanHrs = (newCheckOut.getTime() - newCheckIn.getTime()) / (1000 * 60 * 60)
+            newWorkingHrs = parseFloat(Math.max(0, spanHrs - LUNCH_BREAK_HRS).toFixed(2))
         }
-        const newWorkingHrs = parseFloat(
-            ((attendance.workingHrs ?? 0) + addedWorkMs / (1000 * 60 * 60)).toFixed(2)
-        )
 
         // Update attendance
         const updated = await prisma.attendance.update({
@@ -68,9 +68,9 @@ export async function POST(req: Request) {
             data: {
                 punchCount: newPunchCount,
                 lastPunchTime: now,
-                workingHrs: punchType === "OUT" ? newWorkingHrs : (attendance.workingHrs ?? 0),
-                checkIn:  newPunchCount === 1 ? now : attendance.checkIn,  // first IN only
-                checkOut: punchType === "OUT" ? now : attendance.checkOut, // update on every OUT
+                workingHrs: newWorkingHrs,
+                checkIn:  newCheckIn,
+                checkOut: newCheckOut,
                 status: "PRESENT",
                 ...(isLate ? { remarks: `Late arrival: ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}` } : {}),
             },

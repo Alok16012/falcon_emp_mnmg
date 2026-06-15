@@ -178,22 +178,37 @@ export async function processHardwareRecord(rec: AccessControlRecord): Promise<b
     }
 
     const newPunchCount = (attendance.punchCount ?? 0) + 1
-    const punchType: "IN" | "OUT" = newPunchCount % 2 === 1 ? "IN" : "OUT"
+    // Prefer the device's real direction (0=Enter→IN, 1=Exit→OUT). Only fall back
+    // to count parity when the device reports 2/None — otherwise an extra morning
+    // punch flips the parity and the genuine evening OUT gets mislabelled as IN
+    // (which is why out-time punches were not showing up).
+    const punchType: "IN" | "OUT" =
+        rec.Direction === 0 ? "IN" :
+        rec.Direction === 1 ? "OUT" :
+        (newPunchCount % 2 === 1 ? "IN" : "OUT")
 
-    // Late check: first IN after 09:15
+    // checkIn = earliest IN, checkOut = latest OUT — order-independent so it stays
+    // correct even if the device returns records out of chronological order.
+    const newCheckIn = punchType === "IN"
+        ? (!attendance.checkIn || punchTime < attendance.checkIn ? punchTime : attendance.checkIn)
+        : attendance.checkIn
+    const newCheckOut = punchType === "OUT"
+        ? (!attendance.checkOut || punchTime > attendance.checkOut ? punchTime : attendance.checkOut)
+        : attendance.checkOut
+
+    // Late check: IN after 09:15 (only when recording the first IN of the day)
     const SHIFT_H = 9, SHIFT_M = 15
-    const isLate = punchType === "IN" && newPunchCount === 1 &&
+    const isLate = punchType === "IN" && !attendance.checkIn &&
         (punchTime.getHours() > SHIFT_H || (punchTime.getHours() === SHIFT_H && punchTime.getMinutes() > SHIFT_M))
 
-    // Calculate working hours on OUT
-    let addedWorkMs = 0
-    if (punchType === "OUT" && attendance.lastPunchTime) {
-        addedWorkMs = punchTime.getTime() - new Date(attendance.lastPunchTime).getTime()
-        if (addedWorkMs < 0) addedWorkMs = 0
+    // Working hours = (last OUT − first IN) − 35 min lunch break, never negative.
+    // Span-based so re-syncing the same punches never double-counts.
+    const LUNCH_BREAK_HRS = 35 / 60
+    let newWorkingHrs = attendance.workingHrs ?? 0
+    if (newCheckIn && newCheckOut && newCheckOut > newCheckIn) {
+        const spanHrs = (newCheckOut.getTime() - newCheckIn.getTime()) / (1000 * 60 * 60)
+        newWorkingHrs = parseFloat(Math.max(0, spanHrs - LUNCH_BREAK_HRS).toFixed(2))
     }
-    const newWorkingHrs = parseFloat(
-        ((attendance.workingHrs ?? 0) + addedWorkMs / (1000 * 60 * 60)).toFixed(2)
-    )
 
     // Update attendance
     await prisma.attendance.update({
@@ -201,9 +216,9 @@ export async function processHardwareRecord(rec: AccessControlRecord): Promise<b
         data: {
             punchCount: newPunchCount,
             lastPunchTime: punchTime,
-            workingHrs: punchType === "OUT" ? newWorkingHrs : (attendance.workingHrs ?? 0),
-            checkIn: newPunchCount === 1 ? punchTime : attendance.checkIn,
-            checkOut: punchType === "OUT" ? punchTime : attendance.checkOut,
+            workingHrs: newWorkingHrs,
+            checkIn: newCheckIn,
+            checkOut: newCheckOut,
             status: "PRESENT",
             markedBy: "HARDWARE",
             ...(isLate ? {

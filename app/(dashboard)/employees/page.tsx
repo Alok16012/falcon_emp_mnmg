@@ -492,6 +492,23 @@ function EmployeeModal({
                                     <label className={labelCls}>Aadhar Number</label>
                                     <input value={form.aadharNumber} onChange={set("aadharNumber")} className={inputCls} placeholder="XXXX XXXX XXXX" />
                                 </div>
+                                <div className="col-span-2">
+                                    <label className={labelCls}>Address</label>
+                                    <textarea value={form.address} onChange={set("address")} rows={2}
+                                        className={`${inputCls} h-auto py-2 resize-none`} placeholder="House / street / area" />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>City</label>
+                                    <input value={form.city} onChange={set("city")} className={inputCls} placeholder="City" />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>State</label>
+                                    <input value={form.state} onChange={set("state")} className={inputCls} placeholder="State" />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>Pincode</label>
+                                    <input value={form.pincode} onChange={set("pincode")} className={inputCls} placeholder="6-digit pincode" />
+                                </div>
                             </div>
                         </div>
                     )}
