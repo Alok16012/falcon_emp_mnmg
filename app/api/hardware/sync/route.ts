@@ -201,13 +201,13 @@ export async function processHardwareRecord(rec: AccessControlRecord): Promise<b
     const isLate = punchType === "IN" && !attendance.checkIn &&
         (punchTime.getHours() > SHIFT_H || (punchTime.getHours() === SHIFT_H && punchTime.getMinutes() > SHIFT_M))
 
-    // Working hours = (last OUT − first IN) − 35 min lunch break, never negative.
+    // Working hours = full span (last OUT − first IN). The 35-min lunch is paid by
+    // the company, so it counts as working time and is NOT deducted.
     // Span-based so re-syncing the same punches never double-counts.
-    const LUNCH_BREAK_HRS = 35 / 60
     let newWorkingHrs = attendance.workingHrs ?? 0
     if (newCheckIn && newCheckOut && newCheckOut > newCheckIn) {
         const spanHrs = (newCheckOut.getTime() - newCheckIn.getTime()) / (1000 * 60 * 60)
-        newWorkingHrs = parseFloat(Math.max(0, spanHrs - LUNCH_BREAK_HRS).toFixed(2))
+        newWorkingHrs = parseFloat(spanHrs.toFixed(2))
     }
 
     // Update attendance

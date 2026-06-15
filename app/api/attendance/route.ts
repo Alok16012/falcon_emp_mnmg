@@ -114,10 +114,10 @@ export async function POST(req: Request) {
                     checkOutDT = new Date(`${r.date}T${r.checkOut}:00`)
                 }
                 if (checkInDT && checkOutDT && checkOutDT > checkInDT) {
-                    // Deduct a fixed 35 min lunch break, same as the hardware sync.
-                    const LUNCH_BREAK_HRS = 35 / 60
-                    const spanHrs = (checkOutDT.getTime() - checkInDT.getTime()) / (1000 * 60 * 60)
-                    workingHrs = parseFloat(Math.max(0, spanHrs - LUNCH_BREAK_HRS).toFixed(2))
+                    // Full span — the 35-min lunch is paid by the company, not deducted.
+                    workingHrs = parseFloat(
+                        ((checkOutDT.getTime() - checkInDT.getTime()) / (1000 * 60 * 60)).toFixed(2)
+                    )
                 }
 
                 const existing = await prisma.attendance.findFirst({
