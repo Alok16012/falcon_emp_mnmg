@@ -331,10 +331,15 @@ function EmployeeModal({
         try {
             const url = employee ? `/api/employees/${employee.id}` : "/api/employees"
             const method = employee ? "PUT" : "POST"
+            // basicSalary is the MONTHLY salary. Derive the daily rate as
+            // monthly / 30 (month = 30 days) so attendance/hourly calcs are
+            // consistent. Hourly rate = dailyRate / shiftHours = monthly/30/shift.
+            const monthly = parseFloat(form.basicSalary || "0")
+            const derivedDaily = monthly > 0 ? (monthly / 30).toFixed(2) : form.dailyRate
             const res = await fetch(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(form),
+                body: JSON.stringify({ ...form, dailyRate: derivedDaily }),
             })
             if (!res.ok) throw new Error(await res.text())
             toast.success(employee ? "Employee updated!" : "Employee added!")
@@ -522,8 +527,8 @@ function EmployeeModal({
                                     <input type="date" value={form.dateOfJoining} onChange={set("dateOfJoining")} className={inputCls} />
                                 </div>
                                 <div className="col-span-2">
-                                    <label className={labelCls}>Hourly Rate (₹/hr)</label>
-                                    <input type="number" value={form.basicSalary} onChange={set("basicSalary")} className={inputCls} placeholder="e.g. 80" min="0" />
+                                    <label className={labelCls}>Monthly Salary (₹/month)</label>
+                                    <input type="number" value={form.basicSalary} onChange={set("basicSalary")} className={inputCls} placeholder="e.g. 18000" min="0" />
                                 </div>
                                 <div className="col-span-2">
                                     <label className={labelCls}>Shift Duration</label>
@@ -547,7 +552,7 @@ function EmployeeModal({
                                     </div>
                                     {form.basicSalary && (
                                         <p className="text-[11px] text-[var(--text3)] mt-1.5">
-                                            Daily: ₹{(parseFloat(form.basicSalary || "0") * parseInt(form.shiftHours || "8")).toFixed(0)} · Monthly: ₹{(parseFloat(form.basicSalary || "0") * parseInt(form.shiftHours || "8") * 26).toLocaleString()}
+                                            Daily (÷30): ₹{(parseFloat(form.basicSalary || "0") / 30).toFixed(0)} · Hourly (÷30÷{form.shiftHours || "8"}hr): ₹{(parseFloat(form.basicSalary || "0") / 30 / parseInt(form.shiftHours || "8")).toFixed(2)}
                                         </p>
                                     )}
                                 </div>
@@ -817,7 +822,7 @@ function EmployeeDrawer({
                                 label: "Joined",
                                 value: employee.dateOfJoining ? format(new Date(employee.dateOfJoining), "dd MMM yyyy") : "—"
                             },
-                            { icon: <IndianRupee size={12} />, label: "Hourly Rate", value: employee.basicSalary ? `₹${Number(employee.basicSalary)}/hr` : "—" },
+                            { icon: <IndianRupee size={12} />, label: "Monthly Salary", value: employee.basicSalary ? `₹${Number(employee.basicSalary).toLocaleString()}/mo` : "—" },
                         ].map(s => (
                             <div key={s.label} className="flex items-center gap-1.5 bg-[var(--surface2)]/40 rounded-[8px] px-2.5 py-2 border border-[var(--border)]">
                                 <span className="text-[var(--text3)]">{s.icon}</span>
@@ -872,8 +877,8 @@ function EmployeeDrawer({
                                 icon={<Calendar size={13} />}
                             />
                             <InfoItem
-                                label="Hourly Rate"
-                                value={emp.basicSalary ? `₹${Number(emp.basicSalary).toLocaleString()}/hr` : "—"}
+                                label="Monthly Salary"
+                                value={emp.basicSalary ? `₹${Number(emp.basicSalary).toLocaleString()}/mo` : "—"}
                                 icon={<IndianRupee size={13} />}
                             />
                             <InfoItem
@@ -883,15 +888,15 @@ function EmployeeDrawer({
                             />
                             {emp.basicSalary && emp.shiftHours && (
                                 <div className="p-3 rounded-[10px] bg-[var(--surface2)]/40 border border-[var(--border)]">
-                                    <p className="text-[10.5px] text-[var(--text3)] font-medium uppercase tracking-[0.4px] mb-1.5">Estimated Earnings</p>
+                                    <p className="text-[10.5px] text-[var(--text3)] font-medium uppercase tracking-[0.4px] mb-1.5">Rate Breakdown</p>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                            <p className="text-[10px] text-[var(--text3)]">Daily</p>
-                                            <p className="text-[13px] font-semibold text-[var(--text)]">₹{(Number(emp.basicSalary) * Number(emp.shiftHours)).toLocaleString()}</p>
+                                            <p className="text-[10px] text-[var(--text3)]">Daily (÷30)</p>
+                                            <p className="text-[13px] font-semibold text-[var(--text)]">₹{(Number(emp.basicSalary) / 30).toFixed(0)}</p>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] text-[var(--text3)]">Monthly (26 days)</p>
-                                            <p className="text-[13px] font-semibold text-[var(--text)]">₹{(Number(emp.basicSalary) * Number(emp.shiftHours) * 26).toLocaleString()}</p>
+                                            <p className="text-[10px] text-[var(--text3)]">Hourly (÷30÷{emp.shiftHours}hr)</p>
+                                            <p className="text-[13px] font-semibold text-[var(--text)]">₹{(Number(emp.basicSalary) / 30 / Number(emp.shiftHours)).toFixed(2)}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1356,7 +1361,7 @@ export default function EmployeesPage() {
                     <table className="w-full">
                         <thead>
                             <tr className="border-b border-[var(--border)] bg-[var(--surface2)]/40">
-                                {["Employee","Type","Phone","Joined","Rate/Hr","Status","Actions"].map(h => (
+                                {["Employee","Type","Phone","Joined","Monthly","Status","Actions"].map(h => (
                                     <th key={h} className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-5 py-3">{h}</th>
                                 ))}
                             </tr>
@@ -1436,7 +1441,7 @@ export default function EmployeesPage() {
                                     <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Phone</th>
                                     <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Joined</th>
                                     {isAdmin && (
-                                        <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Rate/Hr</th>
+                                        <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Monthly</th>
                                     )}
                                     <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Status</th>
                                     <th className="text-right text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-5 py-3">Actions</th>
@@ -1489,7 +1494,7 @@ export default function EmployeesPage() {
                                             </td>
                                             {isAdmin && (
                                                 <td className="px-4 py-3 text-[13px] text-[var(--text2)] whitespace-nowrap">
-                                                    {emp.basicSalary ? `₹${Number(emp.basicSalary)}/hr` : "—"}
+                                                    {emp.basicSalary ? `₹${Number(emp.basicSalary).toLocaleString()}/mo` : "—"}
                                                     {emp.shiftHours && <span className="text-[11px] text-[var(--text3)] ml-1">· {emp.shiftHours}hr shift</span>}
                                                 </td>
                                             )}
