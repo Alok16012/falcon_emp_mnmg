@@ -31,17 +31,29 @@ const STATUS_COLOR: Record<string, { color: string; bg: string; label: string }>
     WEEKLY_OFF: { color: "#6b7280", bg: "#f3f4f6", label: "Weekly Off" },
 }
 
+// Device logs every punch as an entry → derive by TIME: first punch = IN,
+// last punch = OUT (only when 2+ punches).
+function sortedPunchTimes(rec?: AttRecord): number[] {
+    return (rec?.punchLogs || []).map(p => +new Date(p.punchTime)).filter(t => !isNaN(t)).sort((a, b) => a - b)
+}
 function punchIn(rec?: AttRecord): string {
     if (!rec) return ""
-    const ins = (rec.punchLogs || []).filter(p => p.punchType === "IN")
-    if (ins.length) return ins.sort((a, b) => +new Date(a.punchTime) - +new Date(b.punchTime))[0].punchTime
+    const t = sortedPunchTimes(rec)
+    if (t.length) return new Date(t[0]).toISOString()
     return rec.checkIn || ""
 }
 function punchOut(rec?: AttRecord): string {
     if (!rec) return ""
-    const outs = (rec.punchLogs || []).filter(p => p.punchType === "OUT")
-    if (outs.length) return outs.sort((a, b) => +new Date(b.punchTime) - +new Date(a.punchTime))[0].punchTime
+    const t = sortedPunchTimes(rec)
+    if (t.length >= 2) return new Date(t[t.length - 1]).toISOString()
     return rec.checkOut || ""
+}
+function totalHrs(rec?: AttRecord): number {
+    if (!rec) return 0
+    if (rec.workingHrs) return rec.workingHrs
+    const t = sortedPunchTimes(rec)
+    if (t.length >= 2) return parseFloat(((t[t.length - 1] - t[0]) / 3600000).toFixed(2))
+    return 0
 }
 function fmtTime(dt: string): string {
     if (!dt) return "—"
@@ -86,7 +98,7 @@ export default function EmployeeAttendancePage() {
         days: filtered.length,
         present: filtered.filter(r => r.status === "PRESENT").length,
         absent: filtered.filter(r => r.status === "ABSENT").length,
-        hours: filtered.reduce((s, r) => s + (r.workingHrs || 0), 0),
+        hours: filtered.reduce((s, r) => s + totalHrs(r), 0),
     }
 
     const exportCSV = () => {
@@ -98,7 +110,7 @@ export default function EmployeeAttendancePage() {
                 r.date ? format(new Date(r.date), "EEEE") : "",
                 fmtTime(punchIn(r)),
                 fmtTime(punchOut(r)),
-                (r.workingHrs || 0).toFixed(2),
+                totalHrs(r).toFixed(2),
                 STATUS_COLOR[r.status]?.label || r.status,
                 r.remarks || "",
             ])
@@ -231,7 +243,7 @@ export default function EmployeeAttendancePage() {
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-[13px] font-bold text-[var(--text)]">
-                                            {r.workingHrs ? `${r.workingHrs.toFixed(2)} hrs` : "—"}
+                                            {totalHrs(r) ? `${totalHrs(r).toFixed(2)} hrs` : "—"}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <span className="px-2.5 py-1 rounded-[6px] text-[11px] font-bold" style={{ background: cfg.bg, color: cfg.color }}>
@@ -245,14 +257,18 @@ export default function EmployeeAttendancePage() {
                                             <td colSpan={6} className="px-6 py-2.5">
                                                 <div className="flex flex-wrap gap-2 items-center">
                                                     <span className="text-[11px] font-semibold text-slate-500 mr-1">All punches:</span>
-                                                    {punches.map((p, pi) => (
-                                                        <span key={pi}
-                                                            className={`flex items-center gap-1 px-2 py-0.5 rounded-[6px] text-[11px] font-semibold ${
-                                                                p.punchType === "IN" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"
-                                                            }`}>
-                                                            {p.punchType === "IN" ? "🟢 IN" : "🔴 OUT"} · {fmtTime(p.punchTime)}
-                                                        </span>
-                                                    ))}
+                                                    {punches.map((p, pi) => {
+                                                        // First punch = IN, last = OUT (when 2+), middle = neutral
+                                                        const isFirst = pi === 0
+                                                        const isLast = pi === punches.length - 1 && punches.length >= 2
+                                                        const label = isFirst ? "🟢 IN" : isLast ? "🔴 OUT" : "⚪ Punch"
+                                                        const cls = isFirst ? "bg-emerald-100 text-emerald-700" : isLast ? "bg-red-100 text-red-600" : "bg-slate-200 text-slate-600"
+                                                        return (
+                                                            <span key={pi} className={`flex items-center gap-1 px-2 py-0.5 rounded-[6px] text-[11px] font-semibold ${cls}`}>
+                                                                {label} · {fmtTime(p.punchTime)}
+                                                            </span>
+                                                        )
+                                                    })}
                                                 </div>
                                             </td>
                                         </tr>

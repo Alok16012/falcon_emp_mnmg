@@ -43,20 +43,30 @@ const STATUS_COLOR: Record<string, { color: string; bg: string; label: string }>
     WEEKLY_OFF: { color: "#6b7280", bg: "#f3f4f6", label: "Weekly Off" },
 }
 
-// First IN punch time → fallback to checkIn
+// Device logs every punch as an entry, so derive by TIME: first punch = IN,
+// last punch = OUT (only when there are 2+ punches).
+function sortedPunchTimes(rec?: AttRecord): number[] {
+    return (rec?.punchLogs || []).map(p => +new Date(p.punchTime)).filter(t => !isNaN(t)).sort((a, b) => a - b)
+}
 function punchIn(rec?: AttRecord): string {
     if (!rec) return ""
-    const ins = (rec.punchLogs || []).filter(p => p.punchType === "IN")
-    if (ins.length) return ins.sort((a, b) => +new Date(a.punchTime) - +new Date(b.punchTime))[0].punchTime
+    const t = sortedPunchTimes(rec)
+    if (t.length) return new Date(t[0]).toISOString()
     return rec.checkIn || ""
 }
-
-// Last OUT punch time → fallback to checkOut
 function punchOut(rec?: AttRecord): string {
     if (!rec) return ""
-    const outs = (rec.punchLogs || []).filter(p => p.punchType === "OUT")
-    if (outs.length) return outs.sort((a, b) => +new Date(b.punchTime) - +new Date(a.punchTime))[0].punchTime
+    const t = sortedPunchTimes(rec)
+    if (t.length >= 2) return new Date(t[t.length - 1]).toISOString()
     return rec.checkOut || ""
+}
+// Total hours = stored workingHrs, else span (last − first) when 2+ punches
+function totalHrs(rec?: AttRecord): number {
+    if (!rec) return 0
+    if (rec.workingHrs) return rec.workingHrs
+    const t = sortedPunchTimes(rec)
+    if (t.length >= 2) return parseFloat(((t[t.length - 1] - t[0]) / 3600000).toFixed(2))
+    return 0
 }
 
 function fmtTime(dt: string): string {
@@ -128,7 +138,7 @@ export default function AttendancePage() {
     const counts = {
         present: filtered.filter(isPresent).length,
         absent: filtered.filter(isAbsent).length,
-        totalHrs: filtered.reduce((s, e) => s + (attMap[e.id]?.workingHrs || 0), 0),
+        totalHrs: filtered.reduce((s, e) => s + totalHrs(attMap[e.id]), 0),
     }
 
     // Table + export respect the clicked status card (Present / Absent)
@@ -149,7 +159,7 @@ export default function AttendancePage() {
                 e.employeeCategory,
                 fmtTime(punchIn(rec)),
                 fmtTime(punchOut(rec)),
-                (rec?.workingHrs || 0).toFixed(2),
+                totalHrs(rec).toFixed(2),
                 rec ? (STATUS_COLOR[rec.status]?.label || rec.status) : "Absent",
             ])
         })
@@ -335,8 +345,8 @@ export default function AttendancePage() {
                                         </td>
                                         {/* Total Hours */}
                                         <td className="px-4 py-3">
-                                            <span className={`text-[13px] font-bold ${rec?.workingHrs ? "text-[var(--text)]" : "text-[var(--text3)]"}`}>
-                                                {rec?.workingHrs ? `${rec.workingHrs.toFixed(2)} hrs` : "—"}
+                                            <span className={`text-[13px] font-bold ${totalHrs(rec) ? "text-[var(--text)]" : "text-[var(--text3)]"}`}>
+                                                {totalHrs(rec) ? `${totalHrs(rec).toFixed(2)} hrs` : "—"}
                                             </span>
                                         </td>
                                         {/* Status */}
