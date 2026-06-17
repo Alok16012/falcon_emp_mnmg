@@ -62,6 +62,48 @@ export async function GET(req: Request) {
     const conn = getConnectedDevices().filter(d => d.connected)
     if (conn.length === 0) return NextResponse.json({ error: "no device connected" }, { status: 200 })
 
+    // Diagnostic: ?missing=1 → list today's punchers who have NO attendance row
+    if (url.searchParams.get("missing") === "1") {
+        const now = Math.floor(Date.now() / 1000)
+        const q = `/cgi-bin/recordFinder.cgi?action=find&name=AccessControlCardRec&StartTime=${now - 30 * 3600}&EndTime=${now + 86400}&count=1000`
+        const rr = await sendToDeviceAwait(conn[0].deviceId, "GET", q, "", 30000)
+        const map = new Map<string, Record<string, string>>()
+        for (const raw of rr.body.split("\n")) {
+            const m = raw.trim().match(/^records\[(\d+)\]\.([\w[\]]+)=(.*)$/)
+            if (!m) continue
+            if (!map.has(m[1])) map.set(m[1], {})
+            map.get(m[1])![m[2]] = m[3]
+        }
+        // distinct punchers today (IST day = the day the attendance page shows)
+        const istDay = new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10)
+        const punchers = new Map<string, string>() // uid -> name
+        for (const r of map.values()) {
+            const uid = (r["UserID"] || "").trim(); const ct = parseInt(r["CreateTime"] || "0")
+            if (!uid || !ct) continue
+            const d = new Date((ct + 5.5 * 3600) * 1000).toISOString().slice(0, 10)
+            if (d === istDay) punchers.set(uid, (r["CardName"] || "").trim())
+        }
+        // today's attendance date range (UTC midnight of IST today)
+        const dayStart = new Date(istDay + "T00:00:00.000Z")
+        const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate() + 1)
+        const missing: unknown[] = []
+        let present = 0
+        for (const [uid, name] of punchers) {
+            const stripped = uid.replace(/^0+/, "") || "0"
+            const cands = Array.from(new Set([uid, stripped, stripped.padStart(2, "0"), stripped.padStart(3, "0"), stripped.padStart(4, "0")]))
+            let emp = await prisma.employee.findFirst({ where: { hardwareUserId: { in: cands } }, select: { id: true, employeeId: true, firstName: true, lastName: true } })
+            if (!emp && name) {
+                const parts = name.split(/\s+/)
+                emp = await prisma.employee.findFirst({ where: { OR: [{ AND: [{ firstName: { equals: parts[0], mode: "insensitive" } }, { lastName: { equals: parts.slice(1).join(" "), mode: "insensitive" } }] }, { firstName: { equals: name, mode: "insensitive" } }] }, select: { id: true, employeeId: true, firstName: true, lastName: true } })
+            }
+            if (!emp) { missing.push({ uid, name, reason: "no employee record" }); continue }
+            const att = await prisma.attendance.findFirst({ where: { employeeId: emp.id, date: { gte: dayStart, lt: dayEnd } }, select: { id: true } })
+            if (att) present++
+            else missing.push({ uid, name, employeeId: emp.employeeId, reason: "employee exists but no attendance row" })
+        }
+        return NextResponse.json({ istDay, punchedToday: punchers.size, present, missingCount: missing.length, missing })
+    }
+
     // Diagnostic: ?testrec=<userId> → fetch that user's latest punch and run
     // processHardwareRecord on it directly, surfacing any thrown error.
     const testrec = url.searchParams.get("testrec")
