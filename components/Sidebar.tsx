@@ -20,6 +20,7 @@ import {
     ScanFace,
     Cpu,
     PackageSearch,
+    UserPlus,
 } from "lucide-react"
 
 export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
@@ -42,6 +43,7 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
             links: [
                 { name: "Employees", href: "/employees", icon: UserCheck, roles: ["ADMIN", "MANAGER"] },
                 { name: "Attendance", href: "/attendance", icon: ClipboardList, roles: ["ADMIN", "MANAGER"] },
+                { name: "Worker Joining", href: "/joinings", icon: UserPlus, roles: ["ADMIN", "MANAGER"] },
                 { name: "Advance Salary", href: "/advances", icon: IndianRupee, roles: ["ADMIN", "MANAGER"] },
                 { name: "Payroll", href: "/payroll", icon: Wallet, roles: ["ADMIN", "MANAGER"] },
             ]
