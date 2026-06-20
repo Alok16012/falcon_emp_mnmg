@@ -14,7 +14,7 @@ import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
 
 // Same marker that /api/join writes into Employee.notes
-export const JOIN_MARKER = "Self-submitted via Worker Joining Form"
+const JOIN_MARKER = "Self-submitted via Worker Joining Form"
 
 export async function GET() {
     try {
