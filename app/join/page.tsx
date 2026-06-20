@@ -51,6 +51,7 @@ export default function WorkerJoiningFormPage() {
         emergencyName: "", emergencyRelationship: "", emergencyPhone: "",
         declaration: false, website: "", // website = honeypot
     })
+    const [sameAddr, setSameAddr] = useState(false)
     const [photo, setPhoto] = useState<string>("")
     const [aadharDoc, setAadharDoc] = useState<FileVal | null>(null)
     const [panDoc, setPanDoc] = useState<FileVal | null>(null)
@@ -163,11 +164,38 @@ export default function WorkerJoiningFormPage() {
                         </div>
                         <div className="sm:col-span-2">
                             <label className={labelCls}>Permanent Address</label>
-                            <textarea value={f.permanentAddress} onChange={set("permanentAddress")} rows={2} className={`${inputCls} h-auto py-2.5 resize-none`} />
+                            <textarea
+                                value={f.permanentAddress}
+                                onChange={e => {
+                                    const v = e.target.value
+                                    setF(p => ({ ...p, permanentAddress: v, ...(sameAddr ? { currentAddress: v } : {}) }))
+                                }}
+                                rows={2}
+                                className={`${inputCls} h-auto py-2.5 resize-none`}
+                            />
                         </div>
                         <div className="sm:col-span-2">
+                            <label className="flex items-center gap-2 cursor-pointer select-none mb-1.5">
+                                <input
+                                    type="checkbox"
+                                    checked={sameAddr}
+                                    onChange={e => {
+                                        const on = e.target.checked
+                                        setSameAddr(on)
+                                        if (on) setF(p => ({ ...p, currentAddress: p.permanentAddress }))
+                                    }}
+                                    className="h-4 w-4 accent-[#1e3799]"
+                                />
+                                <span className="text-[13px] font-medium text-gray-700">Current address same as permanent</span>
+                            </label>
                             <label className={labelCls}>Current Address</label>
-                            <textarea value={f.currentAddress} onChange={set("currentAddress")} rows={2} className={`${inputCls} h-auto py-2.5 resize-none`} />
+                            <textarea
+                                value={f.currentAddress}
+                                onChange={set("currentAddress")}
+                                rows={2}
+                                disabled={sameAddr}
+                                className={`${inputCls} h-auto py-2.5 resize-none ${sameAddr ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
+                            />
                         </div>
                     </div>
 
