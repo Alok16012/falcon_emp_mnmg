@@ -8,7 +8,7 @@ import {
     Calendar, TrendingDown, Edit2, Eye, ChevronDown,
     CheckCircle, Clock, Building2, Briefcase, Phone, Mail,
     FileText, IndianRupee, MoreVertical, ShieldOff, Trash2,
-    User, CreditCard, MapPin, LogOut, Download, Upload
+    User, CreditCard, MapPin, LogOut, Download, Upload, Link2
 } from "lucide-react"
 import { format } from "date-fns"
 import * as XLSX from "xlsx"
@@ -1294,6 +1294,20 @@ export default function EmployeesPage() {
                     <h1 className="text-[24px] font-semibold tracking-[-0.4px] text-[var(--text)]">Employees</h1>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <button
+                        onClick={() => {
+                            const url = `${window.location.origin}/join`
+                            navigator.clipboard?.writeText(url).then(
+                                () => toast.success("Joining form link copied — share it with workers"),
+                                () => { window.prompt("Copy this joining form link:", url) }
+                            )
+                        }}
+                        title="Copy public Worker Joining Form link"
+                        style={{ display: "flex", alignItems: "center", gap: "6px", height: "36px", padding: "0 14px", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)", fontSize: "13px", fontWeight: 500, borderRadius: "8px", cursor: "pointer", whiteSpace: "nowrap" }}
+                    >
+                        <Link2 size={15} />
+                        Joining Link
+                    </button>
                     <button
                         onClick={handleExport}
                         title="Export to Excel"
