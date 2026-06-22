@@ -68,6 +68,16 @@ function totalHrs(rec?: AttRecord): number {
     if (t.length >= 2) return parseFloat(((t[t.length - 1] - t[0]) / 3600000).toFixed(2))
     return 0
 }
+// Format decimal hours (e.g. 4.5) as "4 hr 30 min"
+function fmtHrsMin(dec: number): string {
+    if (!dec || dec <= 0) return "—"
+    const totalMin = Math.round(dec * 60)
+    const h = Math.floor(totalMin / 60)
+    const m = totalMin % 60
+    if (h && m) return `${h} hr ${m} min`
+    if (h) return `${h} hr`
+    return `${m} min`
+}
 
 function fmtTime(dt: string): string {
     if (!dt) return "—"
@@ -159,7 +169,7 @@ export default function AttendancePage() {
                 e.employeeCategory,
                 fmtTime(punchIn(rec)),
                 fmtTime(punchOut(rec)),
-                totalHrs(rec).toFixed(2),
+                fmtHrsMin(totalHrs(rec)),
                 rec ? (STATUS_COLOR[rec.status]?.label || rec.status) : "Absent",
             ])
         })
@@ -211,7 +221,7 @@ export default function AttendancePage() {
                 {([
                     { label: "Present", count: counts.present, icon: <CheckCircle size={16} />, color: "#16a34a", bg: "#dcfce7", sf: "PRESENT" as const },
                     { label: "Absent", count: counts.absent, icon: <XCircle size={16} />, color: "#dc2626", bg: "#fee2e2", sf: "ABSENT" as const },
-                    { label: "Total Hours", count: counts.totalHrs.toFixed(1), icon: <Clock size={16} />, color: "#2563eb", bg: "#dbeafe", sf: null },
+                    { label: "Total Hours", count: fmtHrsMin(counts.totalHrs), icon: <Clock size={16} />, color: "#2563eb", bg: "#dbeafe", sf: null },
                     { label: "Employees", count: filtered.length, icon: <Users size={16} />, color: "#6b7280", bg: "#f3f4f6", sf: null },
                 ]).map(s => {
                     const clickable = s.sf !== null
@@ -346,7 +356,7 @@ export default function AttendancePage() {
                                         {/* Total Hours */}
                                         <td className="px-4 py-3">
                                             <span className={`text-[13px] font-bold ${totalHrs(rec) ? "text-[var(--text)]" : "text-[var(--text3)]"}`}>
-                                                {totalHrs(rec) ? `${totalHrs(rec).toFixed(2)} hrs` : "—"}
+                                                {fmtHrsMin(totalHrs(rec))}
                                             </span>
                                         </td>
                                         {/* Status */}

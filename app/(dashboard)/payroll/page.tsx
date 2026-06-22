@@ -62,8 +62,16 @@ export default function PayrollPage() {
                 const autoAdvance = (Array.isArray(advances) ? advances : [])
                     .filter((a: any) => a.employeeId === e.id)
                     .reduce((s: number, a: any) => s + (a.amount ?? 0), 0)
-                const hourlyRate = parseFloat(e.basicSalary) || 0
                 const shiftHours = parseInt(e.shiftHours) || 8
+                // Derive the TRUE hourly rate. basicSalary is a MONTHLY figure, so we
+                // must convert it — never multiply the monthly salary by hours directly.
+                //   • If a dailyRate is set (labour), hourly = dailyRate ÷ shift hours.
+                //   • Otherwise (monthly staff), hourly = monthly ÷ (26 working days × shift hours).
+                const monthlySalary = parseFloat(e.basicSalary) || 0
+                const dailyRate = parseFloat(e.dailyRate) || 0
+                const hourlyRate = dailyRate > 0
+                    ? parseFloat((dailyRate / shiftHours).toFixed(2))
+                    : (monthlySalary > 0 ? parseFloat((monthlySalary / (26 * shiftHours)).toFixed(2)) : 0)
                 const totalSalary = parseFloat((totalWorkingHrs * hourlyRate).toFixed(2))
                 const pay = (Array.isArray(pays) ? pays : (pays.data ?? [])).find((p: any) => p.employeeId === e.id)
                 return {

@@ -55,6 +55,16 @@ function totalHrs(rec?: AttRecord): number {
     if (t.length >= 2) return parseFloat(((t[t.length - 1] - t[0]) / 3600000).toFixed(2))
     return 0
 }
+// Format decimal hours (e.g. 4.5) as "4 hr 30 min"
+function fmtHrsMin(dec: number): string {
+    if (!dec || dec <= 0) return "—"
+    const totalMin = Math.round(dec * 60)
+    const h = Math.floor(totalMin / 60)
+    const m = totalMin % 60
+    if (h && m) return `${h} hr ${m} min`
+    if (h) return `${h} hr`
+    return `${m} min`
+}
 function fmtTime(dt: string): string {
     if (!dt) return "—"
     const d = new Date(dt)
@@ -110,7 +120,7 @@ export default function EmployeeAttendancePage() {
                 r.date ? format(new Date(r.date), "EEEE") : "",
                 fmtTime(punchIn(r)),
                 fmtTime(punchOut(r)),
-                totalHrs(r).toFixed(2),
+                fmtHrsMin(totalHrs(r)),
                 STATUS_COLOR[r.status]?.label || r.status,
                 r.remarks || "",
             ])
@@ -162,7 +172,7 @@ export default function EmployeeAttendancePage() {
                     { label: "Total Days", count: totals.days, icon: <Calendar size={16} />, color: "#6b7280", bg: "#f3f4f6" },
                     { label: "Present", count: totals.present, icon: <CheckCircle size={16} />, color: "#16a34a", bg: "#dcfce7" },
                     { label: "Absent", count: totals.absent, icon: <XCircle size={16} />, color: "#dc2626", bg: "#fee2e2" },
-                    { label: "Total Hours", count: totals.hours.toFixed(1), icon: <Clock size={16} />, color: "#2563eb", bg: "#dbeafe" },
+                    { label: "Total Hours", count: fmtHrsMin(totals.hours), icon: <Clock size={16} />, color: "#2563eb", bg: "#dbeafe" },
                 ].map(s => (
                     <div key={s.label} className="bg-white border border-[var(--border)] rounded-[12px] p-4">
                         <div className="flex items-center justify-between">
@@ -243,7 +253,7 @@ export default function EmployeeAttendancePage() {
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-[13px] font-bold text-[var(--text)]">
-                                            {totalHrs(r) ? `${totalHrs(r).toFixed(2)} hrs` : "—"}
+                                            {fmtHrsMin(totalHrs(r))}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <span className="px-2.5 py-1 rounded-[6px] text-[11px] font-bold" style={{ background: cfg.bg, color: cfg.color }}>
@@ -281,7 +291,7 @@ export default function EmployeeAttendancePage() {
                             <tr className="border-t-2 border-[var(--border)] bg-[var(--surface2)]">
                                 <td className="px-4 py-3 text-[12px] font-semibold text-[var(--text3)]">TOTAL</td>
                                 <td colSpan={2}></td>
-                                <td className="px-4 py-3 text-[13px] font-bold text-[var(--accent-text)]">{totals.hours.toFixed(2)} hrs</td>
+                                <td className="px-4 py-3 text-[13px] font-bold text-[var(--accent-text)]">{fmtHrsMin(totals.hours)}</td>
                                 <td colSpan={2}></td>
                             </tr>
                         </tfoot>
