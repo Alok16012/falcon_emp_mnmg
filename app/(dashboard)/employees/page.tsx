@@ -554,16 +554,16 @@ function EmployeeModal({
                                     <div className="flex items-center gap-2 mt-2">
                                         <span className="text-[11px] text-[var(--text3)] whitespace-nowrap">Or custom:</span>
                                         <input
-                                            type="number" min="1" max="24" step="1"
+                                            type="number" min="1" max="24" step="0.5"
                                             value={form.shiftHours}
                                             onChange={e => setForm(f => ({ ...f, shiftHours: e.target.value }))}
-                                            placeholder="e.g. 9"
+                                            placeholder="e.g. 10.5"
                                             className={`${inputCls} flex-1`} />
                                         <span className="text-[11px] text-[var(--text3)] whitespace-nowrap">hours / shift</span>
                                     </div>
                                     {form.basicSalary && (
                                         <p className="text-[11px] text-[var(--text3)] mt-1.5">
-                                            Daily (÷30): ₹{(parseFloat(form.basicSalary || "0") / 30).toFixed(0)} · Hourly (÷30÷{form.shiftHours || "8"}hr): ₹{(parseFloat(form.basicSalary || "0") / 30 / parseInt(form.shiftHours || "8")).toFixed(2)}
+                                            Daily (÷30): ₹{(parseFloat(form.basicSalary || "0") / 30).toFixed(0)} · Hourly (÷30÷{form.shiftHours || "8"}hr): ₹{(parseFloat(form.basicSalary || "0") / 30 / parseFloat(form.shiftHours || "8")).toFixed(2)}
                                         </p>
                                     )}
                                 </div>

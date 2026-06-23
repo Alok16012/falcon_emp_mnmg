@@ -95,7 +95,7 @@ export async function PUT(
         if (employeeCategory !== undefined) updateData.employeeCategory = employeeCategory
         if (basicSalary !== undefined) updateData.basicSalary = basicSalary ? parseFloat(basicSalary) : 0
         if (dailyRate !== undefined) updateData.dailyRate = dailyRate ? parseFloat(dailyRate) : null
-        if (shiftHours !== undefined) updateData.shiftHours = shiftHours ? parseInt(String(shiftHours)) : 8
+        if (shiftHours !== undefined) updateData.shiftHours = shiftHours ? parseFloat(String(shiftHours)) : 8
         if (notes !== undefined) updateData.notes = notes
         // New fields
         if (middleName !== undefined) updateData.middleName = middleName || null

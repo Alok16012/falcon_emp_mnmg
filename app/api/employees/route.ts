@@ -26,7 +26,7 @@ export async function GET(req: Request) {
         if (departmentId) where.departmentId = departmentId
         if (status) where.status = status
         if (employmentType) where.employmentType = employmentType
-        if (shiftHoursFilter) where.shiftHours = parseInt(shiftHoursFilter)
+        if (shiftHoursFilter) where.shiftHours = parseFloat(shiftHoursFilter)
         if (companyId) {
             // filter via branch -> company
             where.branch = { companyId }
@@ -210,7 +210,7 @@ export async function POST(req: Request) {
                 employeeCategory: employeeCategory || "LABOUR",
                 basicSalary: basicSalary ? parseFloat(basicSalary) : 0,
                 dailyRate: dailyRate ? parseFloat(dailyRate) : null,
-                shiftHours: shiftHours ? parseInt(String(shiftHours)) : 8,
+                shiftHours: shiftHours ? parseFloat(String(shiftHours)) : 8,
                 userId,
                 // New fields
                 middleName: middleName || null,
