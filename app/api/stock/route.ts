@@ -31,7 +31,7 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json()
-        const { itemCode, itemName, color, size, sizeUnit, quantity, quantityUnit, minStock } = body
+        const { itemCode, itemName, color, size, sizeUnit, quantity, quantityUnit, minStock, rackNumber, ratePerUnit } = body
 
         if (!itemCode || !itemName) {
             return new NextResponse("Item code and name are required", { status: 400 })
@@ -54,6 +54,8 @@ export async function POST(req: Request) {
                 quantity: quantity != null ? parseFloat(quantity) : 0,
                 quantityUnit: quantityUnit ? String(quantityUnit).trim() : "pcs",
                 minStock: minStock != null ? parseFloat(minStock) : 0,
+                rackNumber: rackNumber ? String(rackNumber).trim() : null,
+                ratePerUnit: ratePerUnit != null && ratePerUnit !== "" ? parseFloat(ratePerUnit) : null,
             },
         })
 

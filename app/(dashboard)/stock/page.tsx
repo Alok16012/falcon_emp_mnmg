@@ -17,6 +17,8 @@ type StockItem = {
     quantity: number
     quantityUnit: string
     minStock: number
+    rackNumber: string | null
+    ratePerUnit: number | null
     createdAt: string
     updatedAt: string
 }
@@ -143,6 +145,16 @@ export default function StockPage() {
         }
     }
 
+    async function removeOption(type: string, value: string) {
+        try {
+            await fetch(`/api/stock/options?type=${encodeURIComponent(type)}&value=${encodeURIComponent(value)}`, {
+                method: "DELETE",
+            })
+        } catch {
+            // best-effort; local state already updated
+        }
+    }
+
     const filtered = items.filter(i => {
         const q = search.toLowerCase()
         return !q ||
@@ -254,18 +266,20 @@ export default function StockPage() {
                                 <th className="px-4 py-3 font-semibold">Item Name</th>
                                 <th className="px-4 py-3 font-semibold">Color</th>
                                 <th className="px-4 py-3 font-semibold">Size</th>
+                                <th className="px-4 py-3 font-semibold">Rack No</th>
                                 <th className="px-4 py-3 font-semibold text-center">Quantity</th>
+                                <th className="px-4 py-3 font-semibold text-right">Rate/Unit</th>
                                 <th className="px-4 py-3 font-semibold text-right">Min Stock</th>
                                 <th className="px-4 py-3 font-semibold text-right">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={9} className="px-4 py-10 text-center text-[var(--text3)]">
+                                <tr><td colSpan={11} className="px-4 py-10 text-center text-[var(--text3)]">
                                     <Loader2 size={20} className="animate-spin inline" />
                                 </td></tr>
                             ) : filtered.length === 0 ? (
-                                <tr><td colSpan={9} className="px-4 py-10 text-center text-[var(--text3)]">No items found</td></tr>
+                                <tr><td colSpan={11} className="px-4 py-10 text-center text-[var(--text3)]">No items found</td></tr>
                             ) : filtered.map((i, idx) => {
                                 const low = isLow(i)
                                 const sel = selected.has(i.id)
@@ -291,6 +305,9 @@ export default function StockPage() {
                                         <td className={`px-4 py-3 ${low ? "text-red-700" : "text-[var(--text2)]"}`}>
                                             {i.size ? `${i.size} ${i.sizeUnit || ""}`.trim() : "—"}
                                         </td>
+                                        <td className={`px-4 py-3 ${low ? "text-red-700" : "text-[var(--text2)]"}`}>
+                                            {i.rackNumber || "—"}
+                                        </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center justify-center gap-2">
                                                 <span className={`min-w-[64px] text-center text-[15px] font-bold ${low ? "text-red-700" : "text-[var(--text)]"}`}>
@@ -307,6 +324,9 @@ export default function StockPage() {
                                                     </button>
                                                 </div>
                                             </div>
+                                        </td>
+                                        <td className={`px-4 py-3 text-right ${low ? "text-red-700" : "text-[var(--text2)]"}`}>
+                                            {i.ratePerUnit != null ? `₹${i.ratePerUnit.toLocaleString("en-IN")}` : "—"}
                                         </td>
                                         <td className={`px-4 py-3 text-right ${low ? "text-red-700 font-semibold" : "text-[var(--text2)]"}`}>{i.minStock}</td>
                                         <td className="px-4 py-3 text-right">
@@ -336,6 +356,9 @@ export default function StockPage() {
                     onAddColor={(v) => { setColors(c => [...new Set([...c, v])]); addOption("color", v) }}
                     onAddSizeUnit={(v) => { setSizeUnits(s => [...new Set([...s, v])]); addOption("sizeUnit", v) }}
                     onAddQtyUnit={(v) => { setQtyUnits(s => [...new Set([...s, v])]); addOption("qtyUnit", v) }}
+                    onRemoveColor={(v) => { setColors(c => c.filter(x => x !== v)); removeOption("color", v) }}
+                    onRemoveSizeUnit={(v) => { setSizeUnits(s => s.filter(x => x !== v)); removeOption("sizeUnit", v) }}
+                    onRemoveQtyUnit={(v) => { setQtyUnits(s => s.filter(x => x !== v)); removeOption("qtyUnit", v) }}
                     onClose={() => setShowForm(false)}
                     onSaved={() => { setShowForm(false); load() }}
                 />
@@ -536,7 +559,9 @@ function StatCard({ label, value, color }: { label: string; value: number; color
 
 function StockFormModal({
     item, colors, sizeUnits, qtyUnits,
-    onAddColor, onAddSizeUnit, onAddQtyUnit, onClose, onSaved,
+    onAddColor, onAddSizeUnit, onAddQtyUnit,
+    onRemoveColor, onRemoveSizeUnit, onRemoveQtyUnit,
+    onClose, onSaved,
 }: {
     item: StockItem | null
     colors: string[]
@@ -545,6 +570,9 @@ function StockFormModal({
     onAddColor: (v: string) => void
     onAddSizeUnit: (v: string) => void
     onAddQtyUnit: (v: string) => void
+    onRemoveColor: (v: string) => void
+    onRemoveSizeUnit: (v: string) => void
+    onRemoveQtyUnit: (v: string) => void
     onClose: () => void
     onSaved: () => void
 }) {
@@ -557,6 +585,8 @@ function StockFormModal({
         quantity: item?.quantity != null ? String(item.quantity) : "",
         quantityUnit: item?.quantityUnit || "pcs",
         minStock: item?.minStock != null ? String(item.minStock) : "",
+        rackNumber: item?.rackNumber || "",
+        ratePerUnit: item?.ratePerUnit != null ? String(item.ratePerUnit) : "",
     })
     const [saving, setSaving] = useState(false)
     const [newColor, setNewColor] = useState("")
@@ -627,12 +657,26 @@ function StockFormModal({
                         <Field label="Item Name"><Inp value={form.itemName} onChange={v => set("itemName", v)} /></Field>
                     </div>
 
-                    {/* Color: dropdown + custom add */}
+                    {/* Color: selectable chips with add + remove */}
                     <Field label="Color">
-                        <select value={form.color} onChange={e => set("color", e.target.value)} className="w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#1e3799]">
-                            <option value="">— Select color —</option>
-                            {colors.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            <button type="button" onClick={() => set("color", "")}
+                                className={`rounded-[8px] border px-3 py-1.5 text-[12.5px] font-medium ${!form.color ? "border-[#1e3799] bg-[#1e3799] text-white" : "border-[var(--border)] bg-white text-[var(--text2)] hover:bg-[var(--surface2)]"}`}>
+                                None
+                            </button>
+                            {colors.map(c => (
+                                <span key={c} className={`group inline-flex items-center gap-1 rounded-[8px] border pl-2 pr-1 py-1 text-[12.5px] font-medium ${form.color === c ? "border-[#1e3799] bg-[#1e3799] text-white" : "border-[var(--border)] bg-white text-[var(--text2)]"}`}>
+                                    <button type="button" onClick={() => set("color", c)} className="inline-flex items-center gap-1.5">
+                                        <span className="h-3 w-3 rounded-full border border-black/10" style={{ background: cssColor(c) }} />
+                                        {c}
+                                    </button>
+                                    <button type="button" title="Remove color" onClick={() => { if (form.color === c) set("color", ""); onRemoveColor(c) }}
+                                        className={`rounded p-0.5 ${form.color === c ? "hover:bg-white/20 text-white" : "hover:bg-red-50 text-[var(--text3)] hover:text-red-600"}`}>
+                                        <X size={12} />
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
                         <div className="mt-2 flex gap-2">
                             <input
                                 value={newColor}
@@ -651,16 +695,21 @@ function StockFormModal({
                             <Inp value={form.size} onChange={v => set("size", v)} type="number" placeholder="Measurement" />
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5">
-                            {sizeUnits.map(u => (
-                                <button
-                                    key={u}
-                                    type="button"
-                                    onClick={() => set("sizeUnit", u)}
-                                    className={`rounded-[8px] border px-3 py-1.5 text-[12.5px] font-medium ${form.sizeUnit === u ? "border-[#1e3799] bg-[#1e3799] text-white" : "border-[var(--border)] bg-white text-[var(--text2)] hover:bg-[var(--surface2)]"}`}
-                                >
-                                    {u}
-                                </button>
-                            ))}
+                            {sizeUnits.map(u => {
+                                const removable = !DEFAULT_SIZE_UNITS.includes(u)
+                                const active = form.sizeUnit === u
+                                return (
+                                    <span key={u} className={`inline-flex items-center gap-1 rounded-[8px] border ${removable ? "pl-3 pr-1" : "px-3"} py-1.5 text-[12.5px] font-medium ${active ? "border-[#1e3799] bg-[#1e3799] text-white" : "border-[var(--border)] bg-white text-[var(--text2)]"}`}>
+                                        <button type="button" onClick={() => set("sizeUnit", u)}>{u}</button>
+                                        {removable && (
+                                            <button type="button" title="Remove unit" onClick={() => { if (active) set("sizeUnit", DEFAULT_SIZE_UNITS[0]); onRemoveSizeUnit(u) }}
+                                                className={`rounded p-0.5 ${active ? "hover:bg-white/20 text-white" : "hover:bg-red-50 text-[var(--text3)] hover:text-red-600"}`}>
+                                                <X size={12} />
+                                            </button>
+                                        )}
+                                    </span>
+                                )
+                            })}
                             <input
                                 value={newSizeUnit}
                                 onChange={e => setNewSizeUnit(e.target.value)}
@@ -678,16 +727,21 @@ function StockFormModal({
                             <Inp value={form.quantity} onChange={v => set("quantity", v)} type="number" placeholder="0" />
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5">
-                            {qtyUnits.map(u => (
-                                <button
-                                    key={u}
-                                    type="button"
-                                    onClick={() => set("quantityUnit", u)}
-                                    className={`rounded-[8px] border px-3 py-1.5 text-[12.5px] font-medium ${form.quantityUnit === u ? "border-[#1e3799] bg-[#1e3799] text-white" : "border-[var(--border)] bg-white text-[var(--text2)] hover:bg-[var(--surface2)]"}`}
-                                >
-                                    {u}
-                                </button>
-                            ))}
+                            {qtyUnits.map(u => {
+                                const removable = !DEFAULT_QTY_UNITS.includes(u)
+                                const active = form.quantityUnit === u
+                                return (
+                                    <span key={u} className={`inline-flex items-center gap-1 rounded-[8px] border ${removable ? "pl-3 pr-1" : "px-3"} py-1.5 text-[12.5px] font-medium ${active ? "border-[#1e3799] bg-[#1e3799] text-white" : "border-[var(--border)] bg-white text-[var(--text2)]"}`}>
+                                        <button type="button" onClick={() => set("quantityUnit", u)}>{u}</button>
+                                        {removable && (
+                                            <button type="button" title="Remove unit" onClick={() => { if (active) set("quantityUnit", DEFAULT_QTY_UNITS[0]); onRemoveQtyUnit(u) }}
+                                                className={`rounded p-0.5 ${active ? "hover:bg-white/20 text-white" : "hover:bg-red-50 text-[var(--text3)] hover:text-red-600"}`}>
+                                                <X size={12} />
+                                            </button>
+                                        )}
+                                    </span>
+                                )
+                            })}
                             <input
                                 value={newQtyUnit}
                                 onChange={e => setNewQtyUnit(e.target.value)}
@@ -698,6 +752,15 @@ function StockFormModal({
                             <button type="button" onClick={commitNewQtyUnit} className="rounded-[8px] border border-[var(--border)] px-2.5 py-1.5 text-[12.5px] font-medium text-[#1e3799] hover:bg-[var(--surface2)]">+</button>
                         </div>
                     </Field>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <Field label="Rack Number">
+                            <Inp value={form.rackNumber} onChange={v => set("rackNumber", v)} placeholder="e.g. R-12" />
+                        </Field>
+                        <Field label="Rate / per unit (₹)">
+                            <Inp value={form.ratePerUnit} onChange={v => set("ratePerUnit", v)} type="number" placeholder="0" />
+                        </Field>
+                    </div>
 
                     <Field label="Min Stock (alert when at or below)">
                         <Inp value={form.minStock} onChange={v => set("minStock", v)} type="number" placeholder="0" />

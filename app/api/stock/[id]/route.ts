@@ -41,6 +41,8 @@ export async function PATCH(
         if (body.quantity !== undefined) data.quantity = parseFloat(body.quantity)
         if (body.quantityUnit !== undefined) data.quantityUnit = String(body.quantityUnit).trim()
         if (body.minStock !== undefined) data.minStock = parseFloat(body.minStock)
+        if (body.rackNumber !== undefined) data.rackNumber = body.rackNumber ? String(body.rackNumber).trim() : null
+        if (body.ratePerUnit !== undefined) data.ratePerUnit = body.ratePerUnit !== null && body.ratePerUnit !== "" ? parseFloat(body.ratePerUnit) : null
 
         if (Object.keys(data).length === 0) {
             return new NextResponse("No fields to update", { status: 400 })

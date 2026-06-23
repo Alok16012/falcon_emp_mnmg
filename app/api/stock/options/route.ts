@@ -58,3 +58,27 @@ export async function POST(req: Request) {
         return new NextResponse("Internal Error", { status: 500 })
     }
 }
+
+export async function DELETE(req: Request) {
+    try {
+        const session = await getServerSession(authOptions)
+        if (!session) return new NextResponse("Unauthorized", { status: 401 })
+        if (session.user.role !== "ADMIN" && session.user.role !== "MANAGER") {
+            return new NextResponse("Forbidden", { status: 403 })
+        }
+
+        const { searchParams } = new URL(req.url)
+        const type = searchParams.get("type")
+        const value = searchParams.get("value")
+
+        if (!type || !VALID_TYPES.includes(type as never) || !value) {
+            return new NextResponse("type and value are required", { status: 400 })
+        }
+
+        await prisma.stockOption.deleteMany({ where: { type, value } })
+        return new NextResponse(null, { status: 204 })
+    } catch (error) {
+        console.error("[STOCK_OPTIONS_DELETE]", error)
+        return new NextResponse("Internal Error", { status: 500 })
+    }
+}

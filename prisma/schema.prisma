@@ -1741,6 +1741,8 @@ model StockItem {
   quantity     Float    @default(0)
   quantityUnit String   @default("pcs")
   minStock     Float    @default(0)
+  rackNumber   String?
+  ratePerUnit  Float?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
