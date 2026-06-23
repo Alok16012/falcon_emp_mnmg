@@ -32,6 +32,9 @@ export default function StockPage() {
     const [search, setSearch] = useState("")
     const [showForm, setShowForm] = useState(false)
     const [editItem, setEditItem] = useState<StockItem | null>(null)
+    const [adjustItem, setAdjustItem] = useState<{ item: StockItem; mode: "add" | "remove" } | null>(null)
+    const [selected, setSelected] = useState<Set<string>>(new Set())
+    const [bulkMode, setBulkMode] = useState<"add" | "remove" | null>(null)
     const [colors, setColors] = useState<string[]>([])
     const [sizeUnits, setSizeUnits] = useState<string[]>(DEFAULT_SIZE_UNITS)
     const [qtyUnits, setQtyUnits] = useState<string[]>(DEFAULT_QTY_UNITS)
@@ -82,6 +85,38 @@ export default function StockPage() {
         }
     }
 
+    function toggleSelect(id: string) {
+        setSelected(prev => {
+            const next = new Set(prev)
+            if (next.has(id)) next.delete(id); else next.add(id)
+            return next
+        })
+    }
+
+    // Apply per-item deltas in bulk; mode决定 sign handled by caller (deltas already signed)
+    async function applyBulk(deltas: { id: string; delta: number }[]) {
+        const prev = items
+        setItems(list => list.map(i => {
+            const d = deltas.find(x => x.id === i.id)
+            return d ? { ...i, quantity: Math.max(0, i.quantity + d.delta) } : i
+        }))
+        try {
+            await Promise.all(deltas.map(d =>
+                fetch(`/api/stock/${d.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ adjust: d.delta }),
+                }).then(r => { if (!r.ok) throw new Error() })
+            ))
+            toast.success(`${deltas.length} item${deltas.length > 1 ? "s" : ""} updated`)
+            setSelected(new Set())
+            setBulkMode(null)
+        } catch {
+            setItems(prev)
+            toast.error("Failed to update some items")
+        }
+    }
+
     async function remove(id: string) {
         if (!confirm("Delete this item?")) return
         const prev = items
@@ -126,7 +161,7 @@ export default function StockPage() {
     function openEdit(i: StockItem) { setEditItem(i); setShowForm(true) }
 
     return (
-        <div className="p-6 max-w-[1200px] mx-auto">
+        <div className="p-6 w-full">
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                 <div className="flex items-center gap-3">
@@ -181,12 +216,39 @@ export default function StockPage() {
                 </div>
             </div>
 
+            {/* Bulk action bar */}
+            {selected.size > 0 && (
+                <div className="mb-3 flex flex-wrap items-center gap-3 rounded-[10px] border border-[#1e3799]/30 bg-[#1e3799]/5 px-4 py-2.5">
+                    <span className="text-[13px] font-semibold text-[#1e3799]">{selected.size} selected</span>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => setBulkMode("add")} className="inline-flex items-center gap-1 rounded-[7px] border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[12.5px] font-semibold text-emerald-700 hover:bg-emerald-100">
+                            <Plus size={14} /> Add Quantity
+                        </button>
+                        <button onClick={() => setBulkMode("remove")} className="inline-flex items-center gap-1 rounded-[7px] border border-red-200 bg-red-50 px-3 py-1.5 text-[12.5px] font-semibold text-red-700 hover:bg-red-100">
+                            <Minus size={14} /> Subtract Quantity
+                        </button>
+                    </div>
+                    <button onClick={() => setSelected(new Set())} className="ml-auto text-[12.5px] font-medium text-[var(--text2)] hover:text-[var(--text)] underline">Clear</button>
+                </div>
+            )}
+
             {/* Table */}
             <div className="rounded-[12px] border border-[var(--border)] bg-white overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-[13px]">
                         <thead>
                             <tr className="border-b border-[var(--border)] bg-[var(--surface2)]/40 text-left text-[var(--text2)]">
+                                <th className="px-4 py-3 font-semibold w-10">
+                                    <input
+                                        type="checkbox"
+                                        checked={filtered.length > 0 && filtered.every(i => selected.has(i.id))}
+                                        onChange={e => {
+                                            if (e.target.checked) setSelected(new Set(filtered.map(i => i.id)))
+                                            else setSelected(new Set())
+                                        }}
+                                        className="h-4 w-4 cursor-pointer accent-[#1e3799]"
+                                    />
+                                </th>
                                 <th className="px-4 py-3 font-semibold">S.No</th>
                                 <th className="px-4 py-3 font-semibold">Item Code</th>
                                 <th className="px-4 py-3 font-semibold">Item Name</th>
@@ -199,15 +261,19 @@ export default function StockPage() {
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={8} className="px-4 py-10 text-center text-[var(--text3)]">
+                                <tr><td colSpan={9} className="px-4 py-10 text-center text-[var(--text3)]">
                                     <Loader2 size={20} className="animate-spin inline" />
                                 </td></tr>
                             ) : filtered.length === 0 ? (
-                                <tr><td colSpan={8} className="px-4 py-10 text-center text-[var(--text3)]">No items found</td></tr>
+                                <tr><td colSpan={9} className="px-4 py-10 text-center text-[var(--text3)]">No items found</td></tr>
                             ) : filtered.map((i, idx) => {
                                 const low = isLow(i)
+                                const sel = selected.has(i.id)
                                 return (
-                                    <tr key={i.id} className={`border-b border-[var(--border)] last:border-0 ${low ? "bg-red-50 hover:bg-red-100" : "hover:bg-[var(--surface2)]/30"}`}>
+                                    <tr key={i.id} className={`border-b border-[var(--border)] last:border-0 ${sel ? "bg-[#1e3799]/5" : low ? "bg-red-50 hover:bg-red-100" : "hover:bg-[var(--surface2)]/30"}`}>
+                                        <td className="px-4 py-3">
+                                            <input type="checkbox" checked={sel} onChange={() => toggleSelect(i.id)} className="h-4 w-4 cursor-pointer accent-[#1e3799]" />
+                                        </td>
                                         <td className={`px-4 py-3 ${low ? "text-red-700" : "text-[var(--text3)]"}`}>{idx + 1}</td>
                                         <td className={`px-4 py-3 font-mono ${low ? "text-red-700 font-semibold" : "text-[var(--text)]"}`}>{i.itemCode}</td>
                                         <td className={`px-4 py-3 font-medium ${low ? "text-red-700" : "text-[var(--text)]"}`}>
@@ -226,16 +292,20 @@ export default function StockPage() {
                                             {i.size ? `${i.size} ${i.sizeUnit || ""}`.trim() : "—"}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <div className="flex items-center justify-center gap-1.5">
-                                                <button onClick={() => adjust(i.id, -1)} className="h-6 w-6 rounded-[6px] border border-[var(--border)] bg-white flex items-center justify-center text-[var(--text2)] hover:bg-red-50 hover:text-red-600 hover:border-red-200" title="Decrease">
-                                                    <Minus size={13} />
-                                                </button>
-                                                <span className={`min-w-[56px] text-center font-semibold ${low ? "text-red-700" : "text-[var(--text)]"}`}>
+                                            <div className="flex items-center justify-center gap-2">
+                                                <span className={`min-w-[64px] text-center text-[15px] font-bold ${low ? "text-red-700" : "text-[var(--text)]"}`}>
                                                     {i.quantity} <span className="text-[11px] font-normal text-[var(--text3)]">{i.quantityUnit}</span>
                                                 </span>
-                                                <button onClick={() => adjust(i.id, 1)} className="h-6 w-6 rounded-[6px] border border-[var(--border)] bg-white flex items-center justify-center text-[var(--text2)] hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200" title="Increase">
-                                                    <Plus size={13} />
-                                                </button>
+                                                <div className="flex gap-1">
+                                                    <button onClick={() => setAdjustItem({ item: i, mode: "remove" })} title="Minus stock (used)"
+                                                        className="inline-flex items-center gap-1 rounded-[7px] border border-red-200 bg-red-50 px-2 py-1 text-[12px] font-semibold text-red-600 hover:bg-red-100">
+                                                        <Minus size={13} /> Minus
+                                                    </button>
+                                                    <button onClick={() => setAdjustItem({ item: i, mode: "add" })} title="Add stock (received)"
+                                                        className="inline-flex items-center gap-1 rounded-[7px] border border-emerald-200 bg-emerald-50 px-2 py-1 text-[12px] font-semibold text-emerald-600 hover:bg-emerald-100">
+                                                        <Plus size={13} /> Add
+                                                    </button>
+                                                </div>
                                             </div>
                                         </td>
                                         <td className={`px-4 py-3 text-right ${low ? "text-red-700 font-semibold" : "text-[var(--text2)]"}`}>{i.minStock}</td>
@@ -270,6 +340,179 @@ export default function StockPage() {
                     onSaved={() => { setShowForm(false); load() }}
                 />
             )}
+
+            {adjustItem && (
+                <AdjustQtyModal
+                    item={adjustItem.item}
+                    mode={adjustItem.mode}
+                    onClose={() => setAdjustItem(null)}
+                    onApply={async (delta) => {
+                        await adjust(adjustItem.item.id, delta)
+                        setAdjustItem(null)
+                    }}
+                />
+            )}
+
+            {bulkMode && (
+                <BulkAdjustModal
+                    mode={bulkMode}
+                    items={items.filter(i => selected.has(i.id))}
+                    onClose={() => setBulkMode(null)}
+                    onApply={applyBulk}
+                />
+            )}
+        </div>
+    )
+}
+
+function BulkAdjustModal({ mode, items, onClose, onApply }: {
+    mode: "add" | "remove"
+    items: StockItem[]
+    onClose: () => void
+    onApply: (deltas: { id: string; delta: number }[]) => void | Promise<void>
+}) {
+    const isAdd = mode === "add"
+    const [amounts, setAmounts] = useState<Record<string, string>>({})
+    const [sameForAll, setSameForAll] = useState("")
+    const [busy, setBusy] = useState(false)
+
+    function effectiveAmt(id: string): number {
+        const raw = amounts[id] !== undefined && amounts[id] !== "" ? amounts[id] : sameForAll
+        const n = parseFloat(raw)
+        return Number.isNaN(n) ? 0 : n
+    }
+
+    async function run() {
+        const deltas = items
+            .map(i => ({ id: i.id, amt: effectiveAmt(i.id) }))
+            .filter(x => x.amt > 0)
+            .map(x => ({ id: x.id, delta: isAdd ? x.amt : -x.amt }))
+        if (deltas.length === 0) { toast.error("Enter at least one amount"); return }
+        setBusy(true)
+        await onApply(deltas)
+        setBusy(false)
+    }
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+            <div className="w-full max-w-lg rounded-[14px] bg-white shadow-xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
+                    <h2 className="text-[16px] font-bold text-[var(--text)]">
+                        {isAdd ? "Add Quantity" : "Subtract Quantity"} · {items.length} item{items.length > 1 ? "s" : ""}
+                    </h2>
+                    <button onClick={onClose} className="text-[var(--text3)] hover:text-[var(--text)]"><X size={18} /></button>
+                </div>
+
+                <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--surface2)]/40">
+                    <label className="text-[12px] font-medium text-[var(--text2)]">Same amount for all (optional)</label>
+                    <input
+                        type="number"
+                        value={sameForAll}
+                        onChange={e => setSameForAll(e.target.value)}
+                        placeholder="e.g. 10 — applies to rows left blank below"
+                        className="mt-1 w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#1e3799]"
+                    />
+                </div>
+
+                <div className="overflow-y-auto p-5 space-y-2">
+                    {items.map(i => {
+                        const amt = effectiveAmt(i.id)
+                        const result = isAdd ? i.quantity + amt : Math.max(0, i.quantity - amt)
+                        return (
+                            <div key={i.id} className="flex items-center gap-3 rounded-[8px] border border-[var(--border)] px-3 py-2">
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[13px] font-medium text-[var(--text)] truncate">{i.itemName}</p>
+                                    <p className="text-[11px] text-[var(--text3)]">{i.itemCode} · now {i.quantity} {i.quantityUnit}</p>
+                                </div>
+                                <input
+                                    type="number"
+                                    value={amounts[i.id] ?? ""}
+                                    onChange={e => setAmounts(a => ({ ...a, [i.id]: e.target.value }))}
+                                    placeholder={sameForAll || "0"}
+                                    className="w-20 rounded-[8px] border border-[var(--border)] bg-white px-2 py-1.5 text-[13px] text-center outline-none focus:border-[#1e3799]"
+                                />
+                                <span className={`text-[12px] font-semibold w-16 text-right ${isAdd ? "text-emerald-600" : "text-red-600"}`}>
+                                    → {result}
+                                </span>
+                            </div>
+                        )
+                    })}
+                </div>
+
+                <div className="flex justify-end gap-2 border-t border-[var(--border)] px-5 py-4">
+                    <button onClick={onClose} className="rounded-[8px] border border-[var(--border)] px-4 py-2 text-[13px] font-medium text-[var(--text2)] hover:bg-[var(--surface2)]">Cancel</button>
+                    <button onClick={run} disabled={busy}
+                        className={`inline-flex items-center gap-2 rounded-[8px] px-4 py-2 text-[13px] font-semibold text-white hover:opacity-90 disabled:opacity-50 ${isAdd ? "bg-emerald-600" : "bg-red-600"}`}>
+                        {busy ? <Loader2 size={15} className="animate-spin" /> : isAdd ? <Plus size={15} /> : <Minus size={15} />}
+                        {isAdd ? "Add to all" : "Subtract from all"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function AdjustQtyModal({ item, mode, onClose, onApply }: {
+    item: StockItem
+    mode: "add" | "remove"
+    onClose: () => void
+    onApply: (delta: number) => void | Promise<void>
+}) {
+    const [amount, setAmount] = useState("")
+    const [busy, setBusy] = useState(false)
+    const amt = parseFloat(amount)
+    const valid = !Number.isNaN(amt) && amt > 0
+    const isAdd = mode === "add"
+    const result = isAdd ? item.quantity + (valid ? amt : 0) : Math.max(0, item.quantity - (valid ? amt : 0))
+
+    async function run() {
+        if (!valid) { toast.error("Enter a valid amount"); return }
+        setBusy(true)
+        await onApply(isAdd ? amt : -amt)
+        setBusy(false)
+    }
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+            <div className="w-full max-w-sm rounded-[14px] bg-white shadow-xl" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
+                    <h2 className="text-[16px] font-bold text-[var(--text)]">{isAdd ? "Add Stock" : "Minus Stock (Used)"}</h2>
+                    <button onClick={onClose} className="text-[var(--text3)] hover:text-[var(--text)]"><X size={18} /></button>
+                </div>
+                <div className="p-5 space-y-4">
+                    <div className="rounded-[10px] bg-[var(--surface2)]/50 border border-[var(--border)] px-4 py-3">
+                        <p className="text-[12px] text-[var(--text2)]">{item.itemName} · <span className="font-mono">{item.itemCode}</span></p>
+                        <p className="text-[20px] font-bold text-[var(--text)] mt-0.5">{item.quantity} <span className="text-[13px] font-normal text-[var(--text3)]">{item.quantityUnit}</span> <span className="text-[12px] font-normal text-[var(--text3)]">in stock</span></p>
+                    </div>
+                    <div>
+                        <label className="mb-1 block text-[12px] font-medium text-[var(--text2)]">
+                            {isAdd ? "How many to ADD?" : "How many were USED?"} ({item.quantityUnit})
+                        </label>
+                        <input
+                            autoFocus
+                            type="number"
+                            value={amount}
+                            onChange={e => setAmount(e.target.value)}
+                            onKeyDown={e => { if (e.key === "Enter") run() }}
+                            placeholder="e.g. 10"
+                            className="w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2.5 text-[18px] font-semibold outline-none focus:border-[#1e3799]"
+                        />
+                        {valid && (
+                            <p className="mt-2 text-[13px] text-[var(--text2)]">
+                                New quantity: <span className={`font-bold ${isAdd ? "text-emerald-600" : "text-red-600"}`}>{result} {item.quantityUnit}</span>
+                            </p>
+                        )}
+                    </div>
+                </div>
+                <div className="flex gap-2 border-t border-[var(--border)] px-5 py-4">
+                    <button onClick={onClose} className="rounded-[8px] border border-[var(--border)] px-4 py-2.5 text-[13px] font-medium text-[var(--text2)] hover:bg-[var(--surface2)]">Cancel</button>
+                    <button onClick={run} disabled={busy || !valid}
+                        className={`flex-1 inline-flex items-center justify-center gap-2 rounded-[8px] px-4 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 disabled:opacity-50 ${isAdd ? "bg-emerald-600" : "bg-red-600"}`}>
+                        {busy ? <Loader2 size={15} className="animate-spin" /> : isAdd ? <Plus size={15} /> : <Minus size={15} />}
+                        {isAdd ? "Add Stock" : "Minus Stock"}
+                    </button>
+                </div>
+            </div>
         </div>
     )
 }
