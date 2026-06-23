@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react"
 import {
     Users, UserCheck, ClipboardList, CalendarOff,
     IndianRupee, ArrowRight, TrendingUp, Plus,
-    Wallet, RefreshCw,
+    Wallet, RefreshCw, Boxes, AlertTriangle,
 } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
@@ -179,6 +179,9 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
+            {/* Low Stock Alert */}
+            <LowStockWidget />
+
             {/* Recent Employees */}
             <div className="bg-white border border-[var(--border)] rounded-[14px] overflow-hidden">
                 <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between">
@@ -242,6 +245,59 @@ export default function AdminDashboard() {
                     </table>
                 )}
             </div>
+        </div>
+    )
+}
+
+type LowItem = { id: string; itemCode: string; itemName: string; quantity: number; quantityUnit: string; minStock: number }
+
+function LowStockWidget() {
+    const [items, setItems] = useState<LowItem[]>([])
+    const [loaded, setLoaded] = useState(false)
+
+    useEffect(() => {
+        fetch("/api/stock")
+            .then(r => r.ok ? r.json() : [])
+            .then((data: LowItem[]) => {
+                setItems((data || []).filter(i => i.minStock > 0 && i.quantity <= i.minStock))
+            })
+            .catch(() => {})
+            .finally(() => setLoaded(true))
+    }, [])
+
+    if (!loaded || items.length === 0) return null
+
+    return (
+        <div className="bg-white border border-red-200 rounded-[14px] overflow-hidden">
+            <div className="px-5 py-4 border-b border-red-100 bg-red-50 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <AlertTriangle size={16} className="text-red-600" />
+                    <h2 className="text-[15px] font-semibold text-red-700">Low Stock Alert · {items.length} item{items.length > 1 ? "s" : ""}</h2>
+                </div>
+                <Link href="/stock" className="text-[12px] font-medium text-red-700 hover:underline flex items-center gap-1">
+                    <Boxes size={13} /> Manage stock
+                </Link>
+            </div>
+            <table className="w-full">
+                <thead>
+                    <tr className="border-b border-[var(--border)] bg-[var(--surface2)]">
+                        <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px]">Item Code</th>
+                        <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px]">Item Name</th>
+                        <th className="text-right px-5 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px]">Quantity</th>
+                        <th className="text-right px-5 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px]">Min Stock</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border)]">
+                    {items.map(i => (
+                        <tr key={i.id} className="bg-red-50/50 hover:bg-red-50">
+                            <td className="px-5 py-3 text-[13px] font-mono font-semibold text-red-700">{i.itemCode}</td>
+                            <td className="px-5 py-3 text-[13px] font-medium text-red-700">{i.itemName}</td>
+                            <td className="px-5 py-3 text-[13px] text-right font-semibold text-red-700">{i.quantity} {i.quantityUnit}</td>
+                            <td className="px-5 py-3 text-[13px] text-right text-[var(--text2)]">{i.minStock}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </div>
     )
 }

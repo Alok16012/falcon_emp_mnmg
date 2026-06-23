@@ -1730,3 +1730,31 @@ model ProductInquiry {
   @@index([status])
   @@index([createdAt])
 }
+
+model StockItem {
+  id           String   @id @default(uuid())
+  itemCode     String   @unique
+  itemName     String
+  color        String?
+  size         String?
+  sizeUnit     String?
+  quantity     Float    @default(0)
+  quantityUnit String   @default("pcs")
+  minStock     Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([itemCode])
+}
+
+// Reusable dropdown values for the stock form (colors, size units, qty units).
+// type is one of: "color", "sizeUnit", "qtyUnit".
+model StockOption {
+  id        String   @id @default(uuid())
+  type      String
+  value     String
+  createdAt DateTime @default(now())
+
+  @@unique([type, value])
+  @@index([type])
+}

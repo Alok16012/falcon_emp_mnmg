@@ -50,5 +50,6 @@ export const config = {
         "/departments/:path*",
         "/profile/:path*",
         "/inquiries/:path*",
+        "/stock/:path*",
     ],
 }

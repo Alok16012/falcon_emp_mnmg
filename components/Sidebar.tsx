@@ -21,6 +21,7 @@ import {
     Cpu,
     PackageSearch,
     UserPlus,
+    Boxes,
 } from "lucide-react"
 
 export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
@@ -52,6 +53,7 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
             title: "SALES",
             links: [
                 { name: "Product Inquiry", href: "/inquiries", icon: PackageSearch, roles: ["ADMIN", "MANAGER"] },
+                { name: "Stock Management", href: "/stock", icon: Boxes, roles: ["ADMIN", "MANAGER"] },
             ]
         },
         {
