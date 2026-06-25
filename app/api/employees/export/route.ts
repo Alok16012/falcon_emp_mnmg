@@ -4,6 +4,20 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import * as XLSX from "xlsx"
 
+// "HH:MM" (24h) -> "8:00 AM"
+function fmt12(t?: string | null): string {
+    if (!t) return ""
+    const [h, m] = String(t).split(":").map(Number)
+    if (Number.isNaN(h)) return ""
+    const ampm = h >= 12 ? "PM" : "AM"
+    const hr = h % 12 === 0 ? 12 : h % 12
+    return `${hr}:${String(m || 0).padStart(2, "0")} ${ampm}`
+}
+function shiftTimingLabel(start?: string | null, end?: string | null): string {
+    if (!start || !end) return ""
+    return `${fmt12(start)} - ${fmt12(end)}`
+}
+
 export async function GET() {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -32,6 +46,8 @@ export async function GET() {
         "Branch": e.branch?.name ?? "",
         "Department": e.department?.name ?? "",
         "Employment Type": e.employmentType,
+        "Shift Timing": shiftTimingLabel(e.shiftStart, e.shiftEnd),
+        "Shift Hours": e.shiftHours ?? "",
         "Basic Salary": e.basicSalary,
         "Status": e.status,
         "Date of Joining": e.dateOfJoining ? new Date(e.dateOfJoining).toISOString().split("T")[0] : "",

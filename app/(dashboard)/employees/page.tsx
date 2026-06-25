@@ -1513,6 +1513,8 @@ export default function EmployeesPage() {
                                     <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Type</th>
                                     <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Phone</th>
                                     <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Joined</th>
+                                    <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Shift Time</th>
+                                    <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Shift Hrs</th>
                                     {isAdmin && (
                                         <th className="text-left text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px] px-4 py-3">Monthly</th>
                                     )}
@@ -1565,12 +1567,17 @@ export default function EmployeesPage() {
                                             <td className="px-4 py-3 text-[13px] text-[var(--text2)] whitespace-nowrap">
                                                 {emp.dateOfJoining ? format(new Date(emp.dateOfJoining), "dd MMM yyyy") : "—"}
                                             </td>
+                                            <td className="px-4 py-3 text-[13px] text-[var(--text2)] whitespace-nowrap">
+                                                {(emp as any).shiftStart && (emp as any).shiftEnd
+                                                    ? shiftTimeLabel((emp as any).shiftStart, (emp as any).shiftEnd)
+                                                    : "—"}
+                                            </td>
+                                            <td className="px-4 py-3 text-[13px] text-[var(--text2)] whitespace-nowrap">
+                                                {emp.shiftHours ? `${emp.shiftHours} hr` : "—"}
+                                            </td>
                                             {isAdmin && (
                                                 <td className="px-4 py-3 text-[13px] text-[var(--text2)] whitespace-nowrap">
                                                     {emp.basicSalary ? `₹${Number(emp.basicSalary).toLocaleString()}/mo` : "—"}
-                                                    {(emp as any).shiftStart && (emp as any).shiftEnd
-                                                        ? <span className="text-[11px] text-[var(--text3)] ml-1">· {shiftTimeLabel((emp as any).shiftStart, (emp as any).shiftEnd)}</span>
-                                                        : emp.shiftHours ? <span className="text-[11px] text-[var(--text3)] ml-1">· {emp.shiftHours}hr shift</span> : null}
                                                 </td>
                                             )}
                                             <td className="px-4 py-3">
