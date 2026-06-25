@@ -3,6 +3,21 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
 
+// Compute shift duration in hours from "HH:MM" start/end times (handles overnight shifts)
+function hoursFromShiftTimes(start?: string | null, end?: string | null): number | null {
+    if (!start || !end) return null
+    const m = (t: string) => {
+        const [h, mn] = String(t).split(":").map(Number)
+        if (Number.isNaN(h) || Number.isNaN(mn)) return null
+        return h * 60 + mn
+    }
+    const s = m(start), e = m(end)
+    if (s == null || e == null) return null
+    let diff = e - s
+    if (diff <= 0) diff += 24 * 60
+    return Math.round((diff / 60) * 100) / 100
+}
+
 export async function GET(
     req: Request,
     { params }: { params: { id: string } }
@@ -64,7 +79,7 @@ export async function PUT(
             safetyGoggles, safetyGogglesDate, safetyGloves, safetyGlovesDate,
             safetyHelmet, safetyHelmetDate, safetyMask, safetyMaskDate,
             safetyJacket, safetyJacketDate, safetyEarMuffs, safetyEarMuffsDate,
-            safetyShoes, safetyShoesDate, bankBranch, shiftHours,
+            safetyShoes, safetyShoesDate, bankBranch, shiftHours, shiftStart, shiftEnd,
         } = body
 
         const updateData: Record<string, unknown> = {}
@@ -95,7 +110,17 @@ export async function PUT(
         if (employeeCategory !== undefined) updateData.employeeCategory = employeeCategory
         if (basicSalary !== undefined) updateData.basicSalary = basicSalary ? parseFloat(basicSalary) : 0
         if (dailyRate !== undefined) updateData.dailyRate = dailyRate ? parseFloat(dailyRate) : null
-        if (shiftHours !== undefined) updateData.shiftHours = shiftHours ? parseFloat(String(shiftHours)) : 8
+        if (shiftStart !== undefined) updateData.shiftStart = shiftStart || null
+        if (shiftEnd !== undefined) updateData.shiftEnd = shiftEnd || null
+        if (shiftStart !== undefined || shiftEnd !== undefined) {
+            const computed = hoursFromShiftTimes(
+                shiftStart !== undefined ? shiftStart : undefined,
+                shiftEnd !== undefined ? shiftEnd : undefined
+            )
+            if (computed != null) updateData.shiftHours = computed
+        } else if (shiftHours !== undefined) {
+            updateData.shiftHours = shiftHours ? parseFloat(String(shiftHours)) : 8
+        }
         if (notes !== undefined) updateData.notes = notes
         // New fields
         if (middleName !== undefined) updateData.middleName = middleName || null

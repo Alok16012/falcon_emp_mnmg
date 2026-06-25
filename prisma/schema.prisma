@@ -447,6 +447,8 @@ model Employee {
   workOrderFrom          DateTime?
   workOrderTo            DateTime?
   shiftHours             Float                     @default(8)
+  shiftStart             String?
+  shiftEnd               String?
   workSkill              String?
   natureOfWork           String?
   categoryCode           String?

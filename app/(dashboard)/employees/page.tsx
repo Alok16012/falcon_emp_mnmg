@@ -76,6 +76,8 @@ type Employee = {
     safetyEarMuffs?: boolean
     safetyShoes?: boolean
     shiftHours?: string
+    shiftStart?: string
+    shiftEnd?: string
     dailyRate?: string
     employeeCategory?: string
 }
@@ -94,6 +96,33 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 
 const EMPLOYMENT_TYPES = ["Full-time", "Part-time", "Contract", "Daily Wage"]
 const SALARY_TYPES = ["Monthly", "Daily", "Hourly"]
+
+// Shift timing helpers ("HH:MM" 24h <-> 12h label + duration)
+function shiftHoursFromTimes(start?: string | null, end?: string | null): number {
+    if (!start || !end) return 0
+    const toMin = (t: string) => {
+        const [h, m] = String(t).split(":").map(Number)
+        if (Number.isNaN(h) || Number.isNaN(m)) return null
+        return h * 60 + m
+    }
+    const s = toMin(start), e = toMin(end)
+    if (s == null || e == null) return 0
+    let diff = e - s
+    if (diff <= 0) diff += 24 * 60 // overnight shift
+    return Math.round((diff / 60) * 100) / 100
+}
+function fmt12(t?: string | null): string {
+    if (!t) return ""
+    const [h, m] = String(t).split(":").map(Number)
+    if (Number.isNaN(h)) return ""
+    const ampm = h >= 12 ? "PM" : "AM"
+    const hr = h % 12 === 0 ? 12 : h % 12
+    return `${hr}:${String(m || 0).padStart(2, "0")} ${ampm}`
+}
+function shiftTimeLabel(start?: string | null, end?: string | null): string {
+    if (!start || !end) return ""
+    return `${fmt12(start)} – ${fmt12(end)}`
+}
 
 const AVATAR_COLORS = ["#1a9e6e", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4", "#f97316"]
 
@@ -175,7 +204,9 @@ type ModalForm = {
     designation: string; departmentId: string; managerId: string
     dateOfJoining: string; employmentType: string; salaryType: string; basicSalary: string
     dailyRate: string  // For LABOUR
-    shiftHours: string  // For LABOUR: 8, 10, or 12
+    shiftHours: string  // auto-computed from shift timing
+    shiftStart: string  // shift start time e.g. "08:00"
+    shiftEnd: string    // shift end time e.g. "20:00"
     address: string; city: string; state: string; pincode: string
     bankName: string; bankBranch: string; bankAccountNumber: string; bankIFSC: string
     status: string; notes: string
@@ -194,7 +225,7 @@ const EMPTY_FORM: ModalForm = {
     dateOfBirth: "", gender: "", aadharNumber: "", panNumber: "",
     designation: "", departmentId: "", managerId: "",
     dateOfJoining: "", employmentType: "Full-time", salaryType: "Monthly", basicSalary: "",
-    dailyRate: "", shiftHours: "8",
+    dailyRate: "", shiftHours: "8", shiftStart: "09:00", shiftEnd: "17:00",
     address: "", city: "", state: "", pincode: "",
     bankName: "", bankBranch: "", bankAccountNumber: "", bankIFSC: "",
     status: "ACTIVE", notes: "",
@@ -276,6 +307,8 @@ function EmployeeModal({
                 basicSalary: employee.basicSalary.toString(),
                 dailyRate: (employee as any).dailyRate?.toString() || "",
                 shiftHours: (employee as any).shiftHours?.toString() || "8",
+                shiftStart: (employee as any).shiftStart || "09:00",
+                shiftEnd: (employee as any).shiftEnd || "17:00",
                 address: employee.address || "",
                 city: employee.city || "",
                 state: employee.state || "",
@@ -531,39 +564,52 @@ function EmployeeModal({
                                     <input type="number" value={form.basicSalary} onChange={set("basicSalary")} className={inputCls} placeholder="e.g. 18000" min="0" />
                                 </div>
                                 <div className="col-span-2">
-                                    <label className={labelCls}>Shift Duration</label>
-                                    <div className="flex gap-2">
+                                    <label className={labelCls}>Shift Timing</label>
+                                    {/* Quick preset shift timings */}
+                                    <div className="flex flex-wrap gap-2 mb-2">
                                         {[
-                                            { val: "8", label: "8 Hr", desc: "Gen Shift" },
-                                            { val: "10", label: "10 Hr", desc: "Long Shift" },
-                                            { val: "12", label: "12 Hr", desc: "Double Shift" },
-                                        ].map(opt => (
-                                            <button key={opt.val} type="button"
-                                                onClick={() => setForm(f => ({ ...f, shiftHours: opt.val }))}
-                                                className={`flex-1 flex flex-col items-center py-2.5 rounded-[8px] border-2 text-center transition-all ${
-                                                    form.shiftHours === opt.val
-                                                        ? "border-[var(--accent)] bg-[var(--accent-light)]"
-                                                        : "border-[var(--border)] bg-white hover:border-[var(--accent)]"
-                                                }`}>
-                                                <span className={`text-[14px] font-bold ${form.shiftHours === opt.val ? "text-[var(--accent-text)]" : "text-[var(--text)]"}`}>{opt.label}</span>
-                                                <span className="text-[10px] text-[var(--text3)]">{opt.desc}</span>
-                                            </button>
-                                        ))}
+                                            { s: "09:00", e: "17:00", label: "9 AM – 5 PM" },
+                                            { s: "08:00", e: "20:00", label: "8 AM – 8 PM" },
+                                            { s: "10:00", e: "19:00", label: "10 AM – 7 PM" },
+                                            { s: "20:00", e: "08:00", label: "8 PM – 8 AM (Night)" },
+                                        ].map(opt => {
+                                            const active = form.shiftStart === opt.s && form.shiftEnd === opt.e
+                                            return (
+                                                <button key={opt.label} type="button"
+                                                    onClick={() => setForm(f => ({ ...f, shiftStart: opt.s, shiftEnd: opt.e }))}
+                                                    className={`px-3 py-1.5 rounded-[8px] border-2 text-[12px] font-medium transition-all ${
+                                                        active
+                                                            ? "border-[var(--accent)] bg-[var(--accent-light)] text-[var(--accent-text)]"
+                                                            : "border-[var(--border)] bg-white text-[var(--text)] hover:border-[var(--accent)]"
+                                                    }`}>
+                                                    {opt.label}
+                                                </button>
+                                            )
+                                        })}
                                     </div>
-                                    {/* Custom shift duration — admin can set any value */}
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <span className="text-[11px] text-[var(--text3)] whitespace-nowrap">Or custom:</span>
-                                        <input
-                                            type="number" min="1" max="24" step="0.5"
-                                            value={form.shiftHours}
-                                            onChange={e => setForm(f => ({ ...f, shiftHours: e.target.value }))}
-                                            placeholder="e.g. 10.5"
-                                            className={`${inputCls} flex-1`} />
-                                        <span className="text-[11px] text-[var(--text3)] whitespace-nowrap">hours / shift</span>
+                                    {/* Custom start/end time */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <span className="text-[11px] text-[var(--text3)]">Start time</span>
+                                            <input type="time" value={form.shiftStart}
+                                                onChange={e => setForm(f => ({ ...f, shiftStart: e.target.value }))}
+                                                className={inputCls} />
+                                        </div>
+                                        <div>
+                                            <span className="text-[11px] text-[var(--text3)]">End time</span>
+                                            <input type="time" value={form.shiftEnd}
+                                                onChange={e => setForm(f => ({ ...f, shiftEnd: e.target.value }))}
+                                                className={inputCls} />
+                                        </div>
                                     </div>
+                                    {form.shiftStart && form.shiftEnd && (
+                                        <p className="text-[11px] text-[var(--text2)] mt-1.5 font-medium">
+                                            {shiftTimeLabel(form.shiftStart, form.shiftEnd)} · {shiftHoursFromTimes(form.shiftStart, form.shiftEnd)} hrs / shift
+                                        </p>
+                                    )}
                                     {form.basicSalary && (
-                                        <p className="text-[11px] text-[var(--text3)] mt-1.5">
-                                            Daily (÷30): ₹{(parseFloat(form.basicSalary || "0") / 30).toFixed(0)} · Hourly (÷30÷{form.shiftHours || "8"}hr): ₹{(parseFloat(form.basicSalary || "0") / 30 / parseFloat(form.shiftHours || "8")).toFixed(2)}
+                                        <p className="text-[11px] text-[var(--text3)] mt-1">
+                                            Daily (÷30): ₹{(parseFloat(form.basicSalary || "0") / 30).toFixed(0)} · Hourly (÷30÷{shiftHoursFromTimes(form.shiftStart, form.shiftEnd) || "8"}hr): ₹{(parseFloat(form.basicSalary || "0") / 30 / (shiftHoursFromTimes(form.shiftStart, form.shiftEnd) || 8)).toFixed(2)}
                                         </p>
                                     )}
                                 </div>
@@ -893,8 +939,10 @@ function EmployeeDrawer({
                                 icon={<IndianRupee size={13} />}
                             />
                             <InfoItem
-                                label="Shift Duration"
-                                value={emp.shiftHours ? `${emp.shiftHours} Hours` : "—"}
+                                label="Shift Timing"
+                                value={(emp as any).shiftStart && (emp as any).shiftEnd
+                                    ? `${shiftTimeLabel((emp as any).shiftStart, (emp as any).shiftEnd)} (${emp.shiftHours} hrs)`
+                                    : emp.shiftHours ? `${emp.shiftHours} Hours` : "—"}
                                 icon={<Briefcase size={13} />}
                             />
                             {emp.basicSalary && emp.shiftHours && (
@@ -1520,7 +1568,9 @@ export default function EmployeesPage() {
                                             {isAdmin && (
                                                 <td className="px-4 py-3 text-[13px] text-[var(--text2)] whitespace-nowrap">
                                                     {emp.basicSalary ? `₹${Number(emp.basicSalary).toLocaleString()}/mo` : "—"}
-                                                    {emp.shiftHours && <span className="text-[11px] text-[var(--text3)] ml-1">· {emp.shiftHours}hr shift</span>}
+                                                    {(emp as any).shiftStart && (emp as any).shiftEnd
+                                                        ? <span className="text-[11px] text-[var(--text3)] ml-1">· {shiftTimeLabel((emp as any).shiftStart, (emp as any).shiftEnd)}</span>
+                                                        : emp.shiftHours ? <span className="text-[11px] text-[var(--text3)] ml-1">· {emp.shiftHours}hr shift</span> : null}
                                                 </td>
                                             )}
                                             <td className="px-4 py-3">

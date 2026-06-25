@@ -4,6 +4,21 @@ import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
 import bcrypt from "bcryptjs"
 
+// Compute shift duration in hours from "HH:MM" start/end times (handles overnight shifts)
+function hoursFromShiftTimes(start?: string | null, end?: string | null): number | null {
+    if (!start || !end) return null
+    const m = (t: string) => {
+        const [h, mn] = String(t).split(":").map(Number)
+        if (Number.isNaN(h) || Number.isNaN(mn)) return null
+        return h * 60 + mn
+    }
+    const s = m(start), e = m(end)
+    if (s == null || e == null) return null
+    let diff = e - s
+    if (diff <= 0) diff += 24 * 60 // overnight shift
+    return Math.round((diff / 60) * 100) / 100
+}
+
 export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions)
@@ -61,6 +76,8 @@ export async function GET(req: Request) {
                 basicSalary: true,
                 dailyRate: true,
                 shiftHours: true,
+                shiftStart: true,
+                shiftEnd: true,
                 hardwareUserId: true,
                 createdAt: true,
                 branch: { select: { id: true, name: true } },
@@ -108,7 +125,7 @@ export async function POST(req: Request) {
             safetyGoggles, safetyGogglesDate, safetyGloves, safetyGlovesDate,
             safetyHelmet, safetyHelmetDate, safetyMask, safetyMaskDate,
             safetyJacket, safetyJacketDate, safetyEarMuffs, safetyEarMuffsDate,
-            safetyShoes, safetyShoesDate, bankBranch, shiftHours,
+            safetyShoes, safetyShoesDate, bankBranch, shiftHours, shiftStart, shiftEnd,
         } = body
 
         if (!firstName || !lastName || !phone) {
@@ -210,7 +227,9 @@ export async function POST(req: Request) {
                 employeeCategory: employeeCategory || "LABOUR",
                 basicSalary: basicSalary ? parseFloat(basicSalary) : 0,
                 dailyRate: dailyRate ? parseFloat(dailyRate) : null,
-                shiftHours: shiftHours ? parseFloat(String(shiftHours)) : 8,
+                shiftStart: shiftStart || null,
+                shiftEnd: shiftEnd || null,
+                shiftHours: hoursFromShiftTimes(shiftStart, shiftEnd) ?? (shiftHours ? parseFloat(String(shiftHours)) : 8),
                 userId,
                 // New fields
                 middleName: middleName || null,
