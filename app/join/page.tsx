@@ -41,13 +41,46 @@ function fileToDataUrl(file: File, maxDim = 1280, quality = 0.8): Promise<string
 type FileVal = { fileName: string; dataUrl: string }
 
 const ACCENT = "#1e3799"
+const SHIFT_PRESETS = [
+    { s: "08:00", e: "20:00", label: "8 AM - 8 PM" },
+    { s: "09:00", e: "17:00", label: "9 AM - 5 PM" },
+    { s: "10:00", e: "19:00", label: "10 AM - 7 PM" },
+    { s: "20:00", e: "08:00", label: "8 PM - 8 AM (Night)" },
+]
+
+function shiftHoursFromTimes(start?: string | null, end?: string | null): number {
+    if (!start || !end) return 0
+    const toMinutes = (time: string) => {
+        const [h, m] = time.split(":").map(Number)
+        if (Number.isNaN(h) || Number.isNaN(m)) return null
+        return h * 60 + m
+    }
+    const s = toMinutes(start)
+    const e = toMinutes(end)
+    if (s == null || e == null) return 0
+    let diff = e - s
+    if (diff <= 0) diff += 24 * 60
+    return Math.round((diff / 60) * 100) / 100
+}
+
+function shiftTimeLabel(start?: string | null, end?: string | null): string {
+    if (!start || !end) return ""
+    const fmt = (time: string) => {
+        const [h, m] = time.split(":").map(Number)
+        if (Number.isNaN(h) || Number.isNaN(m)) return time
+        const suffix = h >= 12 ? "PM" : "AM"
+        const hour = h % 12 || 12
+        return `${hour}:${String(m).padStart(2, "0")} ${suffix}`
+    }
+    return `${fmt(start)} - ${fmt(end)}`
+}
 
 export default function WorkerJoiningFormPage() {
     const [f, setF] = useState({
         dateOfJoining: "", fullName: "", fathersName: "", dateOfBirth: "",
         gender: "", mobileNumber: "", permanentAddress: "", currentAddress: "",
         aadharNumber: "", panNumber: "", designation: "", departmentSite: "",
-        providedEmployeeId: "", wageRate: "",
+        providedEmployeeId: "", wageRate: "", shiftStart: "08:00", shiftEnd: "20:00",
         emergencyName: "", emergencyRelationship: "", emergencyPhone: "",
         declaration: false, website: "", // website = honeypot
     })
@@ -247,6 +280,43 @@ export default function WorkerJoiningFormPage() {
                         <div>
                             <label className={labelCls}>Monthly / Daily Wage Rate</label>
                             <input value={f.wageRate} onChange={set("wageRate")} className={inputCls} placeholder="e.g. 18000" inputMode="numeric" />
+                        </div>
+                        <div className="sm:col-span-2">
+                            <label className={labelCls}>Shift Timing</label>
+                            <div className="flex flex-wrap gap-2 mb-2">
+                                {SHIFT_PRESETS.map(opt => {
+                                    const active = f.shiftStart === opt.s && f.shiftEnd === opt.e
+                                    return (
+                                        <button
+                                            key={opt.label}
+                                            type="button"
+                                            onClick={() => setF(p => ({ ...p, shiftStart: opt.s, shiftEnd: opt.e }))}
+                                            className={`px-3 py-1.5 rounded-[8px] border text-[12px] font-semibold transition ${
+                                                active
+                                                    ? "border-[#1e3799] bg-[#1e3799]/10 text-[#1e3799]"
+                                                    : "border-gray-300 bg-white text-gray-700 hover:border-[#1e3799]"
+                                            }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <span className="text-[11px] text-gray-500">Start time</span>
+                                    <input type="time" value={f.shiftStart} onChange={set("shiftStart")} className={inputCls} />
+                                </div>
+                                <div>
+                                    <span className="text-[11px] text-gray-500">End time</span>
+                                    <input type="time" value={f.shiftEnd} onChange={set("shiftEnd")} className={inputCls} />
+                                </div>
+                            </div>
+                            {f.shiftStart && f.shiftEnd && (
+                                <p className="text-[11px] text-gray-500 mt-1.5 font-medium">
+                                    {shiftTimeLabel(f.shiftStart, f.shiftEnd)} · {shiftHoursFromTimes(f.shiftStart, f.shiftEnd)} hrs / shift
+                                </p>
+                            )}
                         </div>
                     </div>
 

@@ -20,6 +20,9 @@ type Joining = {
     designation: string | null
     dateOfJoining: string | null
     basicSalary: number
+    shiftHours: number
+    shiftStart: string | null
+    shiftEnd: string | null
     photo: string | null
     status: string
     notes: string | null
@@ -37,6 +40,18 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 
 function fmtRupee(n: number) {
     return `₹${(n || 0).toLocaleString("en-IN")}`
+}
+
+function shiftTimeLabel(start?: string | null, end?: string | null): string {
+    if (!start || !end) return "—"
+    const fmt = (time: string) => {
+        const [h, m] = time.split(":").map(Number)
+        if (Number.isNaN(h) || Number.isNaN(m)) return time
+        const suffix = h >= 12 ? "PM" : "AM"
+        const hour = h % 12 || 12
+        return `${hour}:${String(m).padStart(2, "0")} ${suffix}`
+    }
+    return `${fmt(start)} - ${fmt(end)}`
 }
 
 // Pull "Department/Site: X" out of the notes string the join API composed
@@ -209,6 +224,7 @@ export default function JoiningsPage() {
                                 <th className="px-4 py-3 font-semibold">Worker</th>
                                 <th className="px-4 py-3 font-semibold">Phone</th>
                                 <th className="px-4 py-3 font-semibold">Designation</th>
+                                <th className="px-4 py-3 font-semibold">Shift Time</th>
                                 <th className="px-4 py-3 font-semibold text-right">Wage</th>
                                 <th className="px-4 py-3 font-semibold">Docs</th>
                                 <th className="px-4 py-3 font-semibold">Submitted</th>
@@ -218,11 +234,11 @@ export default function JoiningsPage() {
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={8} className="px-4 py-10 text-center text-[var(--text3)]">
+                                <tr><td colSpan={9} className="px-4 py-10 text-center text-[var(--text3)]">
                                     <Loader2 size={20} className="animate-spin inline" />
                                 </td></tr>
                             ) : filtered.length === 0 ? (
-                                <tr><td colSpan={8} className="px-4 py-10 text-center text-[var(--text3)]">No joining submissions yet</td></tr>
+                                <tr><td colSpan={9} className="px-4 py-10 text-center text-[var(--text3)]">No joining submissions yet</td></tr>
                             ) : filtered.map(r => {
                                 const sc = STATUS_CONFIG[r.status] || STATUS_CONFIG.INACTIVE
                                 return (
@@ -243,6 +259,9 @@ export default function JoiningsPage() {
                                         </td>
                                         <td className="px-4 py-3 text-[var(--text)] whitespace-nowrap">{r.phone}</td>
                                         <td className="px-4 py-3 text-[var(--text2)]">{r.designation || "—"}</td>
+                                        <td className="px-4 py-3 text-[var(--text2)] whitespace-nowrap">
+                                            {r.shiftStart && r.shiftEnd ? `${shiftTimeLabel(r.shiftStart, r.shiftEnd)} (${r.shiftHours} hr)` : "—"}
+                                        </td>
                                         <td className="px-4 py-3 text-right text-[var(--text)] whitespace-nowrap">{r.basicSalary ? fmtRupee(r.basicSalary) : "—"}</td>
                                         <td className="px-4 py-3">
                                             <span className="inline-flex items-center gap-1 text-[12px] text-[var(--text2)]">
@@ -319,6 +338,7 @@ function ViewModal({ row, onClose, onApprove }: { row: Joining; onClose: () => v
                         <Detail label="Department / Site" value={dept} />
                         <Detail label="Aadhaar Number" value={row.aadharNumber} />
                         <Detail label="Wage Rate" value={row.basicSalary ? fmtRupee(row.basicSalary) : null} />
+                        <Detail label="Shift Timing" value={row.shiftStart && row.shiftEnd ? `${shiftTimeLabel(row.shiftStart, row.shiftEnd)} (${row.shiftHours} hr)` : null} />
                         <Detail label="Date of Joining" value={row.dateOfJoining ? format(new Date(row.dateOfJoining), "dd MMM yyyy") : null} />
                         <Detail label="Emergency Relationship" value={rel} />
                         <Detail label="Worker-stated ID" value={statedId} />

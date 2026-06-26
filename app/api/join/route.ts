@@ -31,6 +31,26 @@ function parseWage(s: string): number {
     return isNaN(n) ? 0 : n
 }
 
+function validTime(value: unknown): string | null {
+    if (typeof value !== "string") return null
+    return /^([01]\d|2[0-3]):[0-5]\d$/.test(value) ? value : null
+}
+
+function hoursFromShiftTimes(start?: string | null, end?: string | null): number | null {
+    if (!start || !end) return null
+    const toMinutes = (time: string) => {
+        const [h, m] = time.split(":").map(Number)
+        if (Number.isNaN(h) || Number.isNaN(m)) return null
+        return h * 60 + m
+    }
+    const s = toMinutes(start)
+    const e = toMinutes(end)
+    if (s == null || e == null) return null
+    let diff = e - s
+    if (diff <= 0) diff += 24 * 60
+    return Math.round((diff / 60) * 100) / 100
+}
+
 export async function POST(req: Request) {
     try {
         const body = await req.json().catch(() => null)
@@ -54,6 +74,8 @@ export async function POST(req: Request) {
             departmentSite,
             providedEmployeeId,
             wageRate,
+            shiftStart,
+            shiftEnd,
             emergencyName,
             emergencyRelationship,
             emergencyPhone,
@@ -92,6 +114,9 @@ export async function POST(req: Request) {
 
         const gen = typeof gender === "string" ? gender.toUpperCase() : null
         const validGender = gen === "MALE" || gen === "FEMALE" || gen === "OTHER" ? gen : null
+        const normalizedShiftStart = validTime(shiftStart)
+        const normalizedShiftEnd = validTime(shiftEnd)
+        const shiftHours = hoursFromShiftTimes(normalizedShiftStart, normalizedShiftEnd)
 
         const noteParts: string[] = ["Self-submitted via Worker Joining Form"]
         if (departmentSite) noteParts.push(`Department/Site: ${departmentSite}`)
@@ -116,6 +141,9 @@ export async function POST(req: Request) {
                 designation: typeof designation === "string" ? designation : null,
                 dateOfJoining: dateOfJoining ? new Date(String(dateOfJoining)) : null,
                 basicSalary: parseWage(String(wageRate || "")),
+                shiftStart: normalizedShiftStart,
+                shiftEnd: normalizedShiftEnd,
+                shiftHours: shiftHours ?? 8,
                 emergencyContact1Name: typeof emergencyName === "string" ? emergencyName : null,
                 emergencyContact1Phone: typeof emergencyPhone === "string" ? emergencyPhone : null,
                 photo: photoStr,
