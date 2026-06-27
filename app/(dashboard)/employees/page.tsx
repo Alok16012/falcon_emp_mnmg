@@ -7,7 +7,7 @@ import {
     Plus, Search, UserCheck, X, Loader2, Users,
     Calendar, TrendingDown, Edit2, Eye, ChevronDown,
     CheckCircle, Clock, Building2, Briefcase, Phone, Mail,
-    FileText, IndianRupee, MoreVertical, ShieldOff, Trash2,
+    FileText, IndianRupee, MoreVertical, ShieldOff, ShieldCheck, Trash2,
     User, CreditCard, MapPin, LogOut, Download, Upload, Link2
 } from "lucide-react"
 import { format } from "date-fns"
@@ -1013,6 +1013,7 @@ function RowActions({
     onView,
     onEdit,
     onTerminate,
+    onReactivate,
     onDelete,
 }: {
     emp: Employee
@@ -1020,6 +1021,7 @@ function RowActions({
     onView: () => void
     onEdit: () => void
     onTerminate: () => void
+    onReactivate: () => void
     onDelete: () => void
 }) {
     const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
@@ -1063,9 +1065,14 @@ function RowActions({
                     <button onClick={() => { onEdit(); setPos(null) }} className="w-full text-left px-4 py-2 text-[13px] flex items-center gap-2.5 hover:bg-[var(--surface2)] text-[var(--text2)] transition-colors">
                         <Edit2 size={14} /> Edit
                     </button>
-                    {emp.status !== "TERMINATED" && (
+                    {emp.status !== "TERMINATED" && emp.status !== "RESIGNED" && (
                         <button onClick={() => { onTerminate(); setPos(null) }} className="w-full text-left px-4 py-2 text-[13px] flex items-center gap-2.5 hover:bg-[var(--surface2)] text-[#f59e0b] transition-colors">
                             <ShieldOff size={14} /> Terminate
+                        </button>
+                    )}
+                    {emp.status !== "ACTIVE" && (
+                        <button onClick={() => { onReactivate(); setPos(null) }} className="w-full text-left px-4 py-2 text-[13px] flex items-center gap-2.5 hover:bg-[var(--surface2)] text-[#1a9e6e] transition-colors">
+                            <ShieldCheck size={14} /> Activate
                         </button>
                     )}
                     {isAdmin && (
@@ -1596,6 +1603,7 @@ export default function EmployeesPage() {
                                                         onView={() => setDrawerEmployee(emp)}
                                                         onEdit={() => { setEditEmployee(emp); setShowModal(true) }}
                                                         onTerminate={() => handleStatusChange(emp.id, "TERMINATED")}
+                                                        onReactivate={() => handleStatusChange(emp.id, "ACTIVE")}
                                                         onDelete={() => handleHardDelete(emp.id, `${emp.firstName} ${emp.lastName}`)}
                                                     />
                                                 </div>
