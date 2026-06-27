@@ -18,14 +18,20 @@ function shiftTimingLabel(start?: string | null, end?: string | null): string {
     return `${fmt12(start)} - ${fmt12(end)}`
 }
 
-export async function GET() {
+export async function GET(req: Request) {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     if (session.user.role !== "ADMIN" && session.user.role !== "MANAGER") {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
+    // By default the export only contains employees still working. Those who
+    // left the job (TERMINATED / RESIGNED — set when you delete/terminate them)
+    // are excluded. Pass ?includeInactive=true to get everyone.
+    const includeInactive = new URL(req.url).searchParams.get("includeInactive") === "true"
+
     const employees = await prisma.employee.findMany({
+        where: includeInactive ? {} : { status: { notIn: ["TERMINATED", "RESIGNED"] } },
         include: {
             branch: { select: { name: true } },
             department: { select: { name: true } },
