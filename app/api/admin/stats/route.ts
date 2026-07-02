@@ -3,6 +3,11 @@ import prisma from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 
+// Self-submitted joining-form entries live only in the Joinings dashboard — keep them
+// out of employee counts/recent list. (null-safe: employees with no notes are kept.)
+const JOIN_MARKER = "Self-submitted via Worker Joining Form"
+const NOT_JOIN_FORM = [{ notes: null }, { notes: { not: { contains: JOIN_MARKER } } }]
+
 export async function GET() {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -24,9 +29,9 @@ export async function GET() {
             thisMonthAdvances,
             recentEmployees,
         ] = await Promise.all([
-            prisma.employee.count({ where: { status: "ACTIVE" } }),
-            prisma.employee.count({ where: { status: "ACTIVE", employeeCategory: "LABOUR" } }),
-            prisma.employee.count({ where: { status: "ACTIVE", employeeCategory: "STAFF" } }),
+            prisma.employee.count({ where: { status: "ACTIVE", OR: NOT_JOIN_FORM } }),
+            prisma.employee.count({ where: { status: "ACTIVE", employeeCategory: "LABOUR", OR: NOT_JOIN_FORM } }),
+            prisma.employee.count({ where: { status: "ACTIVE", employeeCategory: "STAFF", OR: NOT_JOIN_FORM } }),
             prisma.attendance.findMany({
                 where: { date: { gte: todayStart, lt: todayEnd } },
                 select: { status: true },
@@ -42,7 +47,7 @@ export async function GET() {
                 _count: true,
             }),
             prisma.employee.findMany({
-                where: { status: "ACTIVE" },
+                where: { status: "ACTIVE", OR: NOT_JOIN_FORM },
                 orderBy: { createdAt: "desc" },
                 take: 6,
                 select: {

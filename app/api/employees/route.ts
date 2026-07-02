@@ -4,6 +4,11 @@ import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
 import bcrypt from "bcryptjs"
 
+// Marker that /api/join writes into Employee.notes for self-submitted joining-form
+// entries. Those workers live ONLY in the Joinings dashboard and must never appear
+// in the main Employees list.
+const JOIN_MARKER = "Self-submitted via Worker Joining Form"
+
 // Compute shift duration in hours from "HH:MM" start/end times (handles overnight shifts)
 function hoursFromShiftTimes(start?: string | null, end?: string | null): number | null {
     if (!start || !end) return null
@@ -55,6 +60,12 @@ export async function GET(req: Request) {
                 { designation: { contains: search, mode: "insensitive" } },
             ]
         }
+
+        // Never show self-submitted joining-form entries here — they belong only to
+        // the Joinings dashboard. (null-safe: keep employees with no notes.)
+        where.AND = [
+            { OR: [{ notes: null }, { notes: { not: { contains: JOIN_MARKER } } }] },
+        ]
 
         const employees = await prisma.employee.findMany({
             where,

@@ -4,6 +4,10 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import * as XLSX from "xlsx"
 
+// Self-submitted joining-form entries live only in the Joinings dashboard — exclude
+// them from the employees export too.
+const JOIN_MARKER = "Self-submitted via Worker Joining Form"
+
 // "HH:MM" (24h) -> "8:00 AM"
 function fmt12(t?: string | null): string {
     if (!t) return ""
@@ -30,8 +34,13 @@ export async function GET(req: Request) {
     // are excluded. Pass ?includeInactive=true to get everyone.
     const includeInactive = new URL(req.url).searchParams.get("includeInactive") === "true"
 
+    // Always exclude self-submitted joining-form entries (they live only in Joinings).
+    const notJoinForm = { OR: [{ notes: null }, { notes: { not: { contains: JOIN_MARKER } } }] }
+
     const employees = await prisma.employee.findMany({
-        where: includeInactive ? {} : { status: { notIn: ["TERMINATED", "RESIGNED"] } },
+        where: includeInactive
+            ? notJoinForm
+            : { AND: [notJoinForm, { status: { notIn: ["TERMINATED", "RESIGNED"] } }] },
         include: {
             branch: { select: { name: true } },
             department: { select: { name: true } },
