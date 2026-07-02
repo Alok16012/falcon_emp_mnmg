@@ -1139,7 +1139,12 @@ export default function EmployeesPage() {
     // Client-side filtering — instant, no network round-trip
     useEffect(() => {
         let filtered = allEmployees
-        if (statusFilter) filtered = filtered.filter(e => e.status === statusFilter)
+        // Hide terminated/resigned staff by default so the list stays clean. They
+        // are shown only when the "Terminated/Resigned" stat card is selected
+        // (statusFilter === "LEFT"), so they can still be viewed/Activated.
+        if (statusFilter === "LEFT") filtered = filtered.filter(e => e.status === "TERMINATED" || e.status === "RESIGNED")
+        else if (statusFilter) filtered = filtered.filter(e => e.status === statusFilter)
+        else filtered = filtered.filter(e => e.status !== "TERMINATED" && e.status !== "RESIGNED")
         if (deptFilter) filtered = filtered.filter(e => (e.department as { id: string } | null)?.id === deptFilter)
         if (empTypeFilter) filtered = filtered.filter(e => String(e.shiftHours) === empTypeFilter)
         if (search) {
@@ -1334,11 +1339,12 @@ export default function EmployeesPage() {
         }
     }
 
-    // Stats
-    const total = employees.length
-    const active = employees.filter(e => e.status === "ACTIVE").length
-    const onLeave = employees.filter(e => e.status === "ON_LEAVE").length
-    const terminatedResigned = employees.filter(e => e.status === "TERMINATED" || e.status === "RESIGNED").length
+    // Stats — counted from the full list so hiding terminated from the table
+    // doesn't zero-out the counts.
+    const total = allEmployees.filter(e => e.status !== "TERMINATED" && e.status !== "RESIGNED").length
+    const active = allEmployees.filter(e => e.status === "ACTIVE").length
+    const onLeave = allEmployees.filter(e => e.status === "ON_LEAVE").length
+    const terminatedResigned = allEmployees.filter(e => e.status === "TERMINATED" || e.status === "RESIGNED").length
 
 
     return (
@@ -1391,21 +1397,28 @@ export default function EmployeesPage() {
             {/* Stats Row */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
-                    { label: "Total Employees", value: total, icon: <Users size={18} />, color: "#1a9e6e", bg: "#e8f7f1" },
-                    { label: "Active", value: active, icon: <CheckCircle size={18} />, color: "#16a34a", bg: "#dcfce7" },
-                    { label: "On Leave", value: onLeave, icon: <Clock size={18} />, color: "#f59e0b", bg: "#fffbeb" },
-                    { label: "Terminated/Resigned", value: terminatedResigned, icon: <TrendingDown size={18} />, color: "#dc2626", bg: "#fef2f2" },
-                ].map(stat => (
-                    <div key={stat.label} className="bg-white border border-[var(--border)] rounded-[12px] p-4 flex items-center gap-3">
-                        <div style={{ background: stat.bg, color: stat.color }} className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0">
-                            {stat.icon}
-                        </div>
-                        <div>
-                            <p className="text-[22px] font-bold text-[var(--text)] leading-tight">{stat.value}</p>
-                            <p className="text-[11.5px] text-[var(--text3)]">{stat.label}</p>
-                        </div>
-                    </div>
-                ))}
+                    { label: "Total Employees", value: total, icon: <Users size={18} />, color: "#1a9e6e", bg: "#e8f7f1", filter: "" },
+                    { label: "Active", value: active, icon: <CheckCircle size={18} />, color: "#16a34a", bg: "#dcfce7", filter: "ACTIVE" },
+                    { label: "On Leave", value: onLeave, icon: <Clock size={18} />, color: "#f59e0b", bg: "#fffbeb", filter: "ON_LEAVE" },
+                    { label: "Terminated/Resigned", value: terminatedResigned, icon: <TrendingDown size={18} />, color: "#dc2626", bg: "#fef2f2", filter: "LEFT" },
+                ].map(stat => {
+                    const selected = statusFilter === stat.filter
+                    return (
+                        <button
+                            key={stat.label}
+                            onClick={() => setStatusFilter(selected && stat.filter !== "" ? "" : stat.filter)}
+                            className={`text-left bg-white border rounded-[12px] p-4 flex items-center gap-3 transition-colors hover:border-[var(--accent)] ${selected ? "border-[var(--accent)] ring-1 ring-[var(--accent)]" : "border-[var(--border)]"}`}
+                        >
+                            <div style={{ background: stat.bg, color: stat.color }} className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0">
+                                {stat.icon}
+                            </div>
+                            <div>
+                                <p className="text-[22px] font-bold text-[var(--text)] leading-tight">{stat.value}</p>
+                                <p className="text-[11.5px] text-[var(--text3)]">{stat.label}</p>
+                            </div>
+                        </button>
+                    )
+                })}
             </div>
 
             {/* Filters */}
