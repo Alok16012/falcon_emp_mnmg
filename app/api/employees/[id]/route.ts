@@ -217,6 +217,27 @@ export async function DELETE(
 
         if (!employee) return new NextResponse("Not Found", { status: 404 })
 
+        // Workers enrolled on the biometric device can't be truly deleted from the
+        // app: the device still holds their fingerprint/face, so the 90s channel
+        // sync (importDeviceUsers) would just re-create them as a fresh ACTIVE row.
+        // For these, always SOFT-delete (TERMINATED) and KEEP hardwareUserId — that
+        // way the sync's existing-by-hardwareUserId check recognises them and never
+        // makes a duplicate. To remove such a worker fully, their enrolment must
+        // also be deleted on the device itself.
+        if (employee.hardwareUserId) {
+            const updated = await prisma.employee.update({
+                where: { id: params.id },
+                data: { status: "TERMINATED" },
+            })
+            return NextResponse.json({
+                success: true,
+                softDeleted: true,
+                deviceLinked: true,
+                message: "Ye worker biometric device par enrolled hai, isliye delete ke bajaye Terminated kar diya (warna device sync 90 sec me dobara bana deti). Poori tarah hataane ke liye device par unka fingerprint/face bhi delete karein.",
+                employee: updated,
+            })
+        }
+
         if (force) {
             // Hard delete — remove all related records first, then employee
             await prisma.attendance.deleteMany({ where: { employeeId: params.id } })
