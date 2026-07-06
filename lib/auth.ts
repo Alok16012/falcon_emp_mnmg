@@ -22,46 +22,6 @@ export const authOptions: NextAuthOptions = {
             async authorize(credentials) {
                 console.log("Authorize attempt for:", credentials?.email)
 
-                // Demo Mode Handling
-                const demoUsers: Record<string, { name: string, role: string }> = {
-                    "admin@cims.com": { name: "Admin User", role: "ADMIN" },
-                    "manager@cims.com": { name: "Manager User", role: "MANAGER" },
-                    "inspector@cims.com": { name: "Inspection Boy", role: "INSPECTION_BOY" },
-                    "client@cims.com": { name: "Client User", role: "CLIENT" }
-                }
-
-                if (credentials?.email && demoUsers[credentials.email] && credentials.password === "demo123") {
-                    console.log("Demo login attempt for:", credentials.email)
-
-                    try {
-                        // Fetch real user from DB to get the actual ID
-                        const realUser = await prisma.user.findUnique({
-                            where: { email: credentials.email }
-                        })
-
-                        if (realUser) {
-                            console.log("Demo login successful (with real DB ID) for:", credentials.email)
-                            return {
-                                id: realUser.id,
-                                name: realUser.name,
-                                email: realUser.email,
-                                role: realUser.role,
-                            }
-                        }
-                    } catch (dbError) {
-                        console.error("Database error during demo login:", dbError)
-                    }
-
-                    // Fallback to mock ID if DB is down or user not found
-                    console.warn("Demo user fallback to mock ID for:", credentials.email)
-                    return {
-                        id: `demo-${credentials.email}`,
-                        name: demoUsers[credentials.email].name,
-                        email: credentials.email,
-                        role: demoUsers[credentials.email].role as any,
-                    }
-                }
-
                 if (!credentials?.email || !credentials?.password) {
                     console.log("Missing email or password")
                     throw new Error("Invalid credentials")

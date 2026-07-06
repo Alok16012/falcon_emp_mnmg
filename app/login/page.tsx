@@ -53,30 +53,6 @@ export default function LoginPage() {
         }
     }
 
-    const handleDemoLogin = async (roleEmail: string) => {
-        setLoading(true)
-        setError("")
-        const demoPassword = "demo123"
-
-        try {
-            const result = await signIn("credentials", {
-                redirect: false,
-                email: roleEmail,
-                password: demoPassword,
-            })
-
-            if (result?.error) {
-                setError("Demo login failed")
-            } else {
-                window.location.href = "/"
-            }
-        } catch (err) {
-            setError("An unexpected error occurred")
-        } finally {
-            setLoading(false)
-        }
-    }
-
     return (
         <div className="min-h-screen bg-[#f5f4f0] flex items-center justify-center p-6">
             <div className="bg-white border border-[#e8e6e1] rounded-[16px] w-[420px] max-w-full p-9" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
@@ -145,23 +121,6 @@ export default function LoginPage() {
                         {loading ? "Signing in..." : "Sign In"}
                     </Button>
 
-                    <div className="flex items-center gap-3 my-5">
-                        <div className="flex-1 h-px bg-[#e8e6e1]"></div>
-                        <span className="text-[11px] font-medium text-[#9e9b95] tracking-[0.8px] uppercase whitespace-nowrap">OR DEMO ACCESS</span>
-                        <div className="flex-1 h-px bg-[#e8e6e1]"></div>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={() => handleDemoLogin("admin@cims.com")}
-                        disabled={loading}
-                        className="w-full flex items-center justify-center gap-1.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] py-[9px] px-3 text-[13px] font-medium text-[#6b6860] cursor-pointer transition-all hover:bg-[#e8f7f1] hover:text-[#0d6b4a] hover:border-[rgba(26,158,110,0.3)] disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                        </svg>
-                        Demo Admin Login
-                    </button>
                 </form>
             </div>
 

@@ -5,13 +5,14 @@ const bcrypt = require('bcryptjs')
 const prisma = new PrismaClient()
 
 async function main() {
-    const password = await bcrypt.hash('password123', 10)
+    const adminPassword = await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD || 'Falcon@2026', 10)
+    const password = await bcrypt.hash(process.env.SEED_USER_PASSWORD || 'password123', 10)
 
     const users = [
         {
             email: 'admin@cims.com',
             name: 'Admin User',
-            password,
+            password: adminPassword,
             role: 'ADMIN',
         },
         {
