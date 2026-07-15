@@ -137,6 +137,41 @@ export async function GET(req: Request) {
         }
     }
 
+    // Backfill: ?backfill=1&from=YYYY-MM-DD → pull older punches the normal 30h
+    // sync missed (e.g. after the device was offline for days). Fetches ONE DAY
+    // at a time so each window stays under the device's ~1000-record cap and its
+    // time filter keeps working. Default range: last 7 days.
+    if (url.searchParams.get("backfill") === "1") {
+        try {
+            const { syncPunches } = await import("@/lib/channelSync")
+            const fromParam = url.searchParams.get("from")
+            const DAY = 86400
+            const now = Math.floor(Date.now() / 1000)
+            // Start at 00:00 of `from` (IST≈UTC+5:30; we use UTC-day windows with a
+            // ±buffer so boundary punches aren't missed). Default: 7 days back.
+            let startEpoch: number
+            if (fromParam && /^\d{4}-\d{2}-\d{2}$/.test(fromParam)) {
+                startEpoch = Math.floor(new Date(fromParam + "T00:00:00Z").getTime() / 1000)
+            } else {
+                startEpoch = now - 7 * DAY
+            }
+            const days: { window: string; newPunches: number; scanned: number }[] = []
+            let totalNew = 0, totalScanned = 0
+            // Each iteration covers a 24h window with a small overlap buffer.
+            for (let s = startEpoch; s < now + DAY; s += DAY) {
+                const start = s - 3600            // 1h back-buffer for clock skew
+                const end = s + DAY + 3600        // 1h forward-buffer
+                const r = await syncPunches(conn[0].deviceId, { start, end })
+                days.push({ window: new Date(s * 1000).toISOString().slice(0, 10), newPunches: r.newPunches, scanned: r.scanned })
+                totalNew += r.newPunches
+                totalScanned += r.scanned
+            }
+            return NextResponse.json({ ran: "backfill", from: new Date(startEpoch * 1000).toISOString().slice(0, 10), totalNew, totalScanned, days })
+        } catch (e) {
+            return NextResponse.json({ ran: "backfill", error: e instanceof Error ? e.message : String(e) }, { status: 200 })
+        }
+    }
+
     // Diagnostic: ?sync=1 → run punch sync directly and report the raw result
     if (url.searchParams.get("sync") === "1") {
         try {

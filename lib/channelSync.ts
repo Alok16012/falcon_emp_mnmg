@@ -87,7 +87,10 @@ export async function importDeviceUsers(deviceId: string): Promise<{ imported: n
     return { imported, linked }
 }
 
-export async function syncPunches(deviceId: string): Promise<{ newPunches: number; scanned: number }> {
+export async function syncPunches(
+    deviceId: string,
+    window?: { start: number; end: number },
+): Promise<{ newPunches: number; scanned: number }> {
     // Device quirks (verified live):
     //  - StartTime/EndTime work ONLY as UNIX EPOCH seconds (date strings = 0/Bad Request).
     //  - The time filter is honoured ONLY with a MODEST count. With a large count
@@ -97,9 +100,11 @@ export async function syncPunches(deviceId: string): Promise<{ newPunches: numbe
     //  - Records come oldest-first, capped at `count`. So the window must hold
     //    fewer than `count` records — a ~30h window (< ~1000 punches/day) ensures
     //    every recent/today punch is returned, newest included.
+    // An explicit `window` (epoch seconds) is used by the backfill to pull older
+    // days one at a time (each day < 1000 records, so the filter keeps working).
     const now = Math.floor(Date.now() / 1000)
-    const start = now - 30 * 60 * 60       // last ~30 hours
-    const end = now + 24 * 60 * 60         // +1 day buffer for any device clock skew
+    const start = window ? window.start : now - 30 * 60 * 60       // default: last ~30 hours
+    const end = window ? window.end : now + 24 * 60 * 60           // +1 day buffer for any device clock skew
     const uri = `/cgi-bin/recordFinder.cgi?action=find&name=AccessControlCardRec&StartTime=${start}&EndTime=${end}&count=1000`
     const res = await sendToDeviceAwait(deviceId, "GET", uri, "", 30000)
     if (!res.ok) return { newPunches: 0, scanned: 0 }
