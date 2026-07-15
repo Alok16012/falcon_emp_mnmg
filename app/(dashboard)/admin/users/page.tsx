@@ -1,669 +1,486 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import {
-    Users,
-    UserPlus,
-    Search,
-    Building2,
-    Shield,
-    Mail,
-    Loader2,
-    Plus,
-    X,
-    MoreVertical,
-    Lock,
-    UserX,
-    UserCheck,
-    Filter,
-    KeyRound,
-    UserCog,
-    Pencil,
-    Trash2
-} from "lucide-react"
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
-import { format } from "date-fns"
 import { toast } from "sonner"
-import { cn } from "@/lib/utils"
-import BulkImportInspectors from "@/components/BulkImportInspectors"
+import {
+    UsersRound, UserPlus, Shield, KeyRound, Trash2, Pencil, X,
+    Check, Loader2, Search, ShieldCheck, Lock,
+} from "lucide-react"
+
+type AppUser = {
+    id: string
+    name: string
+    email: string
+    role: string
+    isActive: boolean
+    createdAt: string
+}
+
+type RolePerm = { role: string; modules: string[] }
+type ModuleMeta = { key: string; label: string; group: string }
+
+const ROLE_LABELS: Record<string, string> = {
+    ADMIN: "Admin",
+    MANAGER: "Manager",
+    INSPECTION_BOY: "Staff",
+    CLIENT: "Client",
+}
+const ROLE_COLORS: Record<string, string> = {
+    ADMIN: "#7c3aed",
+    MANAGER: "#1e3799",
+    INSPECTION_BOY: "#1a9e6e",
+    CLIENT: "#f59e0b",
+}
+// Roles that can be picked when creating/editing a user
+const CREATE_ROLES = ["MANAGER", "INSPECTION_BOY", "CLIENT", "ADMIN"]
 
 export default function UserManagementPage() {
-    const [users, setUsers] = useState<any[]>([])
-    const [companies, setCompanies] = useState<any[]>([])
+    const { data: session, status } = useSession()
+    const isAdmin = session?.user?.role === "ADMIN"
+
+    const [users, setUsers] = useState<AppUser[]>([])
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState("")
-    const [roleFilter, setRoleFilter] = useState("ALL")
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-    const [isResetModalOpen, setIsResetModalOpen] = useState(false)
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
-    const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
-    const [newPassword, setNewPassword] = useState("")
-    const [submitting, setSubmitting] = useState(false)
-    const [editData, setEditData] = useState({ name: "", email: "", role: "" })
 
-    const [managers, setManagers] = useState<any[]>([])
-    const [groupProjects, setGroupProjects] = useState<any[]>([])
-    const [groupCompanies, setGroupCompanies] = useState<any[]>([])
+    // Role → module permission matrix
+    const [rolePerms, setRolePerms] = useState<RolePerm[]>([])
+    const [modules, setModules] = useState<ModuleMeta[]>([])
+    const [activeRole, setActiveRole] = useState("MANAGER")
+    const [savingPerms, setSavingPerms] = useState(false)
 
-    // Group assignment for inspector creation
-    const [groupMode, setGroupMode] = useState<"none" | "existing" | "new">("none")
-    const [groupCompanyId, setGroupCompanyId] = useState("")
-    const [groupProjectId, setGroupProjectId] = useState("")
-    const [newGroupProjectName, setNewGroupProjectName] = useState("")
-    const [groupManagerIds, setGroupManagerIds] = useState<string[]>([])
+    // Modals
+    const [showCreate, setShowCreate] = useState(false)
+    const [editUser, setEditUser] = useState<AppUser | null>(null)
+    const [resetUser, setResetUser] = useState<AppUser | null>(null)
+    const [deleteUser, setDeleteUser] = useState<AppUser | null>(null)
 
-    // Form state
-    const [formData, setFormData] = useState({
-        name: "",
-        email: "",
-        password: "",
-        role: "CLIENT",
-        companyId: ""
-    })
-
-    const fetchData = async () => {
-        setLoading(true)
+    const fetchUsers = useCallback(async () => {
         try {
-            const [usersRes, companiesRes, managersRes] = await Promise.all([
-                fetch("/api/admin/users"),
-                fetch("/api/companies"),
-                fetch("/api/admin/users")
-            ])
-            if (!usersRes.ok) throw new Error(`users: HTTP ${usersRes.status}`)
-            if (!companiesRes.ok) throw new Error(`companies: HTTP ${companiesRes.status}`)
-            if (!managersRes.ok) throw new Error(`managers: HTTP ${managersRes.status}`)
-            const [usersData, companiesData, managersData] = await Promise.all([
-                usersRes.json(),
-                companiesRes.json(),
-                managersRes.json()
-            ])
-            setUsers(Array.isArray(usersData) ? usersData : [])
-            setCompanies(Array.isArray(companiesData) ? companiesData : [])
-            setGroupCompanies(Array.isArray(companiesData) ? companiesData : [])
-            setManagers(Array.isArray(managersData) ? managersData.filter((u: any) => u.role === "MANAGER") : [])
-        } catch (error) {
-            console.error("Failed to fetch admin data", error)
-            toast.error("Failed to load user data")
+            const res = await fetch("/api/admin/users")
+            if (!res.ok) throw new Error()
+            setUsers(await res.json())
+        } catch {
+            toast.error("Users load nahi hue")
         } finally {
             setLoading(false)
         }
-    }
-
-    useEffect(() => {
-        fetchData()
     }, [])
 
-    const handleCreateUser = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setSubmitting(true)
+    const fetchPerms = useCallback(async () => {
         try {
-            const res = await fetch("/api/admin/users", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData)
-            })
-
-            if (!res.ok) {
-                const data = await res.json()
-                throw new Error(data.message || data.error || "Failed to create user")
-            }
-
-            const newUser = await res.json()
-
-            // Handle group assignment for inspectors
-            if (formData.role === "INSPECTION_BOY") {
-                let assignProjectId = groupProjectId
-
-                if (groupMode === "new" && groupCompanyId && newGroupProjectName.trim()) {
-                    // Create new project first
-                    const projRes = await fetch("/api/projects", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ companyId: groupCompanyId, name: newGroupProjectName.trim() })
-                    })
-                    if (projRes.ok) {
-                        const proj = await projRes.json()
-                        assignProjectId = proj.id
-                    }
-                }
-
-                if (assignProjectId && newUser.id) {
-                    await fetch("/api/assignments", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            projectId: assignProjectId,
-                            inspectorIds: [newUser.id],
-                            managerIds: groupManagerIds.length > 0 ? groupManagerIds : undefined,
-                        })
-                    })
-                    toast.success("User created and assigned to group")
-                } else {
-                    toast.success("User created successfully")
-                }
-            } else {
-                toast.success("User created successfully")
-            }
-
-            setIsCreateModalOpen(false)
-            setFormData({ name: "", email: "", password: "", role: "CLIENT", companyId: "" })
-            setGroupMode("none")
-            setGroupCompanyId("")
-            setGroupProjectId("")
-            setNewGroupProjectName("")
-            setGroupManagerIds([])
-            fetchData()
-        } catch (error: any) {
-            toast.error(error.message)
-        } finally {
-            setSubmitting(false)
-        }
-    }
-
-    const toggleUserStatus = async (id: string, currentStatus: boolean) => {
-        try {
-            const res = await fetch(`/api/admin/users/${id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ isActive: !currentStatus })
-            })
-
-            if (!res.ok) throw new Error("Failed to update status")
-
-            setUsers(users.map(u => u.id === id ? { ...u, isActive: !currentStatus } : u))
-            toast.success(`User ${!currentStatus ? 'enabled' : 'disabled'} successfully`)
-        } catch (error) {
-            toast.error("Failed to update user status")
-        }
-    }
-
-    const handlePasswordReset = async () => {
-        if (!selectedUserId || !newPassword) return
-        setSubmitting(true)
-        try {
-            const res = await fetch(`/api/admin/users/${selectedUserId}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ password: newPassword })
-            })
-
-            if (!res.ok) throw new Error("Failed to reset password")
-
-            toast.success("Password reset successfully")
-            setIsResetModalOpen(false)
-            setNewPassword("")
-        } catch (error) {
-            toast.error("Failed to reset password")
-        } finally {
-            setSubmitting(false)
-        }
-    }
-
-    const handleEditUser = async () => {
-        if (!selectedUserId) return
-        setSubmitting(true)
-        try {
-            const res = await fetch(`/api/admin/users/${selectedUserId}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(editData)
-            })
+            const res = await fetch("/api/admin/role-permissions")
+            if (!res.ok) throw new Error()
             const data = await res.json()
-            if (!res.ok) throw new Error(data.error || "Failed to update user")
-            setUsers(users.map(u => u.id === selectedUserId ? { ...u, ...data } : u))
-            toast.success("User updated successfully")
-            setIsEditModalOpen(false)
-        } catch (error: any) {
-            toast.error(error.message)
-        } finally {
-            setSubmitting(false)
+            setRolePerms(data.roles)
+            setModules(data.modules)
+        } catch {
+            toast.error("Permissions load nahi hue")
         }
-    }
+    }, [])
 
-    const handleDeleteUser = async () => {
-        if (!selectedUserId) return
-        setSubmitting(true)
+    useEffect(() => {
+        if (isAdmin) { fetchUsers(); fetchPerms() }
+    }, [isAdmin, fetchUsers, fetchPerms])
+
+    async function toggleActive(u: AppUser) {
         try {
-            const res = await fetch(`/api/admin/users/${selectedUserId}`, { method: "DELETE" })
-            const data = await res.json()
-            if (!res.ok) throw new Error(data.error || "Failed to delete user")
-            setUsers(users.filter(u => u.id !== selectedUserId))
-            toast.success("User deleted successfully")
-            setIsDeleteConfirmOpen(false)
-            setSelectedUserId(null)
-        } catch (error: any) {
-            toast.error(error.message)
-        } finally {
-            setSubmitting(false)
+            const res = await fetch(`/api/admin/users/${u.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ isActive: !u.isActive }),
+            })
+            if (!res.ok) throw new Error()
+            setUsers(prev => prev.map(x => x.id === u.id ? { ...x, isActive: !x.isActive } : x))
+        } catch {
+            toast.error("Status update fail")
         }
     }
 
-    const fetchGroupProjects = async (companyId: string) => {
-        if (!companyId) { setGroupProjects([]); setGroupProjectId(""); return }
-        try {
-            const res = await fetch(`/api/projects?companyId=${companyId}`)
-            if (res.ok) setGroupProjects(await res.json())
-        } catch { }
+    if (status === "loading") {
+        return <div className="flex items-center justify-center h-[60vh]"><Loader2 className="animate-spin text-[var(--text3)]" /></div>
     }
-
-    const filteredUsers = users.filter(u => {
-        const matchesSearch = u.name.toLowerCase().includes(search.toLowerCase()) ||
-            u.email.toLowerCase().includes(search.toLowerCase())
-        const matchesRole = roleFilter === "ALL" || u.role === roleFilter
-        return matchesSearch && matchesRole
-    })
-
-    const getRoleBadge = (role: string) => {
-        switch (role) {
-            case "ADMIN": return <Badge className="bg-red-50 text-red-600 hover:bg-red-50 border-red-100 px-2 py-0 h-5 text-[10px] font-bold">ADMIN</Badge>
-            case "MANAGER": return <Badge className="bg-blue-50 text-blue-600 hover:bg-blue-50 border-blue-100 px-2 py-0 h-5 text-[10px] font-bold">MANAGER</Badge>
-            case "INSPECTION_BOY": return <Badge className="bg-amber-50 text-amber-600 hover:bg-amber-50 border-amber-100 px-2 py-0 h-5 text-[10px] font-bold">INSPECTOR</Badge>
-            case "CLIENT": return <Badge className="bg-purple-50 text-purple-600 hover:bg-purple-50 border-purple-100 px-2 py-0 h-5 text-[10px] font-bold">CLIENT</Badge>
-            default: return <Badge variant="outline" className="px-2 py-0 h-5 text-[10px] font-bold">{role}</Badge>
-        }
-    }
-
-    if (loading && users.length === 0) {
+    if (!isAdmin) {
         return (
-            <div className="p-6 lg:p-7 flex h-[70vh] items-center justify-center">
-                <div className="flex flex-col items-center gap-2">
-                    <Loader2 className="h-10 w-10 animate-spin text-[#1a9e6e]" />
-                    <p className="text-[13px] font-medium text-[#6b6860]">Loading users...</p>
-                </div>
+            <div className="flex flex-col items-center justify-center h-[60vh] text-center gap-2">
+                <Lock className="text-[var(--text3)]" size={32} />
+                <p className="text-[15px] font-semibold text-[var(--text)]">Sirf Admin access kar sakta hai</p>
+                <p className="text-[13px] text-[var(--text3)]">User Management ke liye admin login chahiye.</p>
             </div>
         )
     }
 
+    const filtered = users.filter(u =>
+        !search ||
+        u.name.toLowerCase().includes(search.toLowerCase()) ||
+        u.email.toLowerCase().includes(search.toLowerCase())
+    )
+
+    const activePerm = rolePerms.find(r => r.role === activeRole)
+    const moduleGroups = Array.from(new Set(modules.map(m => m.group)))
+
+    function toggleModule(key: string) {
+        setRolePerms(prev => prev.map(r => {
+            if (r.role !== activeRole) return r
+            const has = r.modules.includes(key)
+            return { ...r, modules: has ? r.modules.filter(k => k !== key) : [...r.modules, key] }
+        }))
+    }
+
+    async function savePerms() {
+        if (!activePerm) return
+        setSavingPerms(true)
+        try {
+            const res = await fetch("/api/admin/role-permissions", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ role: activeRole, modules: activePerm.modules }),
+            })
+            if (!res.ok) throw new Error(await res.text())
+            toast.success(`${ROLE_LABELS[activeRole]} ke modules save ho gaye`)
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Save fail")
+        } finally {
+            setSavingPerms(false)
+        }
+    }
+
     return (
-        <div className="p-6 lg:p-7">
-            <div className="flex items-center justify-between mb-5">
-                <div>
-                    <h1 className="text-[22px] font-semibold tracking-tight text-[#1a1a18]">System Users</h1>
-                    <p className="text-[13px] text-[#6b6860] mt-[3px]">Manage access, roles, and account security</p>
+        <div className="p-4 lg:p-0 flex flex-col gap-6">
+            {/* Header */}
+            <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-[10px] bg-[#1e3799] text-white flex items-center justify-center">
+                        <UsersRound size={20} />
+                    </div>
+                    <div>
+                        <h1 className="text-[20px] font-bold text-[var(--text)] leading-tight">User Management</h1>
+                        <p className="text-[13px] text-[var(--text3)]">Users banao, role do aur module access set karo</p>
+                    </div>
                 </div>
-                <div className="flex items-center gap-[10px]">
-                    <BulkImportInspectors onImportComplete={fetchData} />
+                <button
+                    onClick={() => setShowCreate(true)}
+                    className="flex items-center gap-2 bg-[#1e3799] text-white px-4 py-2.5 rounded-[10px] text-[13px] font-semibold hover:opacity-90 transition"
+                >
+                    <UserPlus size={16} /> Add User
+                </button>
+            </div>
+
+            {/* Role → Module access matrix */}
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] overflow-hidden">
+                <div className="px-5 py-4 border-b border-[var(--border)] flex items-center gap-2 flex-wrap">
+                    <Shield size={16} className="text-[#1e3799]" />
+                    <h2 className="text-[15px] font-semibold text-[var(--text)]">Module Access by Role</h2>
+                    <span className="text-[11px] text-[var(--text3)] ml-1">Admin ko hamesha sab dikhta hai</span>
+                </div>
+
+                {/* Role tabs */}
+                <div className="flex gap-1.5 px-5 pt-4 flex-wrap">
+                    {rolePerms.map(r => (
+                        <button
+                            key={r.role}
+                            onClick={() => setActiveRole(r.role)}
+                            className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-medium border transition ${
+                                activeRole === r.role
+                                    ? "text-white border-transparent"
+                                    : "text-[var(--text2)] border-[var(--border)] hover:bg-[var(--surface2)]"
+                            }`}
+                            style={activeRole === r.role ? { background: ROLE_COLORS[r.role] || "#1e3799" } : undefined}
+                        >
+                            {ROLE_LABELS[r.role] || r.role}
+                            <span className="ml-1.5 opacity-70">({r.modules.length})</span>
+                        </button>
+                    ))}
+                </div>
+
+                {/* Module checkboxes grouped */}
+                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5">
+                    {moduleGroups.map(group => (
+                        <div key={group}>
+                            <p className="text-[10.5px] font-semibold text-[var(--text3)] tracking-wide uppercase mb-2">{group}</p>
+                            <div className="flex flex-col gap-1.5">
+                                {modules.filter(m => m.group === group).map(m => {
+                                    const checked = activePerm?.modules.includes(m.key) ?? false
+                                    return (
+                                        <label key={m.key} className="flex items-center gap-2.5 cursor-pointer group">
+                                            <span className={`h-[18px] w-[18px] rounded-[5px] border flex items-center justify-center transition ${
+                                                checked ? "bg-[#1a9e6e] border-[#1a9e6e]" : "border-[var(--border)] group-hover:border-[var(--text3)]"
+                                            }`}>
+                                                {checked && <Check size={13} className="text-white" strokeWidth={3} />}
+                                            </span>
+                                            <input type="checkbox" className="hidden" checked={checked} onChange={() => toggleModule(m.key)} />
+                                            <span className="text-[13px] text-[var(--text2)]">{m.label}</span>
+                                        </label>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="px-5 py-3 border-t border-[var(--border)] flex justify-end">
                     <button
-                        onClick={() => setIsCreateModalOpen(true)}
-                        className="px-3.5 h-9 bg-[#1a9e6e] text-white rounded-[9px] text-[13px] font-medium flex items-center gap-2 hover:bg-[#158a5e] transition-colors"
+                        onClick={savePerms}
+                        disabled={savingPerms}
+                        className="flex items-center gap-2 bg-[#1a9e6e] text-white px-4 py-2 rounded-[9px] text-[13px] font-semibold hover:opacity-90 transition disabled:opacity-60"
                     >
-                        <UserPlus className="h-4 w-4" />
-                        Create User
+                        {savingPerms ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
+                        {ROLE_LABELS[activeRole]} ke changes save karo
                     </button>
                 </div>
             </div>
 
-            {/* Filters Bar */}
-            <div className="flex items-center gap-3 mb-4">
-                <div className="relative flex-1 max-w-[400px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-[14px] w-[14px] text-[#9e9b95]" />
-                    <input
-                        placeholder="Search name or email..."
-                        className="w-full pl-9 pr-4 py-[9px] bg-white border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:outline-none focus:border-[#1a9e6e] focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] transition-shadow"
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                    />
-                </div>
-                <select
-                    value={roleFilter}
-                    onChange={e => setRoleFilter(e.target.value)}
-                    className="w-[160px] px-3.5 py-[9px] bg-white border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#6b6860] focus:outline-none focus:border-[#1a9e6e] appearance-none cursor-pointer"
-                >
-                    <option value="ALL">All Roles</option>
-                    <option value="ADMIN">Admin</option>
-                    <option value="MANAGER">Manager</option>
-                    <option value="INSPECTION_BOY">Inspector</option>
-                    <option value="CLIENT">Client</option>
-                </select>
-            </div>
-
-            <div className="bg-white border border-[#e8e6e1] rounded-[14px] overflow-hidden">
-                {filteredUsers.map((user, idx) => (
-                    <div
-                        key={user.id}
-                        className={`flex items-center gap-3.5 p-5 hover:bg-[#f9f8f5] transition-colors ${
-                            idx !== filteredUsers.length - 1 ? "border-b border-[#e8e6e1]" : ""
-                        } ${!user.isActive ? "opacity-60" : ""}`}
-                    >
-                        <div className={`h-9 w-9 rounded-full flex items-center justify-center text-[14px] font-semibold shrink-0 ${
-                            user.role === "ADMIN" ? "bg-[#e8f7f1] text-[#0d6b4a]" :
-                            user.role === "MANAGER" ? "bg-[#eff6ff] text-[#1d4ed8]" :
-                            user.role === "INSPECTION_BOY" ? "bg-[#fef3c7] text-[#92400e]" :
-                            "bg-[#f9f8f5] text-[#6b6860]"
-                        }`}>
-                            {user.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                                <span className="text-[13.5px] font-medium text-[#1a1a18]">{user.name}</span>
-                                <span className={`px-[9px] py-0.5 rounded-[20px] text-[11px] font-medium ${
-                                    user.role === "INSPECTION_BOY" ? "bg-[#fef3c7] text-[#92400e]" :
-                                    user.role === "MANAGER" ? "bg-[#eff6ff] text-[#1d4ed8]" :
-                                    user.role === "ADMIN" ? "bg-[#e8f7f1] text-[#0d6b4a]" :
-                                    "bg-[#f9f8f5] text-[#6b6860]"
-                                }`}>
-                                    {user.role === "ADMIN" ? "Admin" : user.role === "MANAGER" ? "Manager" : user.role === "INSPECTION_BOY" ? "Inspector" : user.role === "CLIENT" ? "Client" : user.role}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                                <Mail className="h-3 w-3 text-[#9e9b95]" />
-                                <span className="text-[12.5px] text-[#6b6860]">{user.email}</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 ml-auto">
-                            <button
-                                onClick={() => {
-                                    setSelectedUserId(user.id)
-                                    setIsResetModalOpen(true)
-                                }}
-                                className="h-[30px] w-[30px] rounded-[7px] bg-[#f9f8f5] border border-[#e8e6e1] flex items-center justify-center hover:bg-[#fef3c7] hover:text-[#d97706] hover:border-[#fcd34d] transition-colors"
-                                title="Reset Password"
-                            >
-                                <KeyRound className="h-[14px] w-[14px] text-[#6b6860]" />
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setSelectedUserId(user.id)
-                                    setEditData({ name: user.name, email: user.email, role: user.role })
-                                    setIsEditModalOpen(true)
-                                }}
-                                className="h-[30px] w-[30px] rounded-[7px] bg-[#f9f8f5] border border-[#e8e6e1] flex items-center justify-center hover:bg-[#eff6ff] hover:text-[#1d4ed8] hover:border-[#93c5fd] transition-colors"
-                                title="Edit User"
-                            >
-                                <Pencil className="h-[14px] w-[14px] text-[#6b6860]" />
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setSelectedUserId(user.id)
-                                    setIsDeleteConfirmOpen(true)
-                                }}
-                                className="h-[30px] w-[30px] rounded-[7px] bg-[#f9f8f5] border border-[#e8e6e1] flex items-center justify-center hover:bg-[#fef2f2] hover:text-[#dc2626] hover:border-[#fca5a5] transition-colors"
-                                title="Delete User"
-                            >
-                                <Trash2 className="h-[14px] w-[14px] text-[#6b6860]" />
-                            </button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Create New User Modal */}
-            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-                <DialogContent className="bg-white rounded-2xl w-[480px] max-w-[95vw] p-7 shadow-[0_20px_60px_rgba(0,0,0,0.12)] border-none [&>button]:hidden">
-                    <div className="flex items-start justify-between mb-5">
-                        <div>
-                            <h2 className="text-[17px] font-semibold text-[#1a1a18]">Create New User</h2>
-                            <p className="text-[13px] text-[#6b6860] mt-1 leading-relaxed">Provision a new account with specific role-based permissions.</p>
-                        </div>
-                        <button
-                            onClick={() => setIsCreateModalOpen(false)}
-                            className="h-[30px] w-[30px] rounded-[8px] bg-[#f9f8f5] border border-[#e8e6e1] text-[#6b6860] text-[16px] cursor-pointer hover:bg-[#fef2f2] hover:text-[#dc2626] hover:border-[#fca5a5] transition-colors flex items-center justify-center"
-                        >
-                            ✕
-                        </button>
-                    </div>
-
-                    <div className="border-t border-[#e8e6e1] mb-5" />
-
-                    <form onSubmit={handleCreateUser} className="space-y-4">
-                        <div className="space-y-1.5">
-                            <label className="text-[11.5px] font-medium text-[#6b6860] uppercase tracking-wide">Full Name</label>
-                            <input
-                                type="text"
-                                required
-                                value={formData.name}
-                                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                placeholder="John Doe"
-                                className="w-full px-3.5 py-2.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:outline-none focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)]"
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[11.5px] font-medium text-[#6b6860] uppercase tracking-wide">Email Address</label>
-                            <input
-                                type="email"
-                                required
-                                value={formData.email}
-                                onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                placeholder="john@example.com"
-                                className="w-full px-3.5 py-2.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:outline-none focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)]"
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[11.5px] font-medium text-[#6b6860] uppercase tracking-wide">Initial Password</label>
-                            <input
-                                type="password"
-                                required
-                                value={formData.password}
-                                onChange={e => setFormData({ ...formData, password: e.target.value })}
-                                placeholder="••••••••"
-                                className="w-full px-3.5 py-2.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:outline-none focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)]"
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[11.5px] font-medium text-[#6b6860] uppercase tracking-wide">Assignment Role</label>
-                            <select
-                                value={formData.role}
-                                onChange={e => setFormData({ ...formData, role: e.target.value })}
-                                className="w-full px-3.5 py-2.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] focus:outline-none focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] appearance-none cursor-pointer"
-                            >
-                                <option value="ADMIN">Administrator</option>
-                                <option value="MANAGER">Manager</option>
-                                <option value="INSPECTION_BOY">Inspector</option>
-                                <option value="CLIENT">Client Portal User</option>
-                            </select>
-                        </div>
-                        {formData.role === "CLIENT" && (
-                            <div className="space-y-1.5">
-                                <label className="text-[11.5px] font-medium text-[#6b6860] uppercase tracking-wide">Designated Company</label>
-                                <select
-                                    value={formData.companyId}
-                                    onChange={e => setFormData({ ...formData, companyId: e.target.value })}
-                                    required
-                                    className="w-full px-3.5 py-2.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] focus:outline-none focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] appearance-none cursor-pointer"
-                                >
-                                    <option value="">Select a company</option>
-                                    {companies.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-
-                        <div className="border-t border-[#e8e6e1] mt-1 pt-4">
-                            <button
-                                type="submit"
-                                disabled={submitting}
-                                className="w-full py-3 bg-[#1a9e6e] text-white border-none rounded-[9px] text-[13.5px] font-medium hover:bg-[#158a5e] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                            >
-                                {submitting ? (
-                                    <span className="flex items-center justify-center gap-2">
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        Creating...
-                                    </span>
-                                ) : (
-                                    "Complete Provisioning"
-                                )}
-                            </button>
-                        </div>
-                    </form>
-                </DialogContent>
-            </Dialog>
-
-            {/* Password Reset Modal */}
-            <Dialog open={isResetModalOpen} onOpenChange={setIsResetModalOpen}>
-                <DialogContent className="bg-white rounded-2xl w-[400px] max-w-[95vw] p-7 shadow-[0_20px_60px_rgba(0,0,0,0.12)] border-none [&>button]:hidden">
-                    <div className="flex items-start justify-between mb-5">
-                        <div>
-                            <h2 className="text-[17px] font-semibold text-[#1a1a18]">Reset Account Password</h2>
-                            <p className="text-[13px] text-[#6b6860] mt-1">Create a new secure password for this user.</p>
-                        </div>
-                        <button
-                            onClick={() => setIsResetModalOpen(false)}
-                            className="h-[30px] w-[30px] rounded-[8px] bg-[#f9f8f5] border border-[#e8e6e1] text-[#6b6860] text-[16px] cursor-pointer hover:bg-[#fef2f2] hover:text-[#dc2626] hover:border-[#fca5a5] transition-colors flex items-center justify-center"
-                        >
-                            ✕
-                        </button>
-                    </div>
-
-                    <div className="border-t border-[#e8e6e1] mb-5" />
-
-                    <div className="space-y-1.5 mb-4">
-                        <label className="text-[11.5px] font-medium text-[#6b6860] uppercase tracking-wide">New Password</label>
+            {/* Users list */}
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] overflow-hidden">
+                <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between gap-3 flex-wrap">
+                    <h2 className="text-[15px] font-semibold text-[var(--text)]">All Users <span className="text-[var(--text3)] font-normal">({users.length})</span></h2>
+                    <div className="relative">
+                        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
                         <input
-                            type="password"
-                            value={newPassword}
-                            onChange={e => setNewPassword(e.target.value)}
-                            placeholder="Enter strong password"
-                            className="w-full px-3.5 py-2.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:outline-none focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)]"
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            placeholder="Search name / email"
+                            className="pl-9 pr-3 py-2 text-[13px] rounded-[9px] border border-[var(--border)] bg-[var(--surface2)] w-[220px] outline-none focus:border-[#1e3799]"
                         />
                     </div>
-
-                    <div className="flex gap-2.5">
-                        <button
-                            onClick={() => setIsResetModalOpen(false)}
-                            className="flex-1 py-2.5 bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[9px] text-[13px] font-medium hover:bg-[#f9f8f5] transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handlePasswordReset}
-                            disabled={submitting || !newPassword}
-                            className="flex-1 py-2.5 bg-[#1a9e6e] text-white border-none rounded-[9px] text-[13px] font-medium hover:bg-[#158a5e] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                            {submitting ? (
-                                <span className="flex items-center justify-center gap-2">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    Resetting...
-                                </span>
-                            ) : (
-                                "Confirm Reset"
-                            )}
-                        </button>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            {/* Edit User Modal */}
-            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-                <DialogContent className="bg-white rounded-2xl w-[440px] max-w-[95vw] p-7 shadow-[0_20px_60px_rgba(0,0,0,0.12)] border-none [&>button]:hidden">
-                    <div className="flex items-start justify-between mb-5">
-                        <div>
-                            <h2 className="text-[17px] font-semibold text-[#1a1a18]">Edit User</h2>
-                            <p className="text-[13px] text-[#6b6860] mt-1">Update user details and role.</p>
-                        </div>
-                        <button
-                            onClick={() => setIsEditModalOpen(false)}
-                            className="h-[30px] w-[30px] rounded-[8px] bg-[#f9f8f5] border border-[#e8e6e1] text-[#6b6860] cursor-pointer hover:bg-[#fef2f2] hover:text-[#dc2626] hover:border-[#fca5a5] transition-colors flex items-center justify-center"
-                        >✕</button>
-                    </div>
-                    <div className="border-t border-[#e8e6e1] mb-5" />
-                    <div className="space-y-4">
-                        <div className="space-y-1.5">
-                            <label className="text-[11.5px] font-medium text-[#6b6860] uppercase tracking-wide">Full Name</label>
-                            <input
-                                type="text"
-                                value={editData.name}
-                                onChange={e => setEditData({ ...editData, name: e.target.value })}
-                                className="w-full px-3.5 py-2.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] focus:outline-none focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)]"
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[11.5px] font-medium text-[#6b6860] uppercase tracking-wide">Email Address</label>
-                            <input
-                                type="email"
-                                value={editData.email}
-                                onChange={e => setEditData({ ...editData, email: e.target.value })}
-                                className="w-full px-3.5 py-2.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] focus:outline-none focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)]"
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[11.5px] font-medium text-[#6b6860] uppercase tracking-wide">Role</label>
-                            <select
-                                value={editData.role}
-                                onChange={e => setEditData({ ...editData, role: e.target.value })}
-                                className="w-full px-3.5 py-2.5 bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] focus:outline-none focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] appearance-none cursor-pointer"
-                            >
-                                <option value="ADMIN">Administrator</option>
-                                <option value="MANAGER">Manager</option>
-                                <option value="INSPECTION_BOY">Inspector</option>
-                                <option value="CLIENT">Client Portal User</option>
-                            </select>
-                        </div>
-                        <div className="border-t border-[#e8e6e1] pt-4">
-                            <button
-                                onClick={handleEditUser}
-                                disabled={submitting}
-                                className="w-full py-3 bg-[#1a9e6e] text-white border-none rounded-[9px] text-[13.5px] font-medium hover:bg-[#158a5e] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            >
-                                {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving...</> : "Save Changes"}
-                            </button>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            {/* Delete Confirmation Modal */}
-            {isDeleteConfirmOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="bg-white rounded-[16px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] p-6 w-[360px] max-w-[90vw]">
-                        <div className="w-[44px] h-[44px] bg-[#fef2f2] rounded-full flex items-center justify-center mb-4">
-                            <Trash2 className="h-5 w-5 text-[#dc2626]" />
-                        </div>
-                        <h3 className="text-[16px] font-semibold text-[#1a1a18] mb-1">Delete User?</h3>
-                        <p className="text-[13px] text-[#6b6860] mb-5 leading-relaxed">
-                            This will permanently remove the user account. This action cannot be undone.
-                        </p>
-                        <div className="flex gap-2.5">
-                            <button
-                                onClick={() => { setIsDeleteConfirmOpen(false); setSelectedUserId(null) }}
-                                className="flex-1 py-2.5 bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[9px] text-[13px] font-medium hover:bg-[#f9f8f5] transition-colors"
-                            >Cancel</button>
-                            <button
-                                onClick={handleDeleteUser}
-                                disabled={submitting}
-                                className="flex-1 py-2.5 bg-[#dc2626] text-white rounded-[9px] text-[13px] font-medium hover:bg-[#b91c1c] transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-                            >
-                                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                                Delete User
-                            </button>
-                        </div>
-                    </div>
                 </div>
-            )}
 
-            {filteredUsers.length === 0 && (
-                <div className="bg-white border border-[#e8e6e1] rounded-[14px] py-[60px] text-center">
-                    <div className="w-[56px] h-[56px] bg-[#e8f7f1] rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Users className="h-6 w-6 text-[#1a9e6e]" />
+                {loading ? (
+                    <div className="py-16 flex justify-center"><Loader2 className="animate-spin text-[var(--text3)]" /></div>
+                ) : filtered.length === 0 ? (
+                    <div className="py-16 text-center text-[13px] text-[var(--text3)]">Koi user nahi mila</div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-[13px]">
+                            <thead>
+                                <tr className="text-left text-[var(--text3)] border-b border-[var(--border)]">
+                                    <th className="px-5 py-2.5 font-medium">Name</th>
+                                    <th className="px-5 py-2.5 font-medium">Email</th>
+                                    <th className="px-5 py-2.5 font-medium">Role</th>
+                                    <th className="px-5 py-2.5 font-medium">Status</th>
+                                    <th className="px-5 py-2.5 font-medium text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.map(u => (
+                                    <tr key={u.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface2)]">
+                                        <td className="px-5 py-3 font-medium text-[var(--text)]">{u.name}</td>
+                                        <td className="px-5 py-3 text-[var(--text2)]">{u.email}</td>
+                                        <td className="px-5 py-3">
+                                            <span className="px-2.5 py-1 rounded-full text-[11.5px] font-semibold text-white" style={{ background: ROLE_COLORS[u.role] || "#6b7280" }}>
+                                                {ROLE_LABELS[u.role] || u.role}
+                                            </span>
+                                        </td>
+                                        <td className="px-5 py-3">
+                                            <button
+                                                onClick={() => toggleActive(u)}
+                                                className={`px-2.5 py-1 rounded-full text-[11.5px] font-semibold ${u.isActive ? "bg-[#e8f7f1] text-[#1a9e6e]" : "bg-[#fef2f2] text-[#dc2626]"}`}
+                                            >
+                                                {u.isActive ? "Active" : "Inactive"}
+                                            </button>
+                                        </td>
+                                        <td className="px-5 py-3">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <IconBtn title="Edit" onClick={() => setEditUser(u)}><Pencil size={14} /></IconBtn>
+                                                <IconBtn title="Reset password" onClick={() => setResetUser(u)}><KeyRound size={14} /></IconBtn>
+                                                {u.id !== session?.user?.id && (
+                                                    <IconBtn title="Delete" danger onClick={() => setDeleteUser(u)}><Trash2 size={14} /></IconBtn>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
-                    <h3 className="text-[16px] font-semibold text-[#1a1a18] mb-1.5">No users found</h3>
-                    <p className="text-[13px] text-[#6b6860] max-w-[250px] mx-auto leading-relaxed">
-                        No system users found matching your criteria.
-                    </p>
-                </div>
-            )}
+                )}
+            </div>
+
+            {showCreate && <CreateUserModal onClose={() => setShowCreate(false)} onDone={() => { setShowCreate(false); fetchUsers() }} />}
+            {editUser && <EditUserModal user={editUser} onClose={() => setEditUser(null)} onDone={() => { setEditUser(null); fetchUsers() }} />}
+            {resetUser && <ResetPasswordModal user={resetUser} onClose={() => setResetUser(null)} />}
+            {deleteUser && <DeleteModal user={deleteUser} onClose={() => setDeleteUser(null)} onDone={() => { setDeleteUser(null); fetchUsers() }} />}
         </div>
+    )
+}
+
+function IconBtn({ children, onClick, title, danger }: { children: React.ReactNode; onClick: () => void; title: string; danger?: boolean }) {
+    return (
+        <button
+            title={title}
+            onClick={onClick}
+            className={`p-1.5 rounded-[7px] transition ${danger ? "text-[#dc2626] hover:bg-[#fef2f2]" : "text-[var(--text3)] hover:bg-[var(--surface2)] hover:text-[var(--text)]"}`}
+        >
+            {children}
+        </button>
+    )
+}
+
+function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+    return (
+        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+            <div className="bg-[var(--surface)] rounded-[14px] w-full max-w-[420px] shadow-2xl" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
+                    <h3 className="text-[15px] font-semibold text-[var(--text)]">{title}</h3>
+                    <button onClick={onClose} className="p-1 rounded-md hover:bg-[var(--surface2)] text-[var(--text3)]"><X size={18} /></button>
+                </div>
+                <div className="p-5">{children}</div>
+            </div>
+        </div>
+    )
+}
+
+const inputCls = "w-full px-3 py-2.5 text-[13px] rounded-[9px] border border-[var(--border)] bg-[var(--surface2)] outline-none focus:border-[#1e3799]"
+const labelCls = "block text-[12px] font-medium text-[var(--text2)] mb-1.5"
+
+function CreateUserModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+    const [form, setForm] = useState({ name: "", email: "", password: "", role: "MANAGER" })
+    const [busy, setBusy] = useState(false)
+
+    async function submit() {
+        if (!form.name || !form.email || !form.password) { toast.error("Naam, email, password bharo"); return }
+        setBusy(true)
+        try {
+            const res = await fetch("/api/admin/users", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(form),
+            })
+            if (!res.ok) { const t = await res.json().catch(() => ({})); throw new Error(t.error || "Create fail") }
+            toast.success("User ban gaya")
+            onDone()
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Create fail")
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    return (
+        <ModalShell title="Add New User" onClose={onClose}>
+            <div className="flex flex-col gap-3.5">
+                <div><label className={labelCls}>Full Name</label><input className={inputCls} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
+                <div><label className={labelCls}>Email</label><input className={inputCls} type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
+                <div><label className={labelCls}>Password</label><input className={inputCls} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} /></div>
+                <div>
+                    <label className={labelCls}>Role</label>
+                    <select className={inputCls} value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
+                        {CREATE_ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>)}
+                    </select>
+                    <p className="text-[11px] text-[var(--text3)] mt-1.5">Role ke modules upar &quot;Module Access by Role&quot; me set karo.</p>
+                </div>
+                <button onClick={submit} disabled={busy} className="mt-1 bg-[#1e3799] text-white py-2.5 rounded-[9px] text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2">
+                    {busy && <Loader2 size={15} className="animate-spin" />} Create User
+                </button>
+            </div>
+        </ModalShell>
+    )
+}
+
+function EditUserModal({ user, onClose, onDone }: { user: AppUser; onClose: () => void; onDone: () => void }) {
+    const [form, setForm] = useState({ name: user.name, email: user.email, role: user.role })
+    const [busy, setBusy] = useState(false)
+
+    async function submit() {
+        setBusy(true)
+        try {
+            const res = await fetch(`/api/admin/users/${user.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(form),
+            })
+            if (!res.ok) { const t = await res.json().catch(() => ({})); throw new Error(t.error || "Update fail") }
+            toast.success("User update ho gaya")
+            onDone()
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Update fail")
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    return (
+        <ModalShell title="Edit User" onClose={onClose}>
+            <div className="flex flex-col gap-3.5">
+                <div><label className={labelCls}>Full Name</label><input className={inputCls} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
+                <div><label className={labelCls}>Email</label><input className={inputCls} type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
+                <div>
+                    <label className={labelCls}>Role</label>
+                    <select className={inputCls} value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
+                        {CREATE_ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>)}
+                    </select>
+                </div>
+                <button onClick={submit} disabled={busy} className="mt-1 bg-[#1e3799] text-white py-2.5 rounded-[9px] text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2">
+                    {busy && <Loader2 size={15} className="animate-spin" />} Save Changes
+                </button>
+            </div>
+        </ModalShell>
+    )
+}
+
+function ResetPasswordModal({ user, onClose }: { user: AppUser; onClose: () => void }) {
+    const [password, setPassword] = useState("")
+    const [busy, setBusy] = useState(false)
+
+    async function submit() {
+        if (password.length < 4) { toast.error("Password chhota hai"); return }
+        setBusy(true)
+        try {
+            const res = await fetch(`/api/admin/users/${user.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ password }),
+            })
+            if (!res.ok) throw new Error()
+            toast.success("Password reset ho gaya")
+            onClose()
+        } catch {
+            toast.error("Reset fail")
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    return (
+        <ModalShell title={`Reset Password — ${user.name}`} onClose={onClose}>
+            <div className="flex flex-col gap-3.5">
+                <div><label className={labelCls}>New Password</label><input className={inputCls} value={password} onChange={e => setPassword(e.target.value)} /></div>
+                <button onClick={submit} disabled={busy} className="mt-1 bg-[#1e3799] text-white py-2.5 rounded-[9px] text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2">
+                    {busy && <Loader2 size={15} className="animate-spin" />} Reset Password
+                </button>
+            </div>
+        </ModalShell>
+    )
+}
+
+function DeleteModal({ user, onClose, onDone }: { user: AppUser; onClose: () => void; onDone: () => void }) {
+    const [busy, setBusy] = useState(false)
+
+    async function submit() {
+        setBusy(true)
+        try {
+            const res = await fetch(`/api/admin/users/${user.id}`, { method: "DELETE" })
+            if (!res.ok) { const t = await res.json().catch(() => ({})); throw new Error(t.error || "Delete fail") }
+            toast.success("User delete ho gaya")
+            onDone()
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Delete fail")
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    return (
+        <ModalShell title="Delete User" onClose={onClose}>
+            <div className="flex flex-col gap-4">
+                <p className="text-[13px] text-[var(--text2)]"><b>{user.name}</b> ({user.email}) ko delete karna hai? Ye undo nahi hoga.</p>
+                <div className="flex gap-2 justify-end">
+                    <button onClick={onClose} className="px-4 py-2 rounded-[9px] text-[13px] font-medium border border-[var(--border)] text-[var(--text2)] hover:bg-[var(--surface2)]">Cancel</button>
+                    <button onClick={submit} disabled={busy} className="px-4 py-2 rounded-[9px] text-[13px] font-semibold bg-[#dc2626] text-white hover:opacity-90 disabled:opacity-60 flex items-center gap-2">
+                        {busy && <Loader2 size={15} className="animate-spin" />} Delete
+                    </button>
+                </div>
+            </div>
+        </ModalShell>
     )
 }

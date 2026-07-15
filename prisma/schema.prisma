@@ -1469,6 +1469,15 @@ enum Role {
   CLIENT
 }
 
+/// Which app modules each role can access. ADMIN is always full-access and is
+/// not stored here. `modules` holds module keys from lib/modules.ts.
+model RolePermission {
+  id        String   @id @default(uuid())
+  role      String   @unique
+  modules   String[] @default([])
+  updatedAt DateTime @updatedAt
+}
+
 enum LeadStatus {
   NEW_LEAD
   CONTACTED

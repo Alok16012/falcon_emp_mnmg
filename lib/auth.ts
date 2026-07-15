@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import prisma from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { Role } from "@prisma/client"
+import { modulesForRole } from "@/lib/modules"
 
 export const authOptions: NextAuthOptions = {
     session: {
@@ -93,12 +94,22 @@ export const authOptions: NextAuthOptions = {
                     }
                 } catch { /* ignore DB errors */ }
             }
+            // Resolve which app modules this role can access (ADMIN → all).
+            // Re-fetched every time so permission changes apply without re-login.
+            try {
+                const role = String(token.role || "")
+                const perm = role && role !== "ADMIN"
+                    ? await prisma.rolePermission.findUnique({ where: { role }, select: { modules: true } })
+                    : null
+                token.modules = modulesForRole(role, perm?.modules)
+            } catch { /* ignore DB errors */ }
             return token
         },
         async session({ session, token }) {
             if (token) {
                 session.user.id = token.id
                 session.user.role = token.role as Role
+                session.user.modules = (token.modules as string[]) || []
             }
             return session
         },

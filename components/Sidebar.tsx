@@ -5,24 +5,37 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
+import { MODULES } from "@/lib/modules"
 import {
     LayoutDashboard,
-    Users,
-    Building2,
     UserCheck,
-    CalendarOff,
     Wallet,
-    CreditCard,
     X,
     Sparkles,
     ClipboardList,
     IndianRupee,
-    ScanFace,
     Cpu,
     PackageSearch,
     UserPlus,
     Boxes,
+    UsersRound,
+    type LucideIcon,
 } from "lucide-react"
+
+// Icon per module key (module list itself lives in lib/modules.ts)
+const MODULE_ICONS: Record<string, LucideIcon> = {
+    dashboard: LayoutDashboard,
+    employees: UserCheck,
+    attendance: ClipboardList,
+    joinings: UserPlus,
+    advances: IndianRupee,
+    payroll: Wallet,
+    inquiries: PackageSearch,
+    stock: Boxes,
+    hardware: Cpu,
+    users: UsersRound,
+    profile: UserCheck,
+}
 
 export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
     const pathname = usePathname()
@@ -31,39 +44,24 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
     useEffect(() => setMounted(true), [])
     // Gate role until mounted so SSR and first client render match (avoids hydration mismatch)
     const role = mounted ? session?.user?.role : undefined
+    const allowed = mounted ? (session?.user?.modules || []) : []
 
-    const navigation = [
-        {
-            title: "MAIN",
-            links: [
-                { name: "Dashboard", href: "/admin", icon: LayoutDashboard, roles: ["ADMIN", "MANAGER"] },
-            ]
-        },
-        {
-            title: "HR MANAGEMENT",
-            links: [
-                { name: "Employees", href: "/employees", icon: UserCheck, roles: ["ADMIN", "MANAGER"] },
-                { name: "Attendance", href: "/attendance", icon: ClipboardList, roles: ["ADMIN", "MANAGER"] },
-                { name: "Worker Joining", href: "/joinings", icon: UserPlus, roles: ["ADMIN", "MANAGER"] },
-                { name: "Advance Salary", href: "/advances", icon: IndianRupee, roles: ["ADMIN", "MANAGER"] },
-                { name: "Payroll", href: "/payroll", icon: Wallet, roles: ["ADMIN", "MANAGER"] },
-            ]
-        },
-        {
-            title: "SALES",
-            links: [
-                { name: "Product Inquiry", href: "/inquiries", icon: PackageSearch, roles: ["ADMIN", "MANAGER"] },
-                { name: "Stock Management", href: "/stock", icon: Boxes, roles: ["ADMIN", "MANAGER"] },
-            ]
-        },
-        {
-            title: "CONFIGURATION",
-            links: [
-                { name: "Hardware Devices", href: "/hardware", icon: Cpu, roles: ["ADMIN", "MANAGER"] },
-                { name: "My Profile", href: "/profile", icon: UserCheck, roles: ["ADMIN", "MANAGER"] },
-            ]
-        }
-    ]
+    // Which module keys this user may see. ADMIN → everything; others → the
+    // modules granted to their role (resolved in the auth session).
+    const canSee = (key: string, adminOnly?: boolean) => {
+        if (role === "ADMIN") return true
+        if (adminOnly) return false
+        return allowed.includes(key)
+    }
+
+    // Build sidebar sections from the central module list, in declared order.
+    const groupOrder = ["MAIN", "HR MANAGEMENT", "SALES", "CONFIGURATION"]
+    const navigation = groupOrder.map(title => ({
+        title,
+        links: MODULES
+            .filter(m => m.group === title && canSee(m.key, m.adminOnly))
+            .map(m => ({ name: m.label, href: m.href, icon: MODULE_ICONS[m.key] || UserCheck })),
+    })).filter(section => section.links.length > 0)
 
     return (
         <div className="flex h-full w-[230px] flex-col bg-[var(--surface)] border-r border-[var(--border)] overflow-hidden">
@@ -90,18 +88,13 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
             {/* Navigation */}
             <div className="flex-1 overflow-y-auto pt-4 px-2 scrollbar-thin">
                 {navigation.map((section) => {
-                    const filteredLinks = section.links.filter(link =>
-                        role ? link.roles.includes(role) : link.roles.includes("ADMIN")
-                    )
-                    if (filteredLinks.length === 0) return null
-
                     return (
                         <div key={section.title} className="mb-6">
                             <h3 className="px-3 mb-2 text-[10.5px] font-semibold text-[var(--text3)] tracking-[0.6px] uppercase">
                                 {section.title}
                             </h3>
                             <nav className="space-y-0.5">
-                                {filteredLinks.map((link) => {
+                                {section.links.map((link) => {
                                     const Icon = link.icon
                                     const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href))
 
