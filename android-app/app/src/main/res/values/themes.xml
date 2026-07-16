@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Main app theme -->
+    <style name="Theme.Falcon" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">@color/falcon_blue</item>
+        <item name="colorPrimaryDark">@color/falcon_blue_dark</item>
+        <item name="colorAccent">@color/falcon_blue</item>
+        <item name="android:statusBarColor">@color/falcon_blue_dark</item>
+        <item name="android:windowBackground">@color/white</item>
+    </style>
+
+    <!-- Splash: shown instantly while the app starts, swapped in onCreate -->
+    <style name="Theme.FalconSplash" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash</item>
+        <item name="android:statusBarColor">@color/falcon_blue</item>
+    </style>
+</resources>
