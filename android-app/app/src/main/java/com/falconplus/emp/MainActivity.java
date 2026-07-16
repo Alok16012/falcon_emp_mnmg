@@ -33,8 +33,8 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
  */
 public class MainActivity extends AppCompatActivity {
 
-    private static final String APP_URL = "https://falcon-emp-mnmg.vercel.app";
-    private static final String APP_HOST = "falcon-emp-mnmg.vercel.app";
+    private static final String APP_URL = "https://falconerp-web-production.up.railway.app";
+    private static final String APP_HOST = "falconerp-web-production.up.railway.app";
     private static final int FILE_CHOOSER_REQUEST = 1001;
 
     private WebView webView;
