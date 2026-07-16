@@ -39,7 +39,7 @@ export default function DashboardLayout({
 
             <div className="flex flex-col w-full min-w-0">
                 <TopNav onMenuClick={() => setIsSidebarOpen(true)} />
-                <main className="flex-1 overflow-y-auto flex flex-col">
+                <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
                     <div className="flex-1 mx-auto w-full flex flex-col gap-0 p-0 lg:gap-8 lg:p-8 max-w-7xl animate-in fade-in duration-150">
                         {children}
                     </div>

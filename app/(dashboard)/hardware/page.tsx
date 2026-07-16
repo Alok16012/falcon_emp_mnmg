@@ -332,7 +332,7 @@ export default function HardwarePage() {
     return (
         <div className="p-6 max-w-5xl mx-auto">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                 <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-[10px] bg-[var(--accent-light)] flex items-center justify-center">
                         <Cpu size={20} className="text-[var(--accent-text)]" />
@@ -353,7 +353,7 @@ export default function HardwarePage() {
             </div>
 
             {/* Stats Row */}
-            <div className="grid grid-cols-5 gap-3 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
                 <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[10px] p-4">
                     <p className="text-[11px] text-[var(--text3)] mb-1">Devices</p>
                     <p className="text-[22px] font-bold text-[var(--text)]">{devices.length}</p>
@@ -588,8 +588,8 @@ export default function HardwarePage() {
                         </div>
                     )}
 
-                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[12px] overflow-hidden">
-                        <table className="w-full text-[12.5px]">
+                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[12px] overflow-hidden overflow-x-auto">
+                        <table className="w-full min-w-[640px] text-[12.5px]">
                             <thead>
                                 <tr className="border-b border-[var(--border)] bg-[var(--surface2)]">
                                     <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-wide w-[120px]">User ID</th>
@@ -655,8 +655,8 @@ export default function HardwarePage() {
                         <span className="text-[12px] text-[var(--text3)] shrink-0">{mappedCount}/{mappings.length} mapped</span>
                     </div>
 
-                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[12px] overflow-hidden">
-                        <table className="w-full text-[12.5px]">
+                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[12px] overflow-hidden overflow-x-auto">
+                        <table className="w-full min-w-[640px] text-[12.5px]">
                             <thead>
                                 <tr className="border-b border-[var(--border)] bg-[var(--surface2)]">
                                     <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-wide">Employee</th>
@@ -693,8 +693,8 @@ export default function HardwarePage() {
 
             {/* ── SYNC LOGS TAB ────────────────────────────────────────────── */}
             {tab === "logs" && (
-                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[12px] overflow-hidden">
-                    <table className="w-full text-[12.5px]">
+                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[12px] overflow-hidden overflow-x-auto">
+                    <table className="w-full min-w-[640px] text-[12.5px]">
                         <thead>
                             <tr className="border-b border-[var(--border)] bg-[var(--surface2)]">
                                 <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-wide">Time</th>
@@ -785,7 +785,7 @@ function DeviceCard({
 
     return (
         <div className={cn(
-            "bg-[var(--surface)] border rounded-[12px] overflow-hidden transition-colors",
+            "bg-[var(--surface)] border rounded-[12px] overflow-hidden overflow-x-auto transition-colors",
             device.enabled ? "border-[var(--border)]" : "border-[var(--border)] opacity-60"
         )}>
             <div className="flex items-center justify-between p-4">
@@ -884,7 +884,7 @@ function DeviceCard({
             </div>
 
             {expanded && (
-                <div className="border-t border-[var(--border)] px-4 py-3 bg-[var(--surface2)] grid grid-cols-3 gap-3 text-[12px]">
+                <div className="border-t border-[var(--border)] px-4 py-3 bg-[var(--surface2)] grid grid-cols-1 sm:grid-cols-3 gap-3 text-[12px]">
                     <div>
                         <p className="text-[var(--text3)] mb-0.5">Username</p>
                         <p className="text-[var(--text)] font-mono">{device.username}</p>

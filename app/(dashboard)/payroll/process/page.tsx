@@ -67,7 +67,7 @@ export default function PayrollProcessWizard() {
             {!result ? (
                 <div className="bg-white border border-[var(--border)] rounded-xl p-6 space-y-4">
                     <h2 className="text-[14px] font-semibold border-b border-[var(--border)] pb-2">Step 1: Define Parameters</h2>
-                    <div className="grid grid-cols-3 gap-4 text-[12px]">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-[12px]">
                         <div>
                             <label className="text-[var(--text3)] block mb-1">Month</label>
                             <input type="number" min={1} max={12} value={month} onChange={(e) => setMonth(Number(e.target.value))} className="w-full h-9 border border-[var(--border)] rounded-lg px-3 outline-none focus:border-[var(--accent)]" />

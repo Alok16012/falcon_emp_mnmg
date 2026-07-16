@@ -144,7 +144,7 @@ export default function JoiningsPage() {
     }
 
     return (
-        <div className="p-6 max-w-[1200px] mx-auto">
+        <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                 <div className="flex items-center gap-3">
@@ -350,7 +350,7 @@ function ViewModal({ row, onClose, onApprove }: { row: Joining; onClose: () => v
                         {row.documents.length === 0 ? (
                             <p className="text-[12px] text-[var(--text3)]">No documents uploaded</p>
                         ) : (
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                 {row.documents.map(d => (
                                     <a key={d.id} href={d.fileUrl} target="_blank" rel="noreferrer" className="block rounded-[10px] border border-[var(--border)] overflow-hidden hover:border-[#1e3799] transition-colors">
                                         {d.fileUrl.startsWith("data:image") ? (

@@ -669,7 +669,7 @@ export default function DocumentsPage() {
     ] as const
 
     return (
-        <div className="p-6 max-w-[1200px] mx-auto">
+        <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div>
@@ -1229,8 +1229,8 @@ export default function DocumentsPage() {
                             <p className="text-[13px]">No documents are pending approval</p>
                         </div>
                     ) : (
-                        <div className="border border-[var(--border)] rounded-xl overflow-hidden">
-                            <table className="w-full text-[13px]">
+                        <div className="border border-[var(--border)] rounded-xl overflow-hidden overflow-x-auto">
+                            <table className="w-full min-w-[640px] text-[13px]">
                                 <thead>
                                     <tr className="bg-[var(--surface)] border-b border-[var(--border)]">
                                         <th className="text-left px-4 py-3 text-[var(--text3)] font-medium">Employee</th>
@@ -1353,7 +1353,7 @@ export default function DocumentsPage() {
 
                         {/* Metadata */}
                         <div className="px-6 py-3 border-b border-[var(--border)] shrink-0">
-                            <div className="grid grid-cols-3 gap-4 text-[12px]">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-[12px]">
                                 <div>
                                     <span className="text-[var(--text3)]">Employee</span>
                                     <p className="font-medium text-[var(--text)] mt-0.5">

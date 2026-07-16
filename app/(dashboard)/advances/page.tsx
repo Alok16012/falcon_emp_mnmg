@@ -117,9 +117,9 @@ export default function AdvancesPage() {
     const totalAmount = filtered.reduce((s, a) => s + a.amount, 0)
 
     return (
-        <div className="flex flex-col gap-6 p-6">
+        <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-[22px] font-bold text-[var(--text)]">Advance Salary</h1>
                     <p className="text-[13px] text-[var(--text3)] mt-0.5">Track and manage advance salary payments</p>
@@ -131,7 +131,7 @@ export default function AdvancesPage() {
             </div>
 
             {/* Summary */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="bg-white border border-[var(--border)] rounded-[12px] p-4">
                     <p className="text-[12px] text-[var(--text3)] font-medium">Total Advance Given</p>
                     <p className="text-[24px] font-bold text-[var(--text)] mt-1">₹{totalAmount.toLocaleString()}</p>
@@ -148,8 +148,8 @@ export default function AdvancesPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex items-center gap-3 bg-white border border-[var(--border)] rounded-[12px] px-4 py-3">
-                <div className="relative flex-1 max-w-xs">
+            <div className="flex flex-wrap items-center gap-3 bg-white border border-[var(--border)] rounded-[12px] px-4 py-3">
+                <div className="relative flex-1 min-w-[180px] max-w-xs">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
                     <input value={search} onChange={e => setSearch(e.target.value)}
                         placeholder="Search employee..."
@@ -193,7 +193,8 @@ export default function AdvancesPage() {
                         <p>No advance records for {MONTHS[filterMonth-1]} {filterYear}</p>
                     </div>
                 ) : (
-                    <table className="w-full">
+                    <div className="overflow-x-auto">
+                    <table className="w-full min-w-[820px]">
                         <thead>
                             <tr className="border-b border-[var(--border)] bg-[var(--surface2)]">
                                 <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px]">Employee</th>
@@ -256,6 +257,7 @@ export default function AdvancesPage() {
                             </tr>
                         </tfoot>
                     </table>
+                    </div>
                 )}
             </div>
 

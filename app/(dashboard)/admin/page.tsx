@@ -66,7 +66,7 @@ export default function AdminDashboard() {
     )
 
     return (
-        <div className="p-6 space-y-6 min-h-screen bg-[var(--bg)]">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6 min-h-screen bg-[var(--bg)]">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
@@ -131,7 +131,7 @@ export default function AdminDashboard() {
                                         style={{ width: `${stats?.totalEmployees ? Math.round((((stats.attendance?.present ?? 0) + (stats.attendance?.halfDay ?? 0) * 0.5) / stats.totalEmployees) * 100) : 0}%` }} />
                                 </div>
                             </div>
-                            <div className="grid grid-cols-4 gap-3">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 {[
                                     { label: "Present", value: stats?.attendance?.present ?? 0, color: "#16a34a", bg: "#dcfce7" },
                                     { label: "Half Day", value: stats?.attendance?.halfDay ?? 0, color: "#d97706", bg: "#fef3c7" },
@@ -199,7 +199,8 @@ export default function AdminDashboard() {
                         <Link href="/employees" className="text-[13px] text-[var(--accent-text)] hover:underline mt-1 inline-block">Add first employee →</Link>
                     </div>
                 ) : (
-                    <table className="w-full">
+                    <div className="overflow-x-auto">
+                    <table className="w-full min-w-[560px]">
                         <thead>
                             <tr className="border-b border-[var(--border)] bg-[var(--surface2)]">
                                 <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px]">Employee</th>
@@ -243,6 +244,7 @@ export default function AdminDashboard() {
                             ))}
                         </tbody>
                     </table>
+                    </div>
                 )}
             </div>
         </div>
@@ -278,7 +280,8 @@ function LowStockWidget() {
                     <Boxes size={13} /> Manage stock
                 </Link>
             </div>
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[520px]">
                 <thead>
                     <tr className="border-b border-[var(--border)] bg-[var(--surface2)]">
                         <th className="text-left px-5 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px]">Item Code</th>
@@ -298,6 +301,7 @@ function LowStockWidget() {
                     ))}
                 </tbody>
             </table>
+            </div>
         </div>
     )
 }

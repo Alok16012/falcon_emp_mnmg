@@ -136,9 +136,9 @@ export default function EmployeeAttendancePage() {
     }
 
     return (
-        <div className="flex flex-col gap-6 p-6">
+        <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <button onClick={() => router.push("/attendance")}
                     className="flex items-center gap-2 text-[13px] text-[var(--text2)] hover:text-[var(--text)] transition-colors">
                     <ArrowLeft size={16} /> Back to Attendance
@@ -167,7 +167,7 @@ export default function EmployeeAttendancePage() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
                     { label: "Total Days", count: totals.days, icon: <Calendar size={16} />, color: "#6b7280", bg: "#f3f4f6" },
                     { label: "Present", count: totals.present, icon: <CheckCircle size={16} />, color: "#16a34a", bg: "#dcfce7" },
@@ -185,7 +185,7 @@ export default function EmployeeAttendancePage() {
             </div>
 
             {/* Month filter */}
-            <div className="flex items-center gap-2 bg-white border border-[var(--border)] rounded-[12px] px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2 bg-white border border-[var(--border)] rounded-[12px] px-4 py-3">
                 <Calendar size={15} className="text-[var(--accent)]" />
                 <span className="text-[13px] text-[var(--text3)]">Filter:</span>
                 <select value={month} onChange={e => setMonth(e.target.value)}
@@ -209,7 +209,8 @@ export default function EmployeeAttendancePage() {
                         <p className="text-[13px]">No attendance records</p>
                     </div>
                 ) : (
-                    <table className="w-full">
+                    <div className="overflow-x-auto">
+                    <table className="w-full min-w-[680px]">
                         <thead>
                             <tr className="border-b border-[var(--border)] bg-[var(--surface2)]">
                                 <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px]">Date</th>
@@ -296,6 +297,7 @@ export default function EmployeeAttendancePage() {
                             </tr>
                         </tfoot>
                     </table>
+                    </div>
                 )}
             </div>
         </div>

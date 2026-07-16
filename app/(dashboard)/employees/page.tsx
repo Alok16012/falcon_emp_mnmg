@@ -1350,11 +1350,11 @@ export default function EmployeesPage() {
     return (
         <div className="space-y-5">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-[24px] font-semibold tracking-[-0.4px] text-[var(--text)]">Employees</h1>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                     <button
                         onClick={() => {
                             const url = `${window.location.origin}/join`
@@ -1516,7 +1516,7 @@ export default function EmployeesPage() {
                         </div>
                     )}
                     <div className="overflow-x-auto">
-                        <table className="w-full">
+                        <table className="w-full min-w-[880px]">
                             <thead>
                                 <tr className="border-b border-[var(--border)] bg-[var(--surface2)]/40">
                                     {isAdmin && (

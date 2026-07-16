@@ -182,7 +182,7 @@ export default function DepartmentsPage() {
     return (
         <div className="space-y-5">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-[24px] font-semibold tracking-[-0.4px] text-[var(--text)]">Departments</h1>
                     <p className="text-[13px] text-[var(--text3)] mt-0.5">

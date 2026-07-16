@@ -183,9 +183,9 @@ export default function AttendancePage() {
     }
 
     return (
-        <div className="flex flex-col gap-6 p-6">
+        <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-[22px] font-bold text-[var(--text)]">Attendance</h1>
                     <p className="text-[13px] text-[var(--text3)] mt-0.5">Punch in / out &amp; working hours · click an employee for full log</p>
@@ -197,15 +197,15 @@ export default function AttendancePage() {
             </div>
 
             {/* Date Navigator */}
-            <div className="flex items-center gap-3 bg-white border border-[var(--border)] rounded-[12px] px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2 md:gap-3 bg-white border border-[var(--border)] rounded-[12px] px-3 md:px-4 py-3">
                 <button onClick={() => changeDate(-1)} className="p-1.5 rounded-[6px] hover:bg-[var(--surface2)] transition-colors">
                     <ChevronLeft size={16} className="text-[var(--text2)]" />
                 </button>
-                <div className="flex items-center gap-2 flex-1">
-                    <Calendar size={16} className="text-[var(--accent)]" />
+                <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+                    <Calendar size={16} className="text-[var(--accent)] shrink-0" />
                     <input type="date" value={date} onChange={e => setDate(e.target.value)}
                         className="text-[15px] font-semibold text-[var(--text)] bg-transparent border-none outline-none cursor-pointer" />
-                    <span className="text-[13px] text-[var(--text3)]">{format(parseISO(date), "EEEE, dd MMMM yyyy")}</span>
+                    <span className="hidden sm:inline text-[13px] text-[var(--text3)]">{format(parseISO(date), "EEEE, dd MMMM yyyy")}</span>
                 </div>
                 <button onClick={() => changeDate(1)} className="p-1.5 rounded-[6px] hover:bg-[var(--surface2)] transition-colors">
                     <ChevronRight size={16} className="text-[var(--text2)]" />
@@ -217,7 +217,7 @@ export default function AttendancePage() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {([
                     { label: "Present", count: counts.present, icon: <CheckCircle size={16} />, color: "#16a34a", bg: "#dcfce7", sf: "PRESENT" as const },
                     { label: "Absent", count: counts.absent, icon: <XCircle size={16} />, color: "#dc2626", bg: "#fee2e2", sf: "ABSENT" as const },
@@ -247,8 +247,8 @@ export default function AttendancePage() {
             </div>
 
             {/* Controls */}
-            <div className="flex items-center justify-between bg-white border border-[var(--border)] rounded-[12px] px-4 py-3 gap-3">
-                <div className="flex gap-2">
+            <div className="flex flex-wrap items-center justify-between bg-white border border-[var(--border)] rounded-[12px] px-4 py-3 gap-3">
+                <div className="flex flex-wrap gap-2">
                     {(["ALL", "LABOUR", "STAFF"] as const).map(f => (
                         <button key={f} onClick={() => setFilter(f)}
                             className={`px-3 py-1.5 rounded-[7px] text-[12px] font-medium transition-colors ${
@@ -289,7 +289,8 @@ export default function AttendancePage() {
                         </p>
                     </div>
                 ) : (
-                    <table className="w-full">
+                    <div className="overflow-x-auto">
+                    <table className="w-full min-w-[720px]">
                         <thead>
                             <tr className="border-b border-[var(--border)] bg-[var(--surface2)]">
                                 <th className="text-left px-4 py-3 text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.5px]">Employee</th>
@@ -373,6 +374,7 @@ export default function AttendancePage() {
                             })}
                         </tbody>
                     </table>
+                    </div>
                 )}
             </div>
 

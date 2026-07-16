@@ -948,7 +948,7 @@ export default function ExpensesPage() {
     return (
         <div className="min-h-screen bg-[var(--surface)] p-4 md:p-6">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                 <div>
                     <h1 className="text-[20px] font-bold text-[var(--text)] flex items-center gap-2">
                         <CreditCard size={22} className="text-[var(--accent)]" />
