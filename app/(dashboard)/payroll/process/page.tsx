@@ -53,7 +53,7 @@ export default function PayrollProcessWizard() {
     }
 
     return (
-        <div className="space-y-6 max-w-5xl mx-auto pb-10">
+        <div className="w-full space-y-6 max-w-5xl mx-auto pb-10 p-4 lg:p-0">
             <div className="flex items-center gap-3">
                 <button onClick={() => router.back()} className="text-[var(--text3)] hover:text-[var(--text)]">
                     <ArrowLeft size={20} />

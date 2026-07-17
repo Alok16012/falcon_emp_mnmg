@@ -102,7 +102,7 @@ const DOC_TYPES = [
 const DEFAULT_TEMPLATE_CONTENTS: Record<string, string> = {
     APPOINTMENT: `<div style="font-family: Arial, sans-serif; padding: 40px; max-width: 700px; margin: 0 auto;">
   <div style="text-align: center; margin-bottom: 30px;">
-    <h2 style="color: #1e3799; font-size: 22px; font-weight: bold;">FALCON PLUS</h2>
+    <h2 style="color: #5b5bd6; font-size: 22px; font-weight: bold;">FALCON PLUS</h2>
     <p style="color: #666; font-size: 12px;">HR Department</p>
   </div>
   <h3 style="text-align: center; text-decoration: underline; color: #333;">APPOINTMENT LETTER</h3>
@@ -127,7 +127,7 @@ const DEFAULT_TEMPLATE_CONTENTS: Record<string, string> = {
 </div>`,
     EXPERIENCE: `<div style="font-family: Arial, sans-serif; padding: 40px; max-width: 700px; margin: 0 auto;">
   <div style="text-align: center; margin-bottom: 30px;">
-    <h2 style="color: #1e3799;">FALCON PLUS</h2>
+    <h2 style="color: #5b5bd6;">FALCON PLUS</h2>
   </div>
   <h3 style="text-align: center; text-decoration: underline;">EXPERIENCE LETTER</h3>
   <p><strong>Date:</strong> {{date}}</p>
@@ -142,7 +142,7 @@ const DEFAULT_TEMPLATE_CONTENTS: Record<string, string> = {
 </div>`,
     SALARY_CERT: `<div style="font-family: Arial, sans-serif; padding: 40px; max-width: 700px; margin: 0 auto;">
   <div style="text-align: center; margin-bottom: 30px;">
-    <h2 style="color: #1e3799;">FALCON PLUS</h2>
+    <h2 style="color: #5b5bd6;">FALCON PLUS</h2>
   </div>
   <h3 style="text-align: center; text-decoration: underline;">SALARY CERTIFICATE</h3>
   <p><strong>Date:</strong> {{date}}</p>
@@ -157,7 +157,7 @@ const DEFAULT_TEMPLATE_CONTENTS: Record<string, string> = {
 </div>`,
     OFFER_LETTER: `<div style="font-family: Arial, sans-serif; padding: 40px; max-width: 700px; margin: 0 auto;">
   <div style="text-align: center; margin-bottom: 30px;">
-    <h2 style="color: #1e3799; font-size: 22px; font-weight: bold;">FALCON PLUS</h2>
+    <h2 style="color: #5b5bd6; font-size: 22px; font-weight: bold;">FALCON PLUS</h2>
     <p style="color: #666; font-size: 12px;">HR Department</p>
   </div>
   <h3 style="text-align: center; text-decoration: underline; color: #333;">OFFER LETTER</h3>
@@ -177,7 +177,7 @@ const DEFAULT_TEMPLATE_CONTENTS: Record<string, string> = {
 </div>`,
     CONFIRMATION: `<div style="font-family: Arial, sans-serif; padding: 40px; max-width: 700px; margin: 0 auto;">
   <div style="text-align: center; margin-bottom: 30px;">
-    <h2 style="color: #1e3799; font-size: 22px;">FALCON PLUS</h2>
+    <h2 style="color: #5b5bd6; font-size: 22px;">FALCON PLUS</h2>
   </div>
   <h3 style="text-align: center; text-decoration: underline;">CONFIRMATION LETTER</h3>
   <p><strong>Date:</strong> {{date}}</p>
@@ -192,7 +192,7 @@ const DEFAULT_TEMPLATE_CONTENTS: Record<string, string> = {
 </div>`,
     RELIEVING: `<div style="font-family: Arial, sans-serif; padding: 40px; max-width: 700px; margin: 0 auto;">
   <div style="text-align: center; margin-bottom: 30px;">
-    <h2 style="color: #1e3799; font-size: 22px;">FALCON PLUS</h2>
+    <h2 style="color: #5b5bd6; font-size: 22px;">FALCON PLUS</h2>
   </div>
   <h3 style="text-align: center; text-decoration: underline;">RELIEVING LETTER</h3>
   <p><strong>Date:</strong> {{date}}</p>
@@ -207,7 +207,7 @@ const DEFAULT_TEMPLATE_CONTENTS: Record<string, string> = {
 </div>`,
     WARNING: `<div style="font-family: Arial, sans-serif; padding: 40px; max-width: 700px; margin: 0 auto;">
   <div style="text-align: center; margin-bottom: 30px;">
-    <h2 style="color: #1e3799; font-size: 22px;">FALCON PLUS</h2>
+    <h2 style="color: #5b5bd6; font-size: 22px;">FALCON PLUS</h2>
   </div>
   <h3 style="text-align: center; text-decoration: underline;">WARNING LETTER</h3>
   <p><strong>Date:</strong> {{date}}</p>
@@ -222,7 +222,7 @@ const DEFAULT_TEMPLATE_CONTENTS: Record<string, string> = {
 </div>`,
     OTHER: `<div style="font-family: Arial, sans-serif; padding: 40px; max-width: 700px; margin: 0 auto;">
   <div style="text-align: center; margin-bottom: 30px;">
-    <h2 style="color: #1e3799; font-size: 22px;">FALCON PLUS</h2>
+    <h2 style="color: #5b5bd6; font-size: 22px;">FALCON PLUS</h2>
   </div>
   <h3 style="text-align: center; text-decoration: underline;">HR LETTER</h3>
   <p><strong>Date:</strong> {{date}}</p>
@@ -669,7 +669,7 @@ export default function DocumentsPage() {
     ] as const
 
     return (
-        <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
+        <div className="w-full p-4 md:p-6 max-w-[1200px] mx-auto">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div>
@@ -1095,7 +1095,7 @@ export default function DocumentsPage() {
                                         type="checkbox"
                                         checked={tplApprovalRequired}
                                         onChange={(e) => setTplApprovalRequired(e.target.checked)}
-                                        className="w-4 h-4 accent-[#1e3799]"
+                                        className="w-4 h-4 accent-[#5b5bd6]"
                                     />
                                     Requires Approval Before Issuing
                                 </label>

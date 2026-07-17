@@ -54,19 +54,16 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#f5f4f0] flex items-center justify-center p-6">
+        <div className="min-h-screen bg-[#ededf9] flex items-center justify-center p-6">
             <div className="bg-white border border-[#e8e6e1] rounded-[16px] w-[420px] max-w-full p-9" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
                 <div className="text-center mb-7">
                     <div className="flex items-center justify-center gap-2.5 mb-4">
-                        <div className="w-9 h-9 bg-[#1a9e6e] rounded-[10px] flex items-center justify-center">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="3" y="3" width="7" height="7" />
-                                <rect x="14" y="3" width="7" height="7" />
-                                <rect x="14" y="14" width="7" height="7" />
-                                <rect x="3" y="14" width="7" height="7" />
+                        <div className="w-9 h-9 bg-gradient-to-br from-[#4f7cf6] to-[#5b5bd6] rounded-[10px] flex items-center justify-center">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                                <path d="M4 4h10c3.3 0 6 2.7 6 6s-2.7 6-6 6H9v4H4V4zm5 8h5c1.1 0 2-.9 2-2s-.9-2-2-2H9v4z"/>
                             </svg>
                         </div>
-                        <span className="text-[20px] font-bold text-[#1a1a18] tracking-[-0.4px]">CIMS</span>
+                        <span className="text-[20px] font-bold text-[#1a1a18] tracking-[-0.4px]">Falcon <span className="text-[#8b8be8]">Plus</span></span>
                     </div>
                     <p className="text-[13px] text-[#9e9b95] leading-relaxed">
                         Enter your credentials to access the system
@@ -96,7 +93,7 @@ export default function LoginPage() {
                                 placeholder="user@cims.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full py-[10px] px-[14px] bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:outline-none transition-all"
+                                className="w-full py-[10px] px-[14px] bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:border-[#5b5bd6] focus:bg-white focus:ring-[3px] focus:ring-[rgba(91,91,214,0.10)] focus:outline-none transition-all"
                                 required
                             />
                         </div>
@@ -107,7 +104,7 @@ export default function LoginPage() {
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full py-[10px] px-[14px] bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:border-[#1a9e6e] focus:bg-white focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:outline-none transition-all"
+                                className="w-full py-[10px] px-[14px] bg-[#f9f8f5] border border-[#e8e6e1] rounded-[9px] text-[13px] text-[#1a1a18] placeholder:text-[#9e9b95] focus:border-[#5b5bd6] focus:bg-white focus:ring-[3px] focus:ring-[rgba(91,91,214,0.10)] focus:outline-none transition-all"
                                 required
                             />
                         </div>
@@ -116,7 +113,7 @@ export default function LoginPage() {
                     <Button
                         type="submit"
                         disabled={loading}
-                        className="w-full mt-3 py-[11px] bg-[#1a9e6e] hover:bg-[#158a5e] text-white border-none rounded-[9px] text-[14px] font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                        className="w-full mt-3 py-[11px] bg-[#5b5bd6] hover:bg-[#4a4ac8] text-white border-none rounded-[9px] text-[14px] font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
                     >
                         {loading ? "Signing in..." : "Sign In"}
                     </Button>
@@ -125,7 +122,7 @@ export default function LoginPage() {
             </div>
 
             <div className="absolute bottom-6 text-center text-[13px] text-[#9e9b95]">
-                Developed by <a href="https://blinks-ai.com" target="_blank" rel="noopener noreferrer" className="text-[#1a9e6e] hover:underline font-medium">Blinks AI</a>
+                Developed by <a href="https://blinks-ai.com" target="_blank" rel="noopener noreferrer" className="text-[#5b5bd6] hover:underline font-medium">Blinks AI</a>
             </div>
         </div>
     )

@@ -390,7 +390,7 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
 
                         <button
                             onClick={() => fileInputRef.current?.click()}
-                            className="w-full bg-[#1a9e6e] text-white rounded-[9px] py-[10px] px-7 text-[13px] font-medium hover:bg-[#158a5e] transition-colors flex items-center justify-center gap-2"
+                            className="w-full bg-[#1a9e6e] text-white rounded-[9px] py-[10px] px-7 text-[13px] font-medium hover:bg-[#4a4ac8] transition-colors flex items-center justify-center gap-2"
                         >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -457,7 +457,7 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
                             </button>
                             <button
                                 onClick={handleImport}
-                                className="flex-1 bg-[#1a9e6e] text-white rounded-[9px] py-[10px] px-4 text-[13px] font-medium hover:bg-[#158a5e] transition-colors"
+                                className="flex-1 bg-[#1a9e6e] text-white rounded-[9px] py-[10px] px-4 text-[13px] font-medium hover:bg-[#4a4ac8] transition-colors"
                             >
                                 Import {parsedData.length} Inspectors{selectedProjectId ? " + Assign to Group" : ""}
                             </button>
@@ -567,7 +567,7 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
                             </button>
                             <button
                                 onClick={() => handleOpenChange(false)}
-                                className="flex-1 bg-[#1a9e6e] text-white rounded-[9px] py-[10px] px-4 text-[13px] font-medium hover:bg-[#158a5e] transition-colors"
+                                className="flex-1 bg-[#1a9e6e] text-white rounded-[9px] py-[10px] px-4 text-[13px] font-medium hover:bg-[#4a4ac8] transition-colors"
                             >
                                 Done
                             </button>

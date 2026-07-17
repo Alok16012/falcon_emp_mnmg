@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Sidebar } from "@/components/Sidebar"
 import { TopNav } from "@/components/TopNav"
+import { MobileBottomNav } from "@/components/MobileBottomNav"
 import { cn } from "@/lib/utils"
 
 export default function DashboardLayout({
@@ -39,15 +40,18 @@ export default function DashboardLayout({
 
             <div className="flex flex-col w-full min-w-0">
                 <TopNav onMenuClick={() => setIsSidebarOpen(true)} />
-                <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
+                <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col pb-[84px] md:pb-0">
                     <div className="flex-1 mx-auto w-full flex flex-col gap-0 p-0 lg:gap-8 lg:p-8 max-w-7xl animate-in fade-in duration-150">
                         {children}
                     </div>
                     <footer className="py-4 text-center text-[13px] text-muted-foreground/80 mt-auto">
-                        Developed by <a href="https://blinks-ai.com" target="_blank" rel="noopener noreferrer" className="text-[#1a9e6e] hover:underline font-medium">Blinks AI</a>
+                        Developed by <a href="https://blinks-ai.com" target="_blank" rel="noopener noreferrer" className="text-[#5b5bd6] hover:underline font-medium">Blinks AI</a>
                     </footer>
                 </main>
             </div>
+
+            {/* Mobile bottom navigation */}
+            <MobileBottomNav onMoreClick={() => setIsSidebarOpen(true)} />
         </div>
     )
 }

@@ -1348,11 +1348,12 @@ export default function EmployeesPage() {
 
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-4 md:space-y-5 p-4 lg:p-0">
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-[24px] font-semibold tracking-[-0.4px] text-[var(--text)]">Employees</h1>
+                    <h1 className="text-[26px] font-bold tracking-[-0.4px] text-[var(--text)]">Employees</h1>
+                    <p className="text-[13.5px] text-[var(--text3)] mt-0.5">Manage your workforce</p>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                     <button
@@ -1387,7 +1388,7 @@ export default function EmployeesPage() {
                     </button>
                     <button
                         onClick={() => { setEditEmployee(null); setShowModal(true) }}
-                        className="inline-flex items-center gap-2 bg-[var(--accent)] text-white rounded-[10px] text-[13px] font-medium px-4 py-2 hover:opacity-90 transition-opacity"
+                        className="inline-flex items-center gap-2 bg-[var(--accent)] text-white rounded-[12px] text-[13.5px] font-semibold px-4 py-2.5 hover:bg-[#4a4ac8] transition-colors shadow-sm"
                     >
                         <Plus size={16} /> Add Employee
                     </button>
@@ -1397,60 +1398,66 @@ export default function EmployeesPage() {
             {/* Stats Row */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
-                    { label: "Total Employees", value: total, icon: <Users size={18} />, color: "#1a9e6e", bg: "#e8f7f1", filter: "" },
-                    { label: "Active", value: active, icon: <CheckCircle size={18} />, color: "#16a34a", bg: "#dcfce7", filter: "ACTIVE" },
-                    { label: "On Leave", value: onLeave, icon: <Clock size={18} />, color: "#f59e0b", bg: "#fffbeb", filter: "ON_LEAVE" },
-                    { label: "Terminated/Resigned", value: terminatedResigned, icon: <TrendingDown size={18} />, color: "#dc2626", bg: "#fef2f2", filter: "LEFT" },
+                    { label: "Total Employees", value: total, icon: <Users size={19} />, color: "#16a34a", bg: "#dcfce7", filter: "", sub: "All Locations" },
+                    { label: "Active", value: active, icon: <CheckCircle size={19} />, color: "#16a34a", bg: "#dcfce7", filter: "ACTIVE", sub: total ? `${Math.round((active / total) * 100)}% of total` : "—" },
+                    { label: "On Leave", value: onLeave, icon: <Clock size={19} />, color: "#f59e0b", bg: "#fef3c7", filter: "ON_LEAVE", sub: "Today" },
+                    { label: "Terminated/Resigned", value: terminatedResigned, icon: <TrendingDown size={19} />, color: "#dc2626", bg: "#fee2e2", filter: "LEFT", sub: "This month" },
                 ].map(stat => {
                     const selected = statusFilter === stat.filter
                     return (
                         <button
                             key={stat.label}
                             onClick={() => setStatusFilter(selected && stat.filter !== "" ? "" : stat.filter)}
-                            className={`text-left bg-white border rounded-[12px] p-4 flex items-center gap-3 transition-colors hover:border-[var(--accent)] ${selected ? "border-[var(--accent)] ring-1 ring-[var(--accent)]" : "border-[var(--border)]"}`}
+                            className={`text-left bg-white border rounded-[16px] p-4 transition-all shadow-[0_2px_10px_rgba(80,80,170,0.05)] hover:shadow-md ${selected ? "border-[var(--accent)] ring-1 ring-[var(--accent)]" : "border-[var(--border)]"}`}
                         >
-                            <div style={{ background: stat.bg, color: stat.color }} className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0">
-                                {stat.icon}
+                            <div className="flex items-start gap-3">
+                                <div style={{ background: stat.bg, color: stat.color }} className="w-10 h-10 rounded-[12px] flex items-center justify-center shrink-0">
+                                    {stat.icon}
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[12px] font-medium text-[var(--text2)] leading-tight truncate">{stat.label}</p>
+                                    <p className="text-[24px] font-bold text-[var(--text)] leading-tight mt-0.5">{stat.value}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-[22px] font-bold text-[var(--text)] leading-tight">{stat.value}</p>
-                                <p className="text-[11.5px] text-[var(--text3)]">{stat.label}</p>
-                            </div>
+                            <p className="text-[11.5px] mt-2" style={{ color: stat.filter === "ACTIVE" ? "#16a34a" : "var(--text3)" }}>{stat.sub}</p>
                         </button>
                     )
                 })}
             </div>
 
             {/* Filters */}
-            <div className="bg-white border border-[var(--border)] rounded-[12px] p-4 space-y-3">
-                {/* Search + dropdowns */}
-                <div className="flex flex-wrap items-center gap-3">
-                    <div className="relative flex-1 min-w-[200px]">
-                        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
-                        <input
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            onKeyDown={e => e.key === "Enter" && fetchEmployees()}
-                            placeholder="Search by name, ID, phone..."
-                            className="w-full h-9 rounded-[8px] border border-[var(--border)] bg-[var(--surface2)]/30 pl-8 pr-3 text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)] transition-colors"
-                        />
-                    </div>
-                    <select
-                        value={empTypeFilter}
-                        onChange={e => setEmpTypeFilter(e.target.value)}
-                        className="h-9 rounded-[8px] border border-[var(--border)] bg-white px-3 text-[13px] text-[var(--text)] outline-none focus:border-[var(--accent)] transition-colors"
-                    >
-                        <option value="">All Shifts</option>
-                        <option value="8">8 Hr (Gen Shift)</option>
-                        <option value="10">10 Hr (Long Shift)</option>
-                        <option value="12">12 Hr (Double Shift)</option>
-                    </select>
+            <div className="flex flex-wrap items-center gap-3">
+                <div className="relative flex-1 min-w-[200px]">
+                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
+                    <input
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        onKeyDown={e => e.key === "Enter" && fetchEmployees()}
+                        placeholder="Search by name, ID, phone..."
+                        className="w-full h-11 rounded-[14px] border border-[var(--border)] bg-white pl-10 pr-3 text-[13.5px] text-[var(--text)] outline-none focus:border-[var(--accent)] transition-colors shadow-[0_2px_10px_rgba(80,80,170,0.05)]"
+                    />
                 </div>
+                <select
+                    value={empTypeFilter}
+                    onChange={e => setEmpTypeFilter(e.target.value)}
+                    className="h-11 rounded-[14px] border border-[var(--border)] bg-white px-3 text-[13px] font-medium text-[var(--text2)] outline-none focus:border-[var(--accent)] transition-colors shadow-[0_2px_10px_rgba(80,80,170,0.05)]"
+                >
+                    <option value="">All Shifts</option>
+                    <option value="8">8 Hr (Gen Shift)</option>
+                    <option value="10">10 Hr (Long Shift)</option>
+                    <option value="12">12 Hr (Double Shift)</option>
+                </select>
             </div>
 
             {/* Employee Table */}
             {loading ? (
-                <div className="bg-white border border-[var(--border)] rounded-[12px] overflow-hidden">
+                <>
+                <div className="md:hidden space-y-2.5">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="h-[74px] bg-white border border-[var(--border)] rounded-[16px] animate-pulse" />
+                    ))}
+                </div>
+                <div className="hidden md:block bg-white border border-[var(--border)] rounded-[16px] overflow-hidden">
                     <table className="w-full">
                         <thead>
                             <tr className="border-b border-[var(--border)] bg-[var(--surface2)]/40">
@@ -1484,14 +1491,67 @@ export default function EmployeesPage() {
                         </tbody>
                     </table>
                 </div>
+                </>
             ) : employees.length === 0 ? (
-                <div className="flex min-h-[300px] flex-col items-center justify-center rounded-[14px] bg-white border border-dashed border-[var(--border)] shadow-sm">
+                <div className="flex min-h-[300px] flex-col items-center justify-center rounded-[16px] bg-white border border-dashed border-[var(--border)] shadow-sm">
                     <UserCheck size={36} className="text-[var(--text3)] mb-2" />
                     <h3 className="text-[15px] font-semibold text-[var(--text)]">No employees found</h3>
                     <p className="text-[13px] text-[var(--text3)] mt-1">Add your first employee to get started.</p>
                 </div>
             ) : (
-                <div className="bg-white border border-[var(--border)] rounded-[12px] overflow-hidden">
+                <>
+                {/* Mobile card list */}
+                <div className="md:hidden space-y-2.5">
+                    {employees.map(emp => {
+                        const s = STATUS_CONFIG[emp.status] || STATUS_CONFIG.ACTIVE
+                        const isLabour = (emp as any).employeeCategory === "LABOUR"
+                        return (
+                            <div key={emp.id}
+                                className="bg-white border border-[var(--border)] rounded-[16px] px-3.5 py-3 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
+                                <div className="flex items-center gap-3">
+                                    <button onClick={() => setDrawerEmployee(emp)} className="shrink-0">
+                                        <Avatar firstName={emp.firstName} lastName={emp.lastName} photo={emp.photo} size={44} />
+                                    </button>
+                                    <button onClick={() => setDrawerEmployee(emp)} className="min-w-0 flex-1 text-left">
+                                        <p className="text-[14.5px] font-semibold text-[var(--text)] truncate">{emp.firstName} {emp.lastName}</p>
+                                        <div className="flex items-center gap-1.5 mt-1">
+                                            <span className="text-[12px] font-medium text-[var(--accent-text)]">{emp.employeeId}</span>
+                                            <span className={`px-2 py-0.5 rounded-[6px] text-[10.5px] font-semibold ${
+                                                isLabour ? "bg-orange-50 text-orange-700" : "bg-blue-50 text-blue-700"
+                                            }`}>
+                                                {isLabour ? "Labour" : "Staff"}
+                                            </span>
+                                        </div>
+                                    </button>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        {emp.shiftHours && (
+                                            <span className="flex items-center gap-1 text-[12px] text-[var(--text2)] font-medium">
+                                                <Clock size={13} className="text-[var(--text3)]" /> {emp.shiftHours} hr
+                                            </span>
+                                        )}
+                                        <span
+                                            style={{ color: s.color, background: s.bg }}
+                                            className="px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap"
+                                        >
+                                            {s.label}
+                                        </span>
+                                        <RowActions
+                                            emp={emp}
+                                            isAdmin={isAdmin}
+                                            onView={() => setDrawerEmployee(emp)}
+                                            onEdit={() => { setEditEmployee(emp); setShowModal(true) }}
+                                            onTerminate={() => handleStatusChange(emp.id, "TERMINATED")}
+                                            onReactivate={() => handleStatusChange(emp.id, "ACTIVE")}
+                                            onDelete={() => handleHardDelete(emp.id, `${emp.firstName} ${emp.lastName}`)}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+
+                <div className="hidden md:block bg-white border border-[var(--border)] rounded-[16px] overflow-hidden">
                     {isAdmin && selectedIds.size > 0 && (
                         <div className="flex items-center justify-between px-5 py-3 bg-[var(--accent-light)]/50 border-b border-[var(--border)]">
                             <span className="text-[13px] font-semibold text-[var(--text)]">
@@ -1628,6 +1688,7 @@ export default function EmployeesPage() {
                         </table>
                     </div>
                 </div>
+                </>
             )}
 
             {/* Modals */}

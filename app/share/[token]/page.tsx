@@ -98,7 +98,7 @@ export default function SharePage() {
                             fileName={`inspection-report-${inspection.id.substring(0, 8)}.pdf`}
                         >
                             {({ loading: pdfLoading }: { loading: boolean }) => (
-                                <button className="flex items-center gap-2 bg-[#1a9e6e] text-white px-4 py-2.5 rounded-[10px] text-[13px] font-medium hover:bg-[#158a5e] transition-colors" disabled={pdfLoading}>
+                                <button className="flex items-center gap-2 bg-[#1a9e6e] text-white px-4 py-2.5 rounded-[10px] text-[13px] font-medium hover:bg-[#4a4ac8] transition-colors" disabled={pdfLoading}>
                                     {pdfLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                                     {pdfLoading ? "Preparing PDF..." : "Download PDF"}
                                 </button>

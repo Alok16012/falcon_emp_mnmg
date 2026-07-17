@@ -485,15 +485,15 @@ export default function LeavesPage() {
     ]
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-4 md:space-y-5 p-4 lg:p-0">
             {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                    <h1 className="text-[24px] font-semibold tracking-[-0.4px] text-[var(--text)]">Leave Management</h1>
-                    <p className="text-[13px] text-[var(--text3)] mt-0.5">Manage employee leave requests</p>
+                    <h1 className="text-[26px] font-bold tracking-[-0.4px] text-[var(--text)]">Leave Management</h1>
+                    <p className="text-[13.5px] text-[var(--text3)] mt-0.5">Manage employee leave requests</p>
                 </div>
                 <button onClick={() => setShowApply(true)}
-                    className="inline-flex items-center gap-2 bg-[var(--accent)] text-white rounded-[10px] text-[13px] font-medium px-4 py-2 hover:opacity-90 transition-opacity">
+                    className="inline-flex items-center gap-2 bg-[var(--accent)] text-white rounded-[12px] text-[13.5px] font-semibold px-4 py-2.5 hover:bg-[#4a4ac8] transition-colors shadow-sm">
                     <Plus size={16} /> Apply Leave
                 </button>
             </div>
@@ -501,8 +501,8 @@ export default function LeavesPage() {
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {statsCards.map(s => (
-                    <div key={s.label} className="bg-[var(--surface)] border border-[var(--border)] rounded-[12px] p-4 flex items-center gap-3">
-                        <div style={{ background: s.bg, color: s.color }} className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0">{s.icon}</div>
+                    <div key={s.label} className="bg-white border border-[var(--border)] rounded-[16px] p-4 flex items-center gap-3 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
+                        <div style={{ background: s.bg, color: s.color }} className="w-10 h-10 rounded-[12px] flex items-center justify-center shrink-0">{s.icon}</div>
                         <div>
                             <p className="text-[22px] font-bold text-[var(--text)] leading-tight">{s.value}</p>
                             <p className="text-[11.5px] text-[var(--text3)]">{s.label}</p>
@@ -559,7 +559,56 @@ export default function LeavesPage() {
                     <p className="text-[13px] text-[var(--text3)] mt-1">No matching leaves found</p>
                 </div>
             ) : (
-                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[12px] overflow-hidden">
+                <>
+                {/* Mobile card list */}
+                <div className="md:hidden space-y-2.5">
+                    {leaves.map(leave => (
+                        <div key={leave.id} onClick={() => setSelectedLeave(leave)}
+                            className="bg-white border border-[var(--border)] rounded-[16px] p-3.5 shadow-[0_2px_10px_rgba(80,80,170,0.05)] cursor-pointer active:bg-[var(--surface2)]">
+                            <div className="flex items-center gap-3">
+                                <Avatar firstName={leave.employee.firstName} lastName={leave.employee.lastName} photo={leave.employee.photo} />
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[14px] font-semibold text-[var(--text)] truncate">{leave.employee.firstName} {leave.employee.lastName}</p>
+                                    <p className="text-[11.5px] text-[var(--accent-text)] font-medium">{leave.employee.employeeId}</p>
+                                </div>
+                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                    <StatusBadge status={leave.status} />
+                                    <LeaveTypeBadge type={leave.type} />
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-[var(--border)]">
+                                <div>
+                                    <p className="text-[12.5px] font-medium text-[var(--text)]">
+                                        {format(new Date(leave.startDate), "dd MMM")} — {format(new Date(leave.endDate), "dd MMM yy")}
+                                        <span className="text-[var(--text3)] font-normal"> · {leave.days} day{leave.days !== 1 ? "s" : ""}</span>
+                                    </p>
+                                    {leave.reason && <p className="text-[11.5px] text-[var(--text3)] truncate max-w-[200px] mt-0.5">{leave.reason}</p>}
+                                </div>
+                                {isAdminOrManager && leave.status === "PENDING" && (
+                                    <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                                        <button onClick={() => setSelectedLeave(leave)}
+                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#fef2f2] text-[#dc2626] text-[11px] font-semibold">
+                                            <XCircle size={11} /> Reject
+                                        </button>
+                                        <button onClick={async () => {
+                                            try {
+                                                const res = await fetch(`/api/leaves/${leave.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "APPROVED" }) })
+                                                if (!res.ok) throw new Error(await res.text())
+                                                toast.success("Leave approved!")
+                                                fetchLeaves()
+                                            } catch (err: unknown) { toast.error(err instanceof Error ? err.message : "Failed") }
+                                        }}
+                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#e8f7f1] text-[#16a34a] text-[11px] font-semibold">
+                                            <CheckCircle size={11} /> Approve
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="hidden md:block bg-[var(--surface)] border border-[var(--border)] rounded-[16px] overflow-hidden shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
@@ -645,6 +694,7 @@ export default function LeavesPage() {
                         </table>
                     </div>
                 </div>
+                </>
             )}
 
             {/* Drawer */}

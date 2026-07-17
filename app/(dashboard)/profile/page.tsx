@@ -388,7 +388,7 @@ export default function ProfilePage() {
     ] as { key: typeof activeTab; label: string; icon: any }[]
 
     return (
-        <div className="max-w-3xl mx-auto pb-12 space-y-5">
+        <div className="max-w-3xl mx-auto pb-12 space-y-5 p-4 lg:p-0">
             {/* Header card */}
             <div className="bg-white border border-[var(--border)] rounded-2xl p-6 flex items-center gap-4">
                 <div className="w-14 h-14 rounded-full bg-[#1a1a18] text-white flex items-center justify-center text-[22px] font-bold shrink-0">

@@ -7,17 +7,18 @@
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
 
-    --bg: #f5f4f0;
+    --bg: #ededf9;
     --surface: #ffffff;
-    --surface2: #f9f8f5;
-    --border: #e8e6e1;
-    --border2: #d4d1ca;
-    --text: #1a1a18;
-    --text2: #6b6860;
-    --text3: #9e9b95;
-    --accent: #1e3799;
-    --accent-light: #eaedff;
-    --accent-text: #1430a0;
+    --surface2: #f4f4fb;
+    --border: #e8e8f4;
+    --border2: #d6d6ea;
+    --text: #17171f;
+    --text2: #62626e;
+    --text3: #94949f;
+    --accent: #5b5bd6;
+    --accent-light: #ececfc;
+    --accent-text: #4f46e5;
+    --accent-grad: linear-gradient(90deg, #4f7cf6 0%, #6d5be8 100%);
     --amber: #d97706;
     --amber-light: #fef3c7;
     --red: #dc2626;

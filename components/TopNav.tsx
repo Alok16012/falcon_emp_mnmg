@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Menu, UserCircle, LogOut, ChevronDown, Search, Loader2, Users } from "lucide-react"
+import { Menu, UserCircle, LogOut, ChevronDown, Search, Loader2, Bell } from "lucide-react"
 import { useSession, signOut } from "next-auth/react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -81,6 +81,18 @@ export function TopNav({ onMenuClick }: { onMenuClick: () => void }) {
                 <button onClick={onMenuClick} className="inline-flex items-center justify-center rounded-[10px] w-9 h-9 text-[var(--text2)] hover:bg-[var(--surface2)] md:hidden transition-colors">
                     <Menu size={20} />
                 </button>
+                {/* Mobile brand logo (like the app design) */}
+                <Link href="/admin" className="flex md:hidden items-center gap-2">
+                    <div className="h-8 w-8 bg-gradient-to-br from-[#4f7cf6] to-[#5b5bd6] rounded-[9px] flex items-center justify-center text-white shrink-0 shadow-sm">
+                        <svg viewBox="0 0 24 24" className="w-[17px] h-[17px]" fill="currentColor">
+                            <path d="M4 4h10c3.3 0 6 2.7 6 6s-2.7 6-6 6H9v4H4V4zm5 8h5c1.1 0 2-.9 2-2s-.9-2-2-2H9v4z"/>
+                        </svg>
+                    </div>
+                    <span className="text-[17px] font-bold leading-none">
+                        <span className="text-[var(--text)]">Falcon</span>{" "}
+                        <span className="text-[#8b8be8] font-semibold">Plus</span>
+                    </span>
+                </Link>
                 <div className="hidden md:flex items-center gap-2 text-[13px]">
                     <span className="text-[var(--text3)]">Falcon Plus</span>
                     <span className="text-[var(--text3)] text-[10px]">›</span>
@@ -88,8 +100,8 @@ export function TopNav({ onMenuClick }: { onMenuClick: () => void }) {
                 </div>
             </div>
 
-            {/* Center: Employee Search */}
-            <div className="flex-1 max-w-[380px] relative" ref={searchRef}>
+            {/* Center: Employee Search (desktop only) */}
+            <div className="hidden md:block flex-1 max-w-[380px] relative" ref={searchRef}>
                 <div className="relative group">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text3)] group-focus-within:text-[var(--accent)] transition-colors" />
                     <input
@@ -123,10 +135,15 @@ export function TopNav({ onMenuClick }: { onMenuClick: () => void }) {
                 )}
             </div>
 
-            {/* Right: Profile */}
+            {/* Right: Bell + Profile */}
+            <div className="flex items-center gap-1.5 shrink-0">
+            <button className="relative inline-flex items-center justify-center w-9 h-9 rounded-full text-[var(--text2)] hover:bg-[var(--surface2)] transition-colors">
+                <Bell size={19} />
+                <span className="absolute top-[7px] right-[8px] w-2 h-2 rounded-full bg-red-500 border-2 border-[var(--surface)]" />
+            </button>
             <div className="relative shrink-0" ref={profileRef}>
                 <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center gap-2 p-1 rounded-full hover:bg-[var(--surface2)] transition-all">
-                    <div className="h-[34px] w-[34px] rounded-full bg-[var(--accent)] flex items-center justify-center text-white text-[13px] font-bold shadow-sm">
+                    <div className="h-[34px] w-[34px] rounded-full bg-[var(--accent)] ring-2 ring-[var(--accent-light)] flex items-center justify-center text-white text-[13px] font-bold shadow-sm">
                         {mounted && session?.user?.name ? session.user.name.charAt(0).toUpperCase() : <UserCircle size={20} />}
                     </div>
                     <div className="hidden sm:block text-left">
@@ -156,6 +173,7 @@ export function TopNav({ onMenuClick }: { onMenuClick: () => void }) {
                         </div>
                     </div>
                 )}
+            </div>
             </div>
         </div>
     )

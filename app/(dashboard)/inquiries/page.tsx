@@ -117,11 +117,11 @@ export default function InquiriesPage() {
     }
 
     return (
-        <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
+        <div className="w-full p-4 md:p-6 max-w-[1200px] mx-auto">
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-[10px] bg-[#1e3799] flex items-center justify-center text-white">
+                    <div className="h-10 w-10 rounded-[10px] bg-[#5b5bd6] flex items-center justify-center text-white">
                         <PackageSearch size={20} />
                     </div>
                     <div>
@@ -133,7 +133,7 @@ export default function InquiriesPage() {
                     <button onClick={load} className="inline-flex items-center gap-2 rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] font-medium text-[var(--text2)] hover:bg-[var(--surface2)]">
                         <RefreshCw size={15} /> Refresh
                     </button>
-                    <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 rounded-[8px] bg-[#1e3799] px-3 py-2 text-[13px] font-medium text-white hover:opacity-90">
+                    <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 rounded-[8px] bg-[#5b5bd6] px-3 py-2 text-[13px] font-medium text-white hover:opacity-90">
                         <Plus size={15} /> Add Inquiry
                     </button>
                 </div>
@@ -143,7 +143,7 @@ export default function InquiriesPage() {
             <div className="mb-5 rounded-[12px] border border-[var(--border)] bg-[var(--surface2)]/40 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
-                        <Link2 size={16} className="text-[#1e3799] shrink-0" />
+                        <Link2 size={16} className="text-[#5b5bd6] shrink-0" />
                         <div className="min-w-0">
                             <p className="text-[12.5px] font-semibold text-[var(--text)]">External inquiry form link</p>
                             <p className="text-[12px] text-[var(--text2)] truncate">{publicUrl || "…"}</p>
@@ -176,21 +176,64 @@ export default function InquiriesPage() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search name, product, party, location…"
-                        className="w-full rounded-[8px] border border-[var(--border)] bg-white pl-9 pr-3 py-2 text-[13px] outline-none focus:border-[#1e3799]"
+                        className="w-full rounded-[8px] border border-[var(--border)] bg-white pl-9 pr-3 py-2 text-[13px] outline-none focus:border-[#5b5bd6]"
                     />
                 </div>
                 <select
                     value={statusFilter}
                     onChange={e => setStatusFilter(e.target.value)}
-                    className="rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#1e3799]"
+                    className="rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#5b5bd6]"
                 >
                     <option value="">All status</option>
                     {STATUS_OPTIONS.map(s => <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>)}
                 </select>
             </div>
 
-            {/* Table */}
-            <div className="rounded-[12px] border border-[var(--border)] bg-white overflow-hidden">
+            {/* Mobile card list */}
+            <div className="md:hidden space-y-2.5">
+                {loading ? (
+                    <div className="py-12 text-center text-[var(--text3)] bg-white border border-[var(--border)] rounded-[16px]">
+                        <Loader2 size={20} className="animate-spin inline" />
+                    </div>
+                ) : filtered.length === 0 ? (
+                    <div className="py-12 text-center text-[var(--text3)] bg-white border border-[var(--border)] rounded-[16px] text-[13px]">No inquiries found</div>
+                ) : filtered.map(i => {
+                    const sc = STATUS_CONFIG[i.status] || STATUS_CONFIG.PENDING
+                    return (
+                        <div key={i.id} className="bg-white border border-[var(--border)] rounded-[16px] p-3.5 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                    <p className="text-[14px] font-semibold text-[var(--text)] truncate">{i.partyName}</p>
+                                    <p className="text-[12px] text-[var(--text3)]">{i.name}</p>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                    <select
+                                        value={i.status}
+                                        onChange={e => updateStatus(i.id, e.target.value)}
+                                        style={{ color: sc.color, background: sc.bg, borderColor: sc.border }}
+                                        className="rounded-full border px-2.5 py-1 text-[11.5px] font-semibold outline-none cursor-pointer"
+                                    >
+                                        {STATUS_OPTIONS.map(s => <option key={s} value={s} style={{ color: "#111", background: "#fff" }}>{STATUS_CONFIG[s].label}</option>)}
+                                    </select>
+                                    <button onClick={() => remove(i.id)} className="text-[var(--text3)] hover:text-red-600 p-1">
+                                        <Trash2 size={15} />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-2.5 pt-2.5 border-t border-[var(--border)] text-[12px]">
+                                <p className="col-span-2"><span className="text-[var(--text3)]">Product:</span> <span className="font-medium text-[var(--text)]">{i.productName}</span></p>
+                                <p><span className="text-[var(--text3)]">Qty:</span> <span className="font-medium text-[var(--text)]">{i.quantity}</span></p>
+                                <p><span className="text-[var(--text3)]">Rate:</span> <span className="font-medium text-[var(--text)]">{fmtRupee(i.rate)}</span></p>
+                                <p className="truncate"><span className="text-[var(--text3)]">Location:</span> <span className="text-[var(--text2)]">{i.location}</span></p>
+                                <p><span className="text-[var(--text3)]">Date:</span> <span className="text-[var(--text2)]">{format(new Date(i.createdAt), "dd MMM yyyy")}</span></p>
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+
+            {/* Table (desktop) */}
+            <div className="hidden md:block rounded-[16px] border border-[var(--border)] bg-white overflow-hidden shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
                 <div className="overflow-x-auto">
                     <table className="w-full text-[13px]">
                         <thead>
@@ -255,9 +298,9 @@ export default function InquiriesPage() {
 
 function StatCard({ label, value, color }: { label: string; value: number; color?: string }) {
     return (
-        <div className="rounded-[12px] border border-[var(--border)] bg-white p-4">
-            <p className="text-[12px] text-[var(--text2)]">{label}</p>
-            <p className="text-[22px] font-bold" style={{ color: color || "var(--text)" }}>{value}</p>
+        <div className="rounded-[16px] border border-[var(--border)] bg-white p-4 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
+            <p className="text-[12.5px] text-[var(--text2)] font-medium">{label}</p>
+            <p className="text-[24px] font-bold mt-1" style={{ color: color || "var(--text)" }}>{value}</p>
         </div>
     )
 }
@@ -305,14 +348,14 @@ function AddInquiryModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
                     <Field label="Rate (₹)"><Inp type="number" value={form.rate} onChange={v => set("rate", v)} /></Field>
                     <Field label="Location" className="col-span-2"><Inp value={form.location} onChange={v => set("location", v)} /></Field>
                     <Field label="Status" className="col-span-2">
-                        <select value={form.status} onChange={e => set("status", e.target.value)} className="w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#1e3799]">
+                        <select value={form.status} onChange={e => set("status", e.target.value)} className="w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#5b5bd6]">
                             {STATUS_OPTIONS.map(s => <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>)}
                         </select>
                     </Field>
                 </div>
                 <div className="flex justify-end gap-2 border-t border-[var(--border)] px-5 py-4">
                     <button onClick={onClose} className="rounded-[8px] border border-[var(--border)] px-4 py-2 text-[13px] font-medium text-[var(--text2)] hover:bg-[var(--surface2)]">Cancel</button>
-                    <button onClick={submit} disabled={saving} className="inline-flex items-center gap-2 rounded-[8px] bg-[#1e3799] px-4 py-2 text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-60">
+                    <button onClick={submit} disabled={saving} className="inline-flex items-center gap-2 rounded-[8px] bg-[#5b5bd6] px-4 py-2 text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-60">
                         {saving && <Loader2 size={15} className="animate-spin" />} Save
                     </button>
                 </div>
@@ -336,7 +379,7 @@ function Inp({ value, onChange, type = "text" }: { value: string; onChange: (v: 
             type={type}
             value={value}
             onChange={e => onChange(e.target.value)}
-            className="w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#1e3799]"
+            className="w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#5b5bd6]"
         />
     )
 }

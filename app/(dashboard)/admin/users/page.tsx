@@ -28,7 +28,7 @@ const ROLE_LABELS: Record<string, string> = {
 }
 const ROLE_COLORS: Record<string, string> = {
     ADMIN: "#7c3aed",
-    MANAGER: "#1e3799",
+    MANAGER: "#5b5bd6",
     INSPECTION_BOY: "#1a9e6e",
     CLIENT: "#f59e0b",
 }
@@ -150,7 +150,7 @@ export default function UserManagementPage() {
             {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-[10px] bg-[#1e3799] text-white flex items-center justify-center">
+                    <div className="h-10 w-10 rounded-[10px] bg-[#5b5bd6] text-white flex items-center justify-center">
                         <UsersRound size={20} />
                     </div>
                     <div>
@@ -160,7 +160,7 @@ export default function UserManagementPage() {
                 </div>
                 <button
                     onClick={() => setShowCreate(true)}
-                    className="flex items-center gap-2 bg-[#1e3799] text-white px-4 py-2.5 rounded-[10px] text-[13px] font-semibold hover:opacity-90 transition"
+                    className="flex items-center gap-2 bg-[#5b5bd6] text-white px-4 py-2.5 rounded-[10px] text-[13px] font-semibold hover:opacity-90 transition"
                 >
                     <UserPlus size={16} /> Add User
                 </button>
@@ -169,7 +169,7 @@ export default function UserManagementPage() {
             {/* Role → Module access matrix */}
             <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] overflow-hidden">
                 <div className="px-5 py-4 border-b border-[var(--border)] flex items-center gap-2 flex-wrap">
-                    <Shield size={16} className="text-[#1e3799]" />
+                    <Shield size={16} className="text-[#5b5bd6]" />
                     <h2 className="text-[15px] font-semibold text-[var(--text)]">Module Access by Role</h2>
                     <span className="text-[11px] text-[var(--text3)] ml-1">Admin ko hamesha sab dikhta hai</span>
                 </div>
@@ -185,7 +185,7 @@ export default function UserManagementPage() {
                                     ? "text-white border-transparent"
                                     : "text-[var(--text2)] border-[var(--border)] hover:bg-[var(--surface2)]"
                             }`}
-                            style={activeRole === r.role ? { background: ROLE_COLORS[r.role] || "#1e3799" } : undefined}
+                            style={activeRole === r.role ? { background: ROLE_COLORS[r.role] || "#5b5bd6" } : undefined}
                         >
                             {ROLE_LABELS[r.role] || r.role}
                             <span className="ml-1.5 opacity-70">({r.modules.length})</span>
@@ -234,13 +234,13 @@ export default function UserManagementPage() {
             <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[14px] overflow-hidden">
                 <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between gap-3 flex-wrap">
                     <h2 className="text-[15px] font-semibold text-[var(--text)]">All Users <span className="text-[var(--text3)] font-normal">({users.length})</span></h2>
-                    <div className="relative">
+                    <div className="relative flex-1 sm:flex-none">
                         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
                         <input
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="Search name / email"
-                            className="pl-9 pr-3 py-2 text-[13px] rounded-[9px] border border-[var(--border)] bg-[var(--surface2)] w-[220px] outline-none focus:border-[#1e3799]"
+                            className="pl-9 pr-3 py-2 text-[13px] rounded-[10px] border border-[var(--border)] bg-[var(--surface2)] w-full sm:w-[220px] outline-none focus:border-[#5b5bd6]"
                         />
                     </div>
                 </div>
@@ -250,7 +250,43 @@ export default function UserManagementPage() {
                 ) : filtered.length === 0 ? (
                     <div className="py-16 text-center text-[13px] text-[var(--text3)]">Koi user nahi mila</div>
                 ) : (
-                    <div className="overflow-x-auto">
+                    <>
+                    {/* Mobile card list */}
+                    <div className="md:hidden divide-y divide-[var(--border)]">
+                        {filtered.map(u => (
+                            <div key={u.id} className="px-4 py-3.5">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-bold shrink-0" style={{ background: ROLE_COLORS[u.role] || "#6b7280" }}>
+                                        {u.name?.[0]?.toUpperCase() || "U"}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-[14px] font-semibold text-[var(--text)] truncate">{u.name}</p>
+                                        <p className="text-[12px] text-[var(--text3)] truncate">{u.email}</p>
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <IconBtn title="Edit" onClick={() => setEditUser(u)}><Pencil size={14} /></IconBtn>
+                                        <IconBtn title="Reset password" onClick={() => setResetUser(u)}><KeyRound size={14} /></IconBtn>
+                                        {u.id !== session?.user?.id && (
+                                            <IconBtn title="Delete" danger onClick={() => setDeleteUser(u)}><Trash2 size={14} /></IconBtn>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 mt-2 pl-[52px]">
+                                    <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold text-white" style={{ background: ROLE_COLORS[u.role] || "#6b7280" }}>
+                                        {ROLE_LABELS[u.role] || u.role}
+                                    </span>
+                                    <button
+                                        onClick={() => toggleActive(u)}
+                                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${u.isActive ? "bg-[#e8f7f1] text-[#16a34a]" : "bg-[#fef2f2] text-[#dc2626]"}`}
+                                    >
+                                        {u.isActive ? "Active" : "Inactive"}
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="hidden md:block overflow-x-auto">
                         <table className="w-full text-[13px]">
                             <thead>
                                 <tr className="text-left text-[var(--text3)] border-b border-[var(--border)]">
@@ -293,6 +329,7 @@ export default function UserManagementPage() {
                             </tbody>
                         </table>
                     </div>
+                    </>
                 )}
             </div>
 
@@ -330,7 +367,7 @@ function ModalShell({ title, onClose, children }: { title: string; onClose: () =
     )
 }
 
-const inputCls = "w-full px-3 py-2.5 text-[13px] rounded-[9px] border border-[var(--border)] bg-[var(--surface2)] outline-none focus:border-[#1e3799]"
+const inputCls = "w-full px-3 py-2.5 text-[13px] rounded-[9px] border border-[var(--border)] bg-[var(--surface2)] outline-none focus:border-[#5b5bd6]"
 const labelCls = "block text-[12px] font-medium text-[var(--text2)] mb-1.5"
 
 function CreateUserModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
@@ -369,7 +406,7 @@ function CreateUserModal({ onClose, onDone }: { onClose: () => void; onDone: () 
                     </select>
                     <p className="text-[11px] text-[var(--text3)] mt-1.5">Role ke modules upar &quot;Module Access by Role&quot; me set karo.</p>
                 </div>
-                <button onClick={submit} disabled={busy} className="mt-1 bg-[#1e3799] text-white py-2.5 rounded-[9px] text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2">
+                <button onClick={submit} disabled={busy} className="mt-1 bg-[#5b5bd6] text-white py-2.5 rounded-[9px] text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2">
                     {busy && <Loader2 size={15} className="animate-spin" />} Create User
                 </button>
             </div>
@@ -410,7 +447,7 @@ function EditUserModal({ user, onClose, onDone }: { user: AppUser; onClose: () =
                         {CREATE_ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>)}
                     </select>
                 </div>
-                <button onClick={submit} disabled={busy} className="mt-1 bg-[#1e3799] text-white py-2.5 rounded-[9px] text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2">
+                <button onClick={submit} disabled={busy} className="mt-1 bg-[#5b5bd6] text-white py-2.5 rounded-[9px] text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2">
                     {busy && <Loader2 size={15} className="animate-spin" />} Save Changes
                 </button>
             </div>
@@ -445,7 +482,7 @@ function ResetPasswordModal({ user, onClose }: { user: AppUser; onClose: () => v
         <ModalShell title={`Reset Password — ${user.name}`} onClose={onClose}>
             <div className="flex flex-col gap-3.5">
                 <div><label className={labelCls}>New Password</label><input className={inputCls} value={password} onChange={e => setPassword(e.target.value)} /></div>
-                <button onClick={submit} disabled={busy} className="mt-1 bg-[#1e3799] text-white py-2.5 rounded-[9px] text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2">
+                <button onClick={submit} disabled={busy} className="mt-1 bg-[#5b5bd6] text-white py-2.5 rounded-[9px] text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2">
                     {busy && <Loader2 size={15} className="animate-spin" />} Reset Password
                 </button>
             </div>

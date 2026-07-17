@@ -39,7 +39,7 @@ export default function PublicInquiryForm() {
             <div className="w-full max-w-lg">
                 <div className="rounded-[16px] bg-white shadow-sm border border-gray-200 overflow-hidden">
                     {/* Header */}
-                    <div className="bg-[#1e3799] px-6 py-5 flex items-center gap-3 text-white">
+                    <div className="bg-[#5b5bd6] px-6 py-5 flex items-center gap-3 text-white">
                         <div className="h-10 w-10 rounded-[10px] bg-white/15 flex items-center justify-center">
                             <PackageSearch size={20} />
                         </div>
@@ -56,7 +56,7 @@ export default function PublicInquiryForm() {
                             <p className="text-[13.5px] text-gray-500 mb-6">Thank you. Our team will review your inquiry shortly.</p>
                             <button
                                 onClick={() => { setForm({ partyName: "", name: "", productName: "", quantity: "", rate: "", location: "" }); setDone(false) }}
-                                className="rounded-[8px] bg-[#1e3799] px-4 py-2 text-[13px] font-medium text-white hover:opacity-90"
+                                className="rounded-[8px] bg-[#5b5bd6] px-4 py-2 text-[13px] font-medium text-white hover:opacity-90"
                             >
                                 Submit another
                             </button>
@@ -87,7 +87,7 @@ export default function PublicInquiryForm() {
                             <button
                                 type="submit"
                                 disabled={saving}
-                                className="col-span-2 mt-1 inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#1e3799] px-4 py-2.5 text-[14px] font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                                className="col-span-2 mt-1 inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#5b5bd6] px-4 py-2.5 text-[14px] font-semibold text-white hover:opacity-90 disabled:opacity-60"
                             >
                                 {saving && <Loader2 size={16} className="animate-spin" />}
                                 Submit Inquiry
@@ -117,7 +117,7 @@ function Inp({ value, onChange, type = "text", placeholder }: { value: string; o
             value={value}
             onChange={e => onChange(e.target.value)}
             placeholder={placeholder}
-            className="w-full rounded-[8px] border border-gray-300 bg-white px-3 py-2 text-[14px] text-gray-900 outline-none focus:border-[#1e3799] focus:ring-1 focus:ring-[#1e3799]"
+            className="w-full rounded-[8px] border border-gray-300 bg-white px-3 py-2 text-[14px] text-gray-900 outline-none focus:border-[#5b5bd6] focus:ring-1 focus:ring-[#5b5bd6]"
         />
     )
 }

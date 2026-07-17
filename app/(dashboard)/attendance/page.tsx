@@ -187,42 +187,46 @@ export default function AttendancePage() {
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-[22px] font-bold text-[var(--text)]">Attendance</h1>
-                    <p className="text-[13px] text-[var(--text3)] mt-0.5">Punch in / out &amp; working hours · click an employee for full log</p>
+                    <h1 className="text-[24px] font-bold text-[var(--text)]">Attendance</h1>
+                    <p className="text-[13px] text-[var(--text3)] mt-0.5">Track punch in / out and working hours</p>
                 </div>
                 <button onClick={exportCSV} disabled={visible.length === 0}
-                    className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-[9px] text-[13px] font-semibold disabled:opacity-60 hover:bg-[#158a5e] transition-colors">
+                    className="flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] text-white rounded-[12px] text-[13px] font-semibold disabled:opacity-60 hover:bg-[#4a4ac8] transition-colors shadow-sm">
                     <Download size={15} /> Export Excel
                 </button>
             </div>
 
             {/* Date Navigator */}
-            <div className="flex flex-wrap items-center gap-2 md:gap-3 bg-white border border-[var(--border)] rounded-[12px] px-3 md:px-4 py-3">
-                <button onClick={() => changeDate(-1)} className="p-1.5 rounded-[6px] hover:bg-[var(--surface2)] transition-colors">
-                    <ChevronLeft size={16} className="text-[var(--text2)]" />
+            <div className="flex items-center gap-2 md:gap-3 bg-white border border-[var(--border)] rounded-[16px] px-3 md:px-4 py-3 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
+                <button onClick={() => changeDate(-1)} className="p-1.5 rounded-[8px] hover:bg-[var(--surface2)] transition-colors">
+                    <ChevronLeft size={17} className="text-[var(--text2)]" />
                 </button>
-                <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
-                    <Calendar size={16} className="text-[var(--accent)] shrink-0" />
-                    <input type="date" value={date} onChange={e => setDate(e.target.value)}
-                        className="text-[15px] font-semibold text-[var(--text)] bg-transparent border-none outline-none cursor-pointer" />
-                    <span className="hidden sm:inline text-[13px] text-[var(--text3)]">{format(parseISO(date), "EEEE, dd MMMM yyyy")}</span>
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                    <div className="w-9 h-9 rounded-[10px] bg-[var(--accent-light)] text-[var(--accent)] flex items-center justify-center shrink-0">
+                        <Calendar size={16} />
+                    </div>
+                    <div className="min-w-0">
+                        <input type="date" value={date} onChange={e => setDate(e.target.value)}
+                            className="block text-[15px] font-bold text-[var(--text)] bg-transparent border-none outline-none cursor-pointer p-0 leading-tight" />
+                        <span className="block text-[12px] text-[var(--text3)] leading-tight truncate">{format(parseISO(date), "EEEE, dd MMMM yyyy")}</span>
+                    </div>
                 </div>
-                <button onClick={() => changeDate(1)} className="p-1.5 rounded-[6px] hover:bg-[var(--surface2)] transition-colors">
-                    <ChevronRight size={16} className="text-[var(--text2)]" />
-                </button>
                 <button onClick={() => setDate(format(new Date(), "yyyy-MM-dd"))}
-                    className="px-3 py-1 rounded-[6px] bg-[var(--accent-light)] text-[var(--accent-text)] text-[12px] font-medium hover:bg-[#d1f0e4] transition-colors">
+                    className="px-3.5 py-1.5 rounded-full bg-[var(--accent-light)] text-[var(--accent-text)] text-[12.5px] font-semibold hover:bg-[#e0e0fa] transition-colors shrink-0">
                     Today
+                </button>
+                <button onClick={() => changeDate(1)} className="p-1.5 rounded-[8px] hover:bg-[var(--surface2)] transition-colors">
+                    <ChevronRight size={17} className="text-[var(--text2)]" />
                 </button>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-4 gap-2 md:gap-3">
                 {([
-                    { label: "Present", count: counts.present, icon: <CheckCircle size={16} />, color: "#16a34a", bg: "#dcfce7", sf: "PRESENT" as const },
-                    { label: "Absent", count: counts.absent, icon: <XCircle size={16} />, color: "#dc2626", bg: "#fee2e2", sf: "ABSENT" as const },
-                    { label: "Total Hours", count: fmtHrsMin(counts.totalHrs), icon: <Clock size={16} />, color: "#2563eb", bg: "#dbeafe", sf: null },
-                    { label: "Employees", count: filtered.length, icon: <Users size={16} />, color: "#6b7280", bg: "#f3f4f6", sf: null },
+                    { label: "Present", count: counts.present, icon: <CheckCircle size={18} />, color: "#16a34a", bg: "#dcfce7", sf: "PRESENT" as const },
+                    { label: "Absent", count: counts.absent, icon: <XCircle size={18} />, color: "#dc2626", bg: "#fee2e2", sf: "ABSENT" as const },
+                    { label: "Total Hours", count: fmtHrsMin(counts.totalHrs), icon: <Clock size={18} />, color: "#2563eb", bg: "#dbeafe", sf: null },
+                    { label: "Employees", count: filtered.length, icon: <Users size={18} />, color: "#7c3aed", bg: "#ede9fe", sf: null },
                 ]).map(s => {
                     const clickable = s.sf !== null
                     const active = clickable && statusFilter === s.sf
@@ -230,43 +234,105 @@ export default function AttendancePage() {
                         <button key={s.label} type="button"
                             onClick={() => clickable && setStatusFilter(active ? "ALL" : s.sf!)}
                             disabled={!clickable}
-                            className={`text-left bg-white border rounded-[12px] p-4 transition-all ${
-                                clickable ? "cursor-pointer hover:shadow-sm" : "cursor-default"
+                            className={`flex flex-col items-center bg-white border rounded-[16px] px-1 py-3.5 md:p-4 transition-all shadow-[0_2px_10px_rgba(80,80,170,0.05)] ${
+                                clickable ? "cursor-pointer hover:shadow-md" : "cursor-default"
                             }`}
-                            style={{ borderColor: active ? s.color : "var(--border)", boxShadow: active ? `0 0 0 1px ${s.color}` : undefined }}>
-                            <div className="flex items-center justify-between">
-                                <p className="text-[12px] text-[var(--text3)] font-medium">
-                                    {s.label}{active ? " · filtering" : ""}
-                                </p>
-                                <div className="p-1.5 rounded-[6px]" style={{ background: s.bg, color: s.color }}>{s.icon}</div>
-                            </div>
-                            <p className="text-[24px] font-bold mt-1" style={{ color: s.color }}>{s.count}</p>
+                            style={{ borderColor: active ? s.color : "var(--border)", boxShadow: active ? `0 0 0 1.5px ${s.color}` : undefined }}>
+                            <div className="w-11 h-11 rounded-full flex items-center justify-center mb-2" style={{ background: s.bg, color: s.color }}>{s.icon}</div>
+                            <p className="text-[11.5px] text-[var(--text2)] font-medium truncate max-w-full">{s.label}</p>
+                            <p className="text-[20px] md:text-[24px] font-bold mt-0.5 truncate max-w-full" style={{ color: s.color }}>{s.count}</p>
                         </button>
                     )
                 })}
             </div>
 
             {/* Controls */}
-            <div className="flex flex-wrap items-center justify-between bg-white border border-[var(--border)] rounded-[12px] px-4 py-3 gap-3">
-                <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col md:flex-row md:items-center gap-3">
+                <div className="relative flex-1">
+                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
+                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search employee..."
+                        className="w-full h-11 pl-10 pr-3 rounded-[14px] border border-[var(--border)] text-[13.5px] outline-none focus:border-[var(--accent)] bg-white shadow-[0_2px_10px_rgba(80,80,170,0.05)]" />
+                </div>
+                <div className="flex gap-2">
                     {(["ALL", "LABOUR", "STAFF"] as const).map(f => (
                         <button key={f} onClick={() => setFilter(f)}
-                            className={`px-3 py-1.5 rounded-[7px] text-[12px] font-medium transition-colors ${
-                                filter === f ? "bg-[var(--accent)] text-white" : "bg-[var(--surface2)] text-[var(--text2)] hover:bg-[var(--border)]"
+                            className={`px-4 py-2 rounded-full text-[12.5px] font-semibold transition-colors border ${
+                                filter === f
+                                    ? "bg-[var(--accent)] text-white border-[var(--accent)] shadow-sm"
+                                    : "bg-white text-[var(--text2)] border-[var(--border)] hover:bg-[var(--surface2)]"
                             }`}>
                             {f === "ALL" ? "All" : f === "LABOUR" ? "🔧 Labour" : "👔 Staff"}
                         </button>
                     ))}
                 </div>
-                <div className="relative w-full max-w-xs">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
-                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search employee..."
-                        className="w-full h-8 pl-8 pr-3 rounded-[7px] border border-[var(--border)] text-[13px] outline-none focus:border-[var(--accent)] bg-[var(--surface2)]" />
-                </div>
             </div>
 
-            {/* Excel-style Table */}
-            <div className="bg-white border border-[var(--border)] rounded-[12px] overflow-hidden">
+            {/* Mobile card list */}
+            <div className="md:hidden space-y-2.5">
+                {loading ? (
+                    Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="h-[76px] bg-white border border-[var(--border)] rounded-[16px] animate-pulse" />
+                    ))
+                ) : visible.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-[var(--text3)] bg-white border border-[var(--border)] rounded-[16px]">
+                        <Users size={32} className="mb-2 opacity-40" />
+                        <p className="text-[14px]">
+                            {statusFilter === "ABSENT" ? "No absent employees" :
+                             statusFilter === "PRESENT" ? "No present employees" : "No employees found"}
+                        </p>
+                    </div>
+                ) : visible.map(emp => {
+                    const rec = attMap[emp.id]
+                    const status = rec?.status || "ABSENT"
+                    const cfg = STATUS_COLOR[status] || STATUS_COLOR.ABSENT
+                    const isLabour = emp.employeeCategory === "LABOUR"
+                    const pin = punchIn(rec)
+                    const pout = punchOut(rec)
+                    return (
+                        <button key={emp.id} onClick={() => openEmployee(emp)}
+                            className="w-full text-left bg-white border border-[var(--border)] rounded-[16px] px-3.5 py-3 shadow-[0_2px_10px_rgba(80,80,170,0.05)] active:bg-[var(--surface2)] transition-colors">
+                            {/* Row 1: identity + status */}
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-[var(--accent-light)] flex items-center justify-center text-[12.5px] font-bold text-[var(--accent-text)] shrink-0">
+                                    {emp.firstName[0]}{emp.lastName?.[0] || ""}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[14px] font-semibold text-[var(--text)] truncate">{emp.firstName} {emp.lastName}</p>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                        <p className="text-[11.5px] text-[var(--accent-text)] font-medium">{emp.employeeId}</p>
+                                        <span className={`px-1.5 py-0.5 rounded-[5px] text-[10px] font-semibold ${
+                                            isLabour ? "bg-orange-50 text-orange-700" : "bg-blue-50 text-blue-700"
+                                        }`}>
+                                            {isLabour ? "🔧 Labour" : "👔 Staff"}
+                                        </span>
+                                    </div>
+                                </div>
+                                <span className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold" style={{ background: cfg.bg, color: cfg.color }}>
+                                    {cfg.label}
+                                </span>
+                            </div>
+                            {/* Row 2: punch times */}
+                            <div className="grid grid-cols-3 gap-2 mt-2.5 pt-2.5 border-t border-[var(--border)]">
+                                <div>
+                                    <p className="text-[10px] text-[var(--text3)] font-medium">Punch In</p>
+                                    <p className={`text-[12.5px] font-semibold mt-0.5 ${pin ? "text-green-600" : "text-[var(--text3)]"}`}>{fmtTime(pin)}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] text-[var(--text3)] font-medium">Punch Out</p>
+                                    <p className={`text-[12.5px] font-semibold mt-0.5 ${pout ? "text-red-500" : "text-[var(--text3)]"}`}>{fmtTime(pout)}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] text-[var(--text3)] font-medium">Hours</p>
+                                    <p className="text-[12.5px] font-semibold mt-0.5 text-[var(--text)]">{fmtHrsMin(totalHrs(rec))}</p>
+                                </div>
+                            </div>
+                        </button>
+                    )
+                })}
+            </div>
+
+            {/* Excel-style Table (desktop) */}
+            <div className="hidden md:block bg-white border border-[var(--border)] rounded-[16px] overflow-hidden shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
                 {loading ? (
                     <table className="w-full">
                         <tbody>

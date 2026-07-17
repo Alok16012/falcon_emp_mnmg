@@ -144,11 +144,11 @@ export default function JoiningsPage() {
     }
 
     return (
-        <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
+        <div className="w-full p-4 md:p-6 max-w-[1200px] mx-auto">
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-[10px] bg-[#1e3799] flex items-center justify-center text-white">
+                    <div className="h-10 w-10 rounded-[10px] bg-[#5b5bd6] flex items-center justify-center text-white">
                         <UserPlus size={20} />
                     </div>
                     <div>
@@ -164,20 +164,22 @@ export default function JoiningsPage() {
             </div>
 
             {/* External link box */}
-            <div className="mb-5 rounded-[12px] border border-[var(--border)] bg-[var(--surface2)]/40 p-4">
+            <div className="mb-5 rounded-[16px] border border-[var(--border)] bg-white p-4 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 min-w-0">
-                        <Link2 size={16} className="text-[#1e3799] shrink-0" />
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-11 w-11 rounded-[13px] bg-[#5b5bd6] flex items-center justify-center text-white shrink-0">
+                            <Link2 size={19} />
+                        </div>
                         <div className="min-w-0">
-                            <p className="text-[12.5px] font-semibold text-[var(--text)]">Worker joining form link</p>
+                            <p className="text-[13.5px] font-bold text-[var(--text)]">Worker joining form link</p>
                             <p className="text-[12px] text-[var(--text2)] truncate">{publicUrl || "…"}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button onClick={copyLink} className="inline-flex items-center gap-1.5 rounded-[8px] border border-[var(--border)] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[var(--text2)] hover:bg-[var(--surface2)]">
+                        <button onClick={copyLink} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-light)] px-3.5 py-2 text-[12.5px] font-semibold text-[var(--accent-text)] hover:bg-[#e0e0fa] transition-colors">
                             <Copy size={14} /> Copy
                         </button>
-                        <a href={publicUrl || "/join"} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-[8px] border border-[var(--border)] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[var(--text2)] hover:bg-[var(--surface2)]">
+                        <a href={publicUrl || "/join"} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-light)] px-3.5 py-2 text-[12.5px] font-semibold text-[var(--accent-text)] hover:bg-[#e0e0fa] transition-colors">
                             <ExternalLink size={14} /> Open
                         </a>
                     </div>
@@ -186,27 +188,27 @@ export default function JoiningsPage() {
 
             {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-                <StatCard label="Total" value={counts.total} />
-                <StatCard label="Pending" value={counts.pending} color="#f59e0b" />
-                <StatCard label="Approved" value={counts.approved} color="#1a9e6e" />
-                <StatCard label="Rejected" value={counts.rejected} color="#dc2626" />
+                <StatCard label="Total" value={counts.total} icon={<UserPlus size={16} />} iconColor="#5b5bd6" iconBg="#ececfc" />
+                <StatCard label="Pending" value={counts.pending} color="#f59e0b" icon={<Loader2 size={16} />} iconColor="#f59e0b" iconBg="#fef3c7" />
+                <StatCard label="Approved" value={counts.approved} color="#16a34a" icon={<CheckCircle size={16} />} iconColor="#16a34a" iconBg="#dcfce7" />
+                <StatCard label="Rejected" value={counts.rejected} color="#dc2626" icon={<X size={16} />} iconColor="#dc2626" iconBg="#fee2e2" />
             </div>
 
             {/* Filters */}
             <div className="flex flex-wrap items-center gap-2 mb-4">
                 <div className="relative flex-1 min-w-[200px]">
-                    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
+                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
                     <input
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search name, phone, Aadhaar, designation…"
-                        className="w-full rounded-[8px] border border-[var(--border)] bg-white pl-9 pr-3 py-2 text-[13px] outline-none focus:border-[#1e3799]"
+                        className="w-full h-11 rounded-[14px] border border-[var(--border)] bg-white pl-10 pr-3 text-[13px] outline-none focus:border-[#5b5bd6] shadow-[0_2px_10px_rgba(80,80,170,0.05)]"
                     />
                 </div>
                 <select
                     value={statusFilter}
                     onChange={e => setStatusFilter(e.target.value)}
-                    className="rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#1e3799]"
+                    className="h-11 rounded-[14px] border border-[var(--border)] bg-white px-3 text-[13px] font-medium text-[var(--text2)] outline-none focus:border-[#5b5bd6] shadow-[0_2px_10px_rgba(80,80,170,0.05)]"
                 >
                     <option value="">All status</option>
                     <option value="INACTIVE">Pending</option>
@@ -215,8 +217,77 @@ export default function JoiningsPage() {
                 </select>
             </div>
 
-            {/* Table */}
-            <div className="rounded-[12px] border border-[var(--border)] bg-white overflow-hidden">
+            {/* Mobile card list */}
+            <div className="md:hidden space-y-2.5">
+                {loading ? (
+                    <div className="py-12 text-center text-[var(--text3)] bg-white border border-[var(--border)] rounded-[16px]">
+                        <Loader2 size={20} className="animate-spin inline" />
+                    </div>
+                ) : filtered.length === 0 ? (
+                    <div className="py-12 text-center text-[var(--text3)] bg-white border border-[var(--border)] rounded-[16px] text-[13px]">No joining submissions yet</div>
+                ) : filtered.map(r => {
+                    const sc = STATUS_CONFIG[r.status] || STATUS_CONFIG.INACTIVE
+                    return (
+                        <div key={r.id} className="bg-white border border-[var(--border)] rounded-[16px] p-3.5 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
+                            <div className="flex items-start gap-3">
+                                <button onClick={() => setView(r)} className="shrink-0">
+                                    {r.photo ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={r.photo} alt="" className="h-11 w-11 rounded-full object-cover" />
+                                    ) : (
+                                        <span className="h-11 w-11 rounded-full bg-[var(--accent-light)] flex items-center justify-center text-[var(--accent)]"><User size={18} /></span>
+                                    )}
+                                </button>
+                                <button onClick={() => setView(r)} className="min-w-0 flex-1 text-left">
+                                    <p className="text-[14.5px] font-semibold text-[var(--text)] truncate">{r.firstName} {r.lastName}</p>
+                                    <p className="text-[12px] text-[var(--accent-text)] font-medium">{r.employeeId}</p>
+                                    <p className="text-[12px] text-[var(--text3)] mt-0.5">📞 {r.phone}</p>
+                                </button>
+                                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                    <span style={{ color: sc.color, background: sc.bg }} className="inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold">{sc.label}</span>
+                                    <div className="flex items-center gap-0.5">
+                                        {r.status !== "ACTIVE" && (
+                                            <button onClick={() => updateStatus(r.id, "ACTIVE")} title="Approve" className="p-1.5 text-green-600 hover:bg-green-50 rounded-[8px]">
+                                                <CheckCircle size={16} />
+                                            </button>
+                                        )}
+                                        <button onClick={() => remove(r.id)} title="Delete" className="p-1.5 text-red-400 hover:bg-red-50 rounded-[8px]">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-[var(--border)]">
+                                <div>
+                                    <p className="text-[10px] text-[var(--text3)] font-medium">Designation</p>
+                                    <p className="text-[12px] font-medium text-[var(--text)] truncate">{r.designation || "—"}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] text-[var(--text3)] font-medium">Shift Time</p>
+                                    <p className="text-[12px] font-medium text-[var(--text)] truncate">
+                                        {r.shiftStart && r.shiftEnd ? `${shiftTimeLabel(r.shiftStart, r.shiftEnd)} (${r.shiftHours} hr)` : "—"}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] text-[var(--text3)] font-medium">Wage</p>
+                                    <p className="text-[12px] font-medium text-[var(--text)]">{r.basicSalary ? fmtRupee(r.basicSalary) : "—"}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] text-[var(--text3)] font-medium">Docs</p>
+                                    <p className="text-[12px] font-medium text-[var(--text)]">{r.documents.length}</p>
+                                </div>
+                                <div className="col-span-2">
+                                    <p className="text-[10px] text-[var(--text3)] font-medium">Submitted</p>
+                                    <p className="text-[12px] font-medium text-[var(--text)]">{format(new Date(r.createdAt), "dd MMM yyyy")}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+
+            {/* Table (desktop) */}
+            <div className="hidden md:block rounded-[16px] border border-[var(--border)] bg-white overflow-hidden shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
                 <div className="overflow-x-auto">
                     <table className="w-full text-[13px]">
                         <thead>
@@ -252,7 +323,7 @@ export default function JoiningsPage() {
                                                     <span className="h-8 w-8 rounded-full bg-[var(--surface2)] flex items-center justify-center text-[var(--text3)] shrink-0"><User size={15} /></span>
                                                 )}
                                                 <span>
-                                                    <span className="block font-medium text-[var(--text)] group-hover:text-[#1e3799]">{r.firstName} {r.lastName}</span>
+                                                    <span className="block font-medium text-[var(--text)] group-hover:text-[#5b5bd6]">{r.firstName} {r.lastName}</span>
                                                     <span className="block text-[12px] text-[var(--text3)]">{r.employeeId}</span>
                                                 </span>
                                             </button>
@@ -297,11 +368,21 @@ export default function JoiningsPage() {
     )
 }
 
-function StatCard({ label, value, color }: { label: string; value: number; color?: string }) {
+function StatCard({ label, value, color, icon, iconColor, iconBg }: {
+    label: string; value: number; color?: string
+    icon?: React.ReactNode; iconColor?: string; iconBg?: string
+}) {
     return (
-        <div className="rounded-[12px] border border-[var(--border)] bg-white p-4">
-            <p className="text-[12px] text-[var(--text2)]">{label}</p>
-            <p className="text-[22px] font-bold" style={{ color: color || "var(--text)" }}>{value}</p>
+        <div className="rounded-[16px] border border-[var(--border)] bg-white p-4 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
+            <div className="flex items-center justify-between">
+                <p className="text-[12.5px] text-[var(--text2)] font-medium">{label}</p>
+                {icon && (
+                    <span className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: iconBg, color: iconColor }}>
+                        {icon}
+                    </span>
+                )}
+            </div>
+            <p className="text-[24px] font-bold mt-1" style={{ color: color || "var(--text)" }}>{value}</p>
         </div>
     )
 }
@@ -352,7 +433,7 @@ function ViewModal({ row, onClose, onApprove }: { row: Joining; onClose: () => v
                         ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                 {row.documents.map(d => (
-                                    <a key={d.id} href={d.fileUrl} target="_blank" rel="noreferrer" className="block rounded-[10px] border border-[var(--border)] overflow-hidden hover:border-[#1e3799] transition-colors">
+                                    <a key={d.id} href={d.fileUrl} target="_blank" rel="noreferrer" className="block rounded-[10px] border border-[var(--border)] overflow-hidden hover:border-[#5b5bd6] transition-colors">
                                         {d.fileUrl.startsWith("data:image") ? (
                                             // eslint-disable-next-line @next/next/no-img-element
                                             <img src={d.fileUrl} alt={d.type} className="h-28 w-full object-cover" />

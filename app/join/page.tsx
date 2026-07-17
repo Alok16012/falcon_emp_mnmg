@@ -40,7 +40,7 @@ function fileToDataUrl(file: File, maxDim = 1280, quality = 0.8): Promise<string
 
 type FileVal = { fileName: string; dataUrl: string }
 
-const ACCENT = "#1e3799"
+const ACCENT = "#5b5bd6"
 const SHIFT_PRESETS = [
     { s: "08:00", e: "20:00", label: "8 AM - 8 PM" },
     { s: "09:00", e: "17:00", label: "9 AM - 5 PM" },
@@ -126,9 +126,9 @@ export default function WorkerJoiningFormPage() {
         } finally { setBusy(false) }
     }
 
-    const inputCls = "w-full h-11 rounded-[10px] border border-gray-300 bg-white px-3 text-[15px] outline-none focus:border-[#1e3799] focus:ring-1 focus:ring-[#1e3799] transition"
+    const inputCls = "w-full h-11 rounded-[10px] border border-gray-300 bg-white px-3 text-[15px] outline-none focus:border-[#5b5bd6] focus:ring-1 focus:ring-[#5b5bd6] transition"
     const labelCls = "block text-[13px] font-medium text-gray-700 mb-1.5"
-    const sectionCls = "text-[15px] font-bold text-[#1e3799] mt-7 mb-3 pb-1.5 border-b-2 border-[#1e3799]/15"
+    const sectionCls = "text-[15px] font-bold text-[#5b5bd6] mt-7 mb-3 pb-1.5 border-b-2 border-[#5b5bd6]/15"
 
     if (done !== null) {
         return (
@@ -217,7 +217,7 @@ export default function WorkerJoiningFormPage() {
                                         setSameAddr(on)
                                         if (on) setF(p => ({ ...p, currentAddress: p.permanentAddress }))
                                     }}
-                                    className="h-4 w-4 accent-[#1e3799]"
+                                    className="h-4 w-4 accent-[#5b5bd6]"
                                 />
                                 <span className="text-[13px] font-medium text-gray-700">Current address same as permanent</span>
                             </label>
@@ -293,8 +293,8 @@ export default function WorkerJoiningFormPage() {
                                             onClick={() => setF(p => ({ ...p, shiftStart: opt.s, shiftEnd: opt.e }))}
                                             className={`px-3 py-1.5 rounded-[8px] border text-[12px] font-semibold transition ${
                                                 active
-                                                    ? "border-[#1e3799] bg-[#1e3799]/10 text-[#1e3799]"
-                                                    : "border-gray-300 bg-white text-gray-700 hover:border-[#1e3799]"
+                                                    ? "border-[#5b5bd6] bg-[#5b5bd6]/10 text-[#5b5bd6]"
+                                                    : "border-gray-300 bg-white text-gray-700 hover:border-[#5b5bd6]"
                                             }`}
                                         >
                                             {opt.label}
@@ -339,7 +339,7 @@ export default function WorkerJoiningFormPage() {
                     {/* Declaration */}
                     <div className={sectionCls}>Declaration</div>
                     <label className="flex items-start gap-3 cursor-pointer">
-                        <input type="checkbox" checked={f.declaration} onChange={set("declaration")} className="mt-1 w-5 h-5 accent-[#1e3799] shrink-0" />
+                        <input type="checkbox" checked={f.declaration} onChange={set("declaration")} className="mt-1 w-5 h-5 accent-[#5b5bd6] shrink-0" />
                         <span className="text-[13px] text-gray-700 leading-relaxed">
                             I hereby declare that the information provided above is true and correct to the best of my
                             knowledge. I agree to abide by the rules and regulations of the company.
@@ -374,7 +374,7 @@ function DocUpload({ label, doc, onPick, onClear }: {
                     <button type="button" onClick={onClear} className="text-green-700 hover:text-green-900 shrink-0"><X size={16} /></button>
                 </div>
             ) : (
-                <label className="flex items-center gap-2 h-11 px-3 rounded-[10px] border border-dashed border-gray-300 bg-gray-50 cursor-pointer text-[13px] text-gray-600 hover:border-[#1e3799]">
+                <label className="flex items-center gap-2 h-11 px-3 rounded-[10px] border border-dashed border-gray-300 bg-gray-50 cursor-pointer text-[13px] text-gray-600 hover:border-[#5b5bd6]">
                     <Upload size={15} /> Choose file
                     <input type="file" accept="image/*,application/pdf" capture="environment" onChange={onPick} className="hidden" />
                 </label>

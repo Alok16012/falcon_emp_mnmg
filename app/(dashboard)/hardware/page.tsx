@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import {
     Cpu, Plus, Trash2, RefreshCw, CheckCircle2, XCircle,
     Wifi, WifiOff, Link2, Link2Off, ChevronDown, ChevronUp,
-    Clock, AlertCircle, User, UserPlus, Search, Save, Play, Timer
+    Clock, AlertCircle, User, UserPlus, Search, Save, Play, Timer, FileText
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -330,22 +330,17 @@ export default function HardwarePage() {
     }
 
     return (
-        <div className="p-6 max-w-5xl mx-auto">
+        <div className="w-full p-4 md:p-6 max-w-5xl mx-auto">
             {/* Header */}
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-                <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-[10px] bg-[var(--accent-light)] flex items-center justify-center">
-                        <Cpu size={20} className="text-[var(--accent-text)]" />
-                    </div>
-                    <div>
-                        <h1 className="text-[17px] font-semibold text-[var(--text)]">Hardware Integration</h1>
-                        <p className="text-[12px] text-[var(--text3)]">Dahua Access Control · Face Recognition Attendance</p>
-                    </div>
+            <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
+                <div>
+                    <h1 className="text-[24px] md:text-[26px] font-bold text-[var(--text)] leading-tight">Hardware Integration</h1>
+                    <p className="text-[13px] text-[var(--text3)] mt-0.5">Manage attendance devices and sync employee data</p>
                 </div>
                 <button
                     onClick={() => handleSync()}
                     disabled={syncing !== null || devices.filter(d => d.enabled).length === 0}
-                    className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white text-[13px] font-medium rounded-[8px] hover:opacity-90 disabled:opacity-50 transition-opacity"
+                    className="flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] text-white text-[13px] font-semibold rounded-[12px] hover:bg-[#4a4ac8] disabled:opacity-50 transition-colors shadow-sm"
                 >
                     <RefreshCw size={14} className={cn(syncing ? "animate-spin" : "")} />
                     {syncing === "all" ? "Syncing…" : "Sync All Devices"}
@@ -353,55 +348,77 @@ export default function HardwarePage() {
             </div>
 
             {/* Stats Row */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[10px] p-4">
-                    <p className="text-[11px] text-[var(--text3)] mb-1">Devices</p>
-                    <p className="text-[22px] font-bold text-[var(--text)]">{devices.length}</p>
-                    <p className="text-[11px] text-[var(--text3)]">{devices.filter(d => d.enabled).length} enabled</p>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
+                <div className="bg-white border border-[var(--border)] rounded-[16px] p-3.5 md:p-4 shadow-[0_2px_10px_rgba(80,80,170,0.05)] min-w-0 overflow-hidden">
+                    <div className="flex items-start gap-2.5">
+                        <div className="w-9 h-9 rounded-[11px] bg-[var(--accent-light)] text-[var(--accent)] flex items-center justify-center shrink-0"><Cpu size={17} /></div>
+                        <div className="min-w-0">
+                            <p className="text-[12px] text-[var(--text2)] font-medium">Devices</p>
+                            <p className="text-[22px] font-bold text-[var(--text)] leading-tight">{devices.length}</p>
+                        </div>
+                    </div>
+                    <p className="text-[11.5px] text-[var(--text3)] mt-1.5">{devices.filter(d => d.enabled).length} enabled</p>
                 </div>
-                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[10px] p-4">
-                    <p className="text-[11px] text-[var(--text3)] mb-1">Employees Mapped</p>
-                    <p className="text-[22px] font-bold text-[var(--text)]">{mappedCount}</p>
-                    <p className="text-[11px] text-[var(--text3)]">of {mappings.length} active</p>
+                <div className="bg-white border border-[var(--border)] rounded-[16px] p-3.5 md:p-4 shadow-[0_2px_10px_rgba(80,80,170,0.05)] min-w-0 overflow-hidden">
+                    <div className="flex items-start gap-2.5">
+                        <div className="w-9 h-9 rounded-[11px] bg-[#dcfce7] text-[#16a34a] flex items-center justify-center shrink-0"><UserPlus size={17} /></div>
+                        <div className="min-w-0">
+                            <p className="text-[12px] text-[var(--text2)] font-medium">Employees Mapped</p>
+                            <p className="text-[22px] font-bold text-[var(--text)] leading-tight">{mappedCount}</p>
+                        </div>
+                    </div>
+                    <p className="text-[11.5px] text-[var(--text3)] mt-1.5">of {mappings.length} active</p>
                 </div>
-                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[10px] p-4">
-                    <p className="text-[11px] text-[var(--text3)] mb-1">Last Sync</p>
-                    <p className="text-[13px] font-semibold text-[var(--text)] truncate">
-                        {syncLogs[0] ? new Date(syncLogs[0].syncedAt).toLocaleString("en-IN", { hour12: false }) : "Never"}
-                    </p>
-                    <p className="text-[11px] text-[var(--text3)]">
+                <div className="bg-white border border-[var(--border)] rounded-[16px] p-3.5 md:p-4 shadow-[0_2px_10px_rgba(80,80,170,0.05)] min-w-0 overflow-hidden">
+                    <div className="flex items-start gap-2.5">
+                        <div className="w-9 h-9 rounded-[11px] bg-[#dbeafe] text-[#2563eb] flex items-center justify-center shrink-0"><Timer size={17} /></div>
+                        <div className="min-w-0">
+                            <p className="text-[12px] text-[var(--text2)] font-medium">Last Sync</p>
+                            <p className="text-[12.5px] md:text-[14px] font-bold text-[var(--text)] leading-tight truncate mt-0.5">
+                                {syncLogs[0] ? new Date(syncLogs[0].syncedAt).toLocaleString("en-IN", { hour12: false }) : "Never"}
+                            </p>
+                        </div>
+                    </div>
+                    <p className="text-[11.5px] text-[var(--text3)] mt-1.5">
                         {syncLogs[0] ? `${syncLogs[0].newPunches} new punches` : "—"}
                     </p>
                 </div>
-                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[10px] p-4">
-                    <div className="flex items-center gap-1.5 mb-1">
-                        <Link2 size={11} className={tcpSessions.filter(s => s.connected).length > 0 ? "text-emerald-500" : "text-[var(--text3)]"} />
-                        <p className="text-[11px] text-[var(--text3)]">TCP Connected</p>
+                <div className="bg-white border border-[var(--border)] rounded-[16px] p-3.5 md:p-4 shadow-[0_2px_10px_rgba(80,80,170,0.05)] min-w-0 overflow-hidden">
+                    <div className="flex items-start gap-2.5">
+                        <div className={cn("w-9 h-9 rounded-[11px] flex items-center justify-center shrink-0",
+                            tcpSessions.filter(s => s.connected).length > 0 ? "bg-[#dcfce7] text-[#16a34a]" : "bg-[var(--accent-light)] text-[var(--accent)]")}>
+                            <Link2 size={17} />
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-[12px] text-[var(--text2)] font-medium">TCP Connected</p>
+                            <p className="text-[22px] font-bold text-[var(--text)] leading-tight">{tcpSessions.filter(s => s.connected).length}</p>
+                        </div>
                     </div>
-                    <p className="text-[22px] font-bold text-[var(--text)]">{tcpSessions.filter(s => s.connected).length}</p>
-                    <p className="text-[11px] text-[var(--text3)]">Auto-Reg devices live</p>
+                    <p className="text-[11.5px] text-[var(--text3)] mt-1.5">Auto-Reg devices live</p>
                 </div>
-                <div className="bg-[var(--surface)] border border-emerald-200 rounded-[10px] p-4">
-                    <div className="flex items-center gap-1.5 mb-1">
-                        <Timer size={11} className="text-emerald-500" />
-                        <p className="text-[11px] text-[var(--text3)]">Auto-Sync</p>
+                <div className="bg-white border border-[var(--border)] rounded-[16px] p-3.5 md:p-4 shadow-[0_2px_10px_rgba(80,80,170,0.05)] min-w-0 overflow-hidden">
+                    <div className="flex items-start gap-2.5">
+                        <div className="w-9 h-9 rounded-[11px] bg-[#dcfce7] text-[#16a34a] flex items-center justify-center shrink-0"><Timer size={17} /></div>
+                        <div className="min-w-0">
+                            <p className="text-[12px] text-[var(--text2)] font-medium">Auto-Sync</p>
+                            <p className="text-[22px] font-bold text-emerald-600 leading-tight font-mono">{fmtCountdown(nextSyncIn)}</p>
+                        </div>
                     </div>
-                    <p className="text-[22px] font-bold text-emerald-600 font-mono">{fmtCountdown(nextSyncIn)}</p>
-                    <p className="text-[11px] text-emerald-600">● Running · every 30 min</p>
+                    <p className="text-[11.5px] text-emerald-600 mt-1.5">● Running · every 30 min</p>
                 </div>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 border-b border-[var(--border)] mb-5">
+            <div className="flex gap-2 mb-5 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0">
                 {(["devices", "deviceUsers", "mapping", "logs"] as const).map(t => (
                     <button
                         key={t}
                         onClick={() => setTab(t)}
                         className={cn(
-                            "px-4 py-2 text-[13px] font-medium border-b-2 -mb-px transition-colors",
+                            "px-4 py-2 text-[12.5px] font-semibold rounded-[12px] border whitespace-nowrap transition-colors shrink-0",
                             tab === t
-                                ? "border-[var(--accent)] text-[var(--accent-text)]"
-                                : "border-transparent text-[var(--text2)] hover:text-[var(--text)]"
+                                ? "bg-[var(--accent-light)] text-[var(--accent-text)] border-[var(--accent)]/40"
+                                : "bg-white text-[var(--text2)] border-[var(--border)] hover:bg-[var(--surface2)]"
                         )}
                     >
                         {t === "deviceUsers" ? "Device Users" : t === "mapping" ? "Employee Mapping" : t === "logs" ? "Sync Logs" : "Devices"}
@@ -526,23 +543,35 @@ export default function HardwarePage() {
                     ) : (
                         <button
                             onClick={() => setShowAddDevice(true)}
-                            className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-[var(--border)] rounded-[12px] text-[13px] text-[var(--text3)] hover:border-[var(--accent)] hover:text-[var(--accent-text)] transition-colors"
+                            className="w-full flex items-center justify-center gap-2 py-4 border-2 border-dashed border-[var(--accent)]/30 rounded-[16px] text-[14px] font-semibold text-[var(--accent-text)] hover:border-[var(--accent)] hover:bg-[var(--accent-light)]/40 transition-colors"
                         >
-                            <Plus size={16} />
+                            <Plus size={17} />
                             Add Device
                         </button>
                     )}
 
                     {/* Setup Guide */}
-                    <div className="mt-6 bg-[var(--surface2)] border border-[var(--border)] rounded-[12px] p-4">
-                        <h4 className="text-[12px] font-semibold text-[var(--text)] mb-2">Setup Guide</h4>
-                        <ol className="text-[11.5px] text-[var(--text2)] space-y-1.5 list-decimal list-inside">
-                            <li>Add your Dahua ASI device with its LAN IP and credentials</li>
-                            <li>Test connection to verify credentials are correct</li>
-                            <li>Go to <strong>Employee Mapping</strong> tab — assign a Hardware User ID to each employee</li>
-                            <li>Click <strong>Sync All Devices</strong> to import punch records</li>
-                            <li><strong>Auto Registration (recommended):</strong> On the device, set <em>Auto Registration</em> → Server IP = your server, Port = <code className="bg-[var(--surface)] px-1 rounded">8099</code>. Device will connect automatically and show <strong>TCP Live</strong> badge above.</li>
-                            <li><strong>HTTP Push (alternative):</strong> On the device, set Event Upload URL to <code className="bg-[var(--surface)] px-1 rounded">/api/hardware/event</code> — punch events pushed in real-time.</li>
+                    <div className="mt-5 bg-white border border-[var(--border)] rounded-[16px] p-4 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
+                        <div className="flex items-center gap-2.5 mb-3.5">
+                            <div className="w-9 h-9 rounded-[11px] bg-[var(--accent-light)] text-[var(--accent)] flex items-center justify-center">
+                                <FileText size={16} />
+                            </div>
+                            <h4 className="text-[15px] font-bold text-[var(--text)]">Setup Guide</h4>
+                        </div>
+                        <ol className="space-y-2.5">
+                            {[
+                                <>Add Dahua ASI device LAN IP and credentials</>,
+                                <>Test connection</>,
+                                <>Map employees to hardware user IDs</>,
+                                <>Sync all devices to import punch data</>,
+                                <>Enable auto registration with server IP and port <code className="bg-[var(--surface2)] px-1 rounded">8099</code></>,
+                                <>HTTP push can send punch events in real time</>,
+                            ].map((step, i) => (
+                                <li key={i} className="flex items-start gap-2.5">
+                                    <span className="w-6 h-6 rounded-full bg-[var(--accent-light)] text-[var(--accent-text)] text-[11.5px] font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                                    <span className="text-[12.5px] text-[var(--text2)] leading-relaxed pt-0.5">{step}</span>
+                                </li>
+                            ))}
                         </ol>
                     </div>
                 </div>
@@ -785,100 +814,101 @@ function DeviceCard({
 
     return (
         <div className={cn(
-            "bg-[var(--surface)] border rounded-[12px] overflow-hidden overflow-x-auto transition-colors",
+            "bg-white border rounded-[16px] overflow-hidden transition-colors shadow-[0_2px_10px_rgba(80,80,170,0.05)]",
             device.enabled ? "border-[var(--border)]" : "border-[var(--border)] opacity-60"
         )}>
-            <div className="flex items-center justify-between p-4">
+            <div className="p-4">
+                {/* Top row: identity + status + small controls */}
                 <div className="flex items-center gap-3">
                     <div className={cn(
-                        "h-9 w-9 rounded-[8px] flex items-center justify-center",
-                        device.enabled ? "bg-blue-50 text-blue-600" : "bg-[var(--surface2)] text-[var(--text3)]"
+                        "h-11 w-11 rounded-[13px] flex items-center justify-center shrink-0",
+                        device.enabled ? "bg-[var(--accent-light)] text-[var(--accent)]" : "bg-[var(--surface2)] text-[var(--text3)]"
                     )}>
-                        <Cpu size={16} />
+                        <Cpu size={19} />
                     </div>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <p className="text-[14px] font-semibold text-[var(--text)]">{device.name}</p>
-                            {tcpConnected && (
-                                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-semibold rounded-full">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
-                                    TCP Live
-                                </span>
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[15px] font-bold text-[var(--text)] truncate">{device.name}</p>
+                        <p className="text-[12px] text-[var(--text3)] font-mono">{device.ip}:{device.port}</p>
+                    </div>
+                    {tcpConnected ? (
+                        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-600 text-[11.5px] font-semibold rounded-full shrink-0">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                            Online
+                        </span>
+                    ) : connResult === true ? (
+                        <span className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-600 text-[11.5px] font-semibold rounded-full shrink-0">
+                            <CheckCircle2 size={12} /> OK
+                        </span>
+                    ) : connResult === false ? (
+                        <span className="flex items-center gap-1 px-2.5 py-1 bg-red-50 text-red-600 text-[11.5px] font-semibold rounded-full shrink-0">
+                            <XCircle size={12} /> Failed
+                        </span>
+                    ) : null}
+                    <div className="flex items-center shrink-0">
+                        <button
+                            onClick={() => onToggle(!device.enabled)}
+                            title={device.enabled ? "Disable device" : "Enable device"}
+                            className={cn(
+                                "p-1.5 rounded-[8px] transition-colors",
+                                device.enabled ? "text-[var(--text3)] hover:bg-[var(--surface2)]" : "text-emerald-600 hover:bg-emerald-50"
                             )}
-                        </div>
-                        <p className="text-[11.5px] text-[var(--text3)] font-mono">{device.ip}:{device.port}</p>
+                        >
+                            {device.enabled ? <WifiOff size={14} /> : <Wifi size={14} />}
+                        </button>
+                        <button
+                            onClick={onDelete}
+                            className="p-1.5 rounded-[8px] text-[var(--text3)] hover:text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                            <Trash2 size={14} />
+                        </button>
+                        <button
+                            onClick={() => setExpanded(v => !v)}
+                            className="p-1.5 rounded-[8px] text-[var(--text3)] hover:text-[var(--text)] hover:bg-[var(--surface2)] transition-colors"
+                        >
+                            {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                        </button>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    {/* Connection test result */}
-                    {connResult === true && <CheckCircle2 size={15} className="text-emerald-500" />}
-                    {connResult === false && <XCircle size={15} className="text-red-500" />}
-
+                {/* Action buttons */}
+                <div className="flex flex-wrap gap-2 mt-3.5">
                     <button
                         onClick={onTest}
                         disabled={testingConn}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] border border-[var(--border)] rounded-[6px] text-[var(--text2)] hover:bg-[var(--surface2)] disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-3.5 py-2 text-[12.5px] font-semibold border border-[var(--border)] rounded-[11px] text-[var(--text2)] bg-white hover:bg-[var(--surface2)] disabled:opacity-50"
                         title="Test connection"
                     >
-                        {testingConn ? <RefreshCw size={12} className="animate-spin" /> : <Wifi size={12} />}
+                        {testingConn ? <RefreshCw size={13} className="animate-spin" /> : <Wifi size={13} />}
                         Test
                     </button>
 
                     <button
                         onClick={onConfigure}
                         disabled={configuring || !device.enabled}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-emerald-600 text-white rounded-[6px] hover:bg-emerald-700 disabled:opacity-50 font-medium"
+                        className="flex items-center gap-1.5 px-3.5 py-2 text-[12.5px] font-semibold bg-emerald-500 text-white rounded-[11px] hover:bg-emerald-600 disabled:opacity-50"
                         title="Auto-configure device to push attendance to this server"
                     >
-                        {configuring ? <RefreshCw size={12} className="animate-spin" /> : <Link2 size={12} />}
+                        {configuring ? <RefreshCw size={13} className="animate-spin" /> : <Link2 size={13} />}
                         {configuring ? "Connecting…" : "Connect"}
                     </button>
 
                     <button
                         onClick={onEnroll}
                         disabled={enrolling || !device.enabled}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-indigo-600 text-white rounded-[6px] hover:bg-indigo-700 disabled:opacity-50 font-medium"
+                        className="flex items-center gap-1.5 px-3.5 py-2 text-[12.5px] font-semibold bg-[#6d5be8] text-white rounded-[11px] hover:bg-[#5d4bd8] disabled:opacity-50"
                         title="Push mapped employees (name + ID) to this device so their name appears when enrolling fingerprints"
                     >
-                        {enrolling ? <RefreshCw size={12} className="animate-spin" /> : <UserPlus size={12} />}
+                        {enrolling ? <RefreshCw size={13} className="animate-spin" /> : <UserPlus size={13} />}
                         {enrolling ? "Pushing…" : "Push Staff"}
                     </button>
 
                     <button
                         onClick={onSync}
                         disabled={syncing || !device.enabled}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-[var(--accent)] text-white rounded-[6px] hover:opacity-90 disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-3.5 py-2 text-[12.5px] font-semibold bg-[#2e3a8c] text-white rounded-[11px] hover:opacity-90 disabled:opacity-50"
                     >
-                        {syncing ? <RefreshCw size={12} className="animate-spin" /> : <Play size={12} />}
+                        {syncing ? <RefreshCw size={13} className="animate-spin" /> : <Play size={13} />}
                         Sync
-                    </button>
-
-                    {/* Enable/disable toggle */}
-                    <button
-                        onClick={() => onToggle(!device.enabled)}
-                        className={cn(
-                            "px-3 py-1.5 text-[12px] border rounded-[6px] transition-colors",
-                            device.enabled
-                                ? "border-[var(--border)] text-[var(--text2)] hover:bg-[var(--surface2)]"
-                                : "border-emerald-300 text-emerald-600 hover:bg-emerald-50"
-                        )}
-                    >
-                        {device.enabled ? <WifiOff size={12} /> : <Wifi size={12} />}
-                    </button>
-
-                    <button
-                        onClick={() => setExpanded(v => !v)}
-                        className="p-1.5 text-[var(--text3)] hover:text-[var(--text)] transition-colors"
-                    >
-                        {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                    </button>
-
-                    <button
-                        onClick={onDelete}
-                        className="p-1.5 text-[var(--text3)] hover:text-red-500 transition-colors"
-                    >
-                        <Trash2 size={14} />
                     </button>
                 </div>
             </div>

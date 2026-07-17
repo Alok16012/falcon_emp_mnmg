@@ -180,7 +180,7 @@ export default function DepartmentsPage() {
     }
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-5 p-4 lg:p-0">
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>

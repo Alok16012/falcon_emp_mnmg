@@ -144,7 +144,7 @@ export default function EmployeeAttendancePage() {
                     <ArrowLeft size={16} /> Back to Attendance
                 </button>
                 <button onClick={exportCSV} disabled={filtered.length === 0}
-                    className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-[9px] text-[13px] font-semibold disabled:opacity-60 hover:bg-[#158a5e] transition-colors">
+                    className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-[9px] text-[13px] font-semibold disabled:opacity-60 hover:bg-[#4a4ac8] transition-colors">
                     <Download size={15} /> Download Excel
                 </button>
             </div>

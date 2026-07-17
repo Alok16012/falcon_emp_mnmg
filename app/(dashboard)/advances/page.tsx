@@ -125,30 +125,30 @@ export default function AdvancesPage() {
                     <p className="text-[13px] text-[var(--text3)] mt-0.5">Track and manage advance salary payments</p>
                 </div>
                 <button onClick={() => setShowModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-[9px] text-[13px] font-semibold hover:bg-[#158a5e] transition-colors">
+                    className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-[9px] text-[13px] font-semibold hover:bg-[#4a4ac8] transition-colors">
                     <Plus size={15} /> Give Advance
                 </button>
             </div>
 
             {/* Summary */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="bg-white border border-[var(--border)] rounded-[12px] p-4">
+                <div className="bg-white border border-[var(--border)] rounded-[16px] p-4 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
                     <p className="text-[12px] text-[var(--text3)] font-medium">Total Advance Given</p>
                     <p className="text-[24px] font-bold text-[var(--text)] mt-1">₹{totalAmount.toLocaleString()}</p>
                     <p className="text-[11px] text-[var(--text3)]">{MONTHS[filterMonth-1]} {filterYear}</p>
                 </div>
-                <div className="bg-white border border-[var(--border)] rounded-[12px] p-4">
+                <div className="bg-white border border-[var(--border)] rounded-[16px] p-4 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
                     <p className="text-[12px] text-[var(--text3)] font-medium">Employees with Advance</p>
                     <p className="text-[24px] font-bold text-[var(--text)] mt-1">{new Set(filtered.map(a => a.employeeId)).size}</p>
                 </div>
-                <div className="bg-white border border-[var(--border)] rounded-[12px] p-4">
+                <div className="bg-white border border-[var(--border)] rounded-[16px] p-4 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
                     <p className="text-[12px] text-[var(--text3)] font-medium">Total Entries</p>
                     <p className="text-[24px] font-bold text-[var(--text)] mt-1">{filtered.length}</p>
                 </div>
             </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap items-center gap-3 bg-white border border-[var(--border)] rounded-[12px] px-4 py-3">
+            <div className="flex flex-wrap items-center gap-3 bg-white border border-[var(--border)] rounded-[16px] px-4 py-3 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
                 <div className="relative flex-1 min-w-[180px] max-w-xs">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
                     <input value={search} onChange={e => setSearch(e.target.value)}
@@ -165,8 +165,63 @@ export default function AdvancesPage() {
                 </select>
             </div>
 
-            {/* Table */}
-            <div className="bg-white border border-[var(--border)] rounded-[12px] overflow-hidden">
+            {/* Mobile card list */}
+            <div className="md:hidden space-y-2.5">
+                {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="h-[80px] bg-white border border-[var(--border)] rounded-[16px] animate-pulse" />
+                    ))
+                ) : filtered.length === 0 ? (
+                    <div className="py-14 text-center text-[var(--text3)] bg-white border border-[var(--border)] rounded-[16px]">
+                        <IndianRupee size={30} className="mx-auto mb-2 opacity-30" />
+                        <p className="text-[13px]">No advance records for {MONTHS[filterMonth-1]} {filterYear}</p>
+                    </div>
+                ) : (
+                    <>
+                    {filtered.map(adv => (
+                        <div key={adv.id} className="bg-white border border-[var(--border)] rounded-[16px] p-3.5 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-[var(--accent-light)] flex items-center justify-center text-[12px] font-bold text-[var(--accent-text)] shrink-0">
+                                    {adv.employee.firstName[0]}{adv.employee.lastName?.[0] || ""}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[14px] font-semibold text-[var(--text)] truncate">{adv.employee.firstName} {adv.employee.lastName}</p>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                        <span className="text-[11.5px] text-[var(--accent-text)] font-medium">{adv.employee.employeeId}</span>
+                                        <span className={`px-1.5 py-0.5 rounded-[5px] text-[10px] font-semibold ${adv.employee.employeeCategory === "LABOUR" ? "bg-orange-50 text-orange-700" : "bg-blue-50 text-blue-700"}`}>
+                                            {adv.employee.employeeCategory === "LABOUR" ? "🔧 Labour" : "👔 Staff"}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <p className="text-[16px] font-bold text-[var(--text)]">₹{adv.amount.toLocaleString()}</p>
+                                    <p className="text-[10.5px] text-[var(--text3)]">
+                                        {adv.advanceDate
+                                            ? format(new Date(adv.advanceDate), "dd MMM yyyy")
+                                            : format(new Date(adv.createdAt), "dd MMM yyyy")}
+                                    </p>
+                                </div>
+                                <button onClick={() => handleDelete(adv.id)}
+                                    className="p-1.5 rounded-[8px] hover:bg-red-50 text-[var(--text3)] hover:text-red-600 transition-colors shrink-0">
+                                    <Trash2 size={15} />
+                                </button>
+                            </div>
+                            <div className="flex items-center gap-3 mt-2.5 pt-2.5 border-t border-[var(--border)] text-[11.5px] text-[var(--text2)]">
+                                <span><span className="text-[var(--text3)]">Deduct:</span> {MONTHS[adv.monthToImpact - 1]} {adv.yearToImpact}</span>
+                                {adv.reason && <span className="truncate"><span className="text-[var(--text3)]">Reason:</span> {adv.reason}</span>}
+                            </div>
+                        </div>
+                    ))}
+                    <div className="bg-[var(--accent-light)] rounded-[16px] px-4 py-3 flex items-center justify-between">
+                        <span className="text-[12.5px] font-semibold text-[var(--accent-text)]">TOTAL</span>
+                        <span className="text-[16px] font-bold text-[var(--accent-text)]">₹{totalAmount.toLocaleString()}</span>
+                    </div>
+                    </>
+                )}
+            </div>
+
+            {/* Table (desktop) */}
+            <div className="hidden md:block bg-white border border-[var(--border)] rounded-[16px] overflow-hidden shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
                 {loading ? (
                     <table className="w-full">
                         <tbody>
@@ -361,7 +416,7 @@ export default function AdvancesPage() {
                                     Cancel
                                 </button>
                                 <button type="submit" disabled={saving || !form.employeeId}
-                                    className="flex-1 h-9 rounded-[8px] bg-[var(--accent)] text-white text-[13px] font-semibold hover:bg-[#158a5e] transition-colors disabled:opacity-60">
+                                    className="flex-1 h-9 rounded-[8px] bg-[var(--accent)] text-white text-[13px] font-semibold hover:bg-[#4a4ac8] transition-colors disabled:opacity-60">
                                     {saving ? "Saving..." : "Give Advance"}
                                 </button>
                             </div>

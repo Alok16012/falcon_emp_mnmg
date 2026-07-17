@@ -4,8 +4,8 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
-    Loader2, IndianRupee, Printer, X, FileSpreadsheet, Clock,
-    ChevronLeft, ChevronRight, CheckSquare, Square, Download
+    Loader2, IndianRupee, Printer, X, CalendarDays, Clock,
+    ChevronLeft, ChevronRight, CheckSquare, Square, Download, Search, SlidersHorizontal
 } from "lucide-react"
 import * as XLSX from "xlsx"
 
@@ -35,6 +35,7 @@ export default function PayrollPage() {
     // Pagination
     const [pageSize, setPageSize] = useState(20)
     const [page, setPage] = useState(1)
+    const [q, setQ] = useState("")
     // Selection for bulk action
     const [selected, setSelected] = useState<Set<string>>(new Set())
     const slipRef = useRef<HTMLDivElement>(null)
@@ -199,9 +200,12 @@ export default function PayrollPage() {
     const totalNet       = displayRows.reduce((s, r) => s + r.netSalary, 0)
     const paidCount      = displayRows.filter(r => r.payrollStatus === "PAID").length
 
-    // Pagination
-    const totalPages = Math.ceil(displayRows.length / pageSize)
-    const pageRows   = displayRows.slice((page - 1) * pageSize, page * pageSize)
+    // Search + pagination
+    const searchedRows = q
+        ? displayRows.filter(r => `${r.name} ${r.employeeId}`.toLowerCase().includes(q.toLowerCase()))
+        : displayRows
+    const totalPages = Math.max(1, Math.ceil(searchedRows.length / pageSize))
+    const pageRows   = searchedRows.slice((page - 1) * pageSize, page * pageSize)
 
     const allPageSelected = pageRows.length > 0 && pageRows.every(r => selected.has(r.id))
     const toggleAll = () => {
@@ -213,71 +217,169 @@ export default function PayrollPage() {
     }
 
     return (
-        <div className="space-y-5 max-w-screen-xl mx-auto pb-12">
+        <div className="w-full space-y-4 md:space-y-5 max-w-screen-xl mx-auto pb-12 p-4 lg:p-0">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div>
-                    <h1 className="text-[22px] font-semibold text-[var(--text)]">Payroll</h1>
+                    <h1 className="text-[26px] font-bold text-[var(--text)]">Payroll</h1>
                     <p className="text-[13px] text-[var(--text3)]">Work Hours × Hourly Rate = Salary</p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                    {/* Month/Year */}
-                    <div className="flex items-center gap-2 bg-white border border-[var(--border)] rounded-xl px-3 py-2">
+                    <div className="flex items-center gap-1.5 bg-white border border-[var(--border)] rounded-[12px] px-2.5 py-2 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
+                        <CalendarDays size={14} className="text-[var(--text3)]" />
                         <select value={month} onChange={e => setMonth(+e.target.value)}
-                            className="bg-transparent text-[13px] font-medium outline-none">
+                            className="bg-transparent text-[13px] font-semibold outline-none cursor-pointer">
                             {MONTHS.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
                         </select>
-                        <input type="number" value={year} onChange={e => setYear(+e.target.value)}
-                            className="bg-transparent text-[13px] font-medium w-16 outline-none" />
+                    </div>
+                    <div className="bg-white border border-[var(--border)] rounded-[12px] px-2.5 py-2 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
+                        <select value={year} onChange={e => setYear(+e.target.value)}
+                            className="bg-transparent text-[13px] font-semibold outline-none cursor-pointer">
+                            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 3 + i).map(y => (
+                                <option key={y} value={y}>{y}</option>
+                            ))}
+                        </select>
                     </div>
                     <button onClick={exportExcel}
-                        className="flex items-center gap-2 border border-[var(--border)] bg-white rounded-xl text-[13px] font-medium px-4 py-2 hover:bg-[var(--surface)] transition-colors">
-                        <FileSpreadsheet size={15} className="text-green-600" /> Excel
+                        className="flex items-center gap-2 border border-[var(--border)] bg-white rounded-[12px] text-[13px] font-semibold px-4 py-2 hover:bg-[var(--surface2)] transition-colors shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
+                        <Download size={14} className="text-[var(--accent)]" /> Export
                     </button>
                     {slipEmp && (
                         <button onClick={printSlip}
-                            className="flex items-center gap-2 border border-[var(--border)] bg-white rounded-xl text-[13px] font-medium px-4 py-2 hover:bg-[var(--surface)] transition-colors">
-                            <Download size={15} className="text-blue-600" /> PDF
+                            className="flex items-center gap-2 border border-[var(--border)] bg-white rounded-[12px] text-[13px] font-medium px-3 py-2 hover:bg-[var(--surface2)] transition-colors">
+                            <Printer size={14} className="text-blue-600" /> PDF
                         </button>
-                    )}
-                    {/* Bulk actions */}
-                    {selected.size > 0 && (
-                        <div className="flex items-center gap-2">
-                            <span className="text-[12px] text-[var(--text3)]">{selected.size} selected</span>
-                            <button onClick={() => bulkMarkPaid("PAID")}
-                                className="px-3 py-2 bg-green-600 text-white rounded-xl text-[12px] font-medium hover:opacity-90">
-                                ✓ Mark All Paid
-                            </button>
-                            <button onClick={() => bulkMarkPaid("UNPAID")}
-                                className="px-3 py-2 bg-orange-500 text-white rounded-xl text-[12px] font-medium hover:opacity-90">
-                                Mark Unpaid
-                            </button>
-                        </div>
                     )}
                 </div>
             </div>
 
+            {/* Bulk actions */}
+            {selected.size > 0 && (
+                <div className="flex items-center gap-2 flex-wrap bg-white border border-[var(--border)] rounded-[14px] px-3.5 py-2.5 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
+                    <span className="text-[12.5px] font-medium text-[var(--text2)]">{selected.size} selected</span>
+                    <button onClick={() => bulkMarkPaid("PAID")}
+                        className="px-3 py-1.5 bg-green-600 text-white rounded-full text-[12px] font-semibold hover:opacity-90">
+                        ✓ Mark All Paid
+                    </button>
+                    <button onClick={() => bulkMarkPaid("UNPAID")}
+                        className="px-3 py-1.5 bg-orange-500 text-white rounded-full text-[12px] font-semibold hover:opacity-90">
+                        Mark Unpaid
+                    </button>
+                </div>
+            )}
+
             {/* Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
-                    { label: "Total Hrs", value: totalHrs.toFixed(1) + " hrs", color: "text-blue-600", icon: <Clock size={15} /> },
-                    { label: "Total Salary", value: fmt(totalSalarySum), color: "text-[var(--accent)]", icon: <IndianRupee size={15} /> },
-                    { label: "Advance", value: fmt(totalAdvance), color: "text-orange-600", icon: <IndianRupee size={15} /> },
-                    { label: "Net Payable", value: fmt(totalNet), color: "text-green-600", icon: <IndianRupee size={15} /> },
-                    { label: "Paid", value: `${paidCount} / ${rows.length}`, color: "text-teal-600", icon: <span className="text-[14px]">✓</span> },
+                    { label: "Total Hrs", value: totalHrs.toFixed(1) + " hrs", color: "#2563eb", bg: "#eff5ff", icon: <Clock size={18} /> },
+                    { label: "Total Salary", value: fmt(totalSalarySum), color: "#5b5bd6", bg: "#f0f0fd", icon: <IndianRupee size={18} /> },
+                    { label: "Advance", value: fmt(totalAdvance), color: "#ea580c", bg: "#fff5eb", icon: <IndianRupee size={18} /> },
+                    { label: "Net Payable", value: fmt(totalNet), color: "#16a34a", bg: "#eefaf2", icon: <IndianRupee size={18} /> },
                 ].map(card => (
-                    <div key={card.label} className="bg-white border border-[var(--border)] rounded-xl p-3">
-                        <div className="flex items-center gap-1 mb-0.5">
-                            <span className={card.color}>{card.icon}</span>
-                            <p className="text-[10px] text-[var(--text3)]">{card.label}</p>
+                    <div key={card.label} className="rounded-[16px] p-3 md:p-4 flex items-center gap-2.5 min-w-0" style={{ background: card.bg }}>
+                        <div className="w-9 h-9 md:w-11 md:h-11 rounded-[11px] md:rounded-[13px] bg-white flex items-center justify-center shrink-0 shadow-sm" style={{ color: card.color }}>
+                            {card.icon}
                         </div>
-                        <p className={`text-[17px] font-bold ${card.color}`}>{card.value}</p>
+                        <div className="min-w-0">
+                            <p className="text-[11.5px] md:text-[12px] text-[var(--text2)] font-medium">{card.label}</p>
+                            <p className="text-[15px] md:text-[18px] font-bold leading-tight whitespace-nowrap" style={{ color: card.color }}>{card.value}</p>
+                        </div>
                     </div>
                 ))}
             </div>
 
-            {/* Table */}
-            <div className="bg-white border border-[var(--border)] rounded-xl overflow-hidden">
+            {/* Paid counter */}
+            <div className="rounded-[16px] p-4 flex items-center gap-3 bg-[#ebfaf6]">
+                <div className="w-11 h-11 rounded-[13px] bg-white text-[#0d9488] flex items-center justify-center shrink-0 text-[17px] font-bold shadow-sm">✓</div>
+                <div>
+                    <p className="text-[12px] text-[var(--text2)] font-medium">Paid</p>
+                    <p className="text-[18px] font-bold text-[#0d9488]">{paidCount} / {rows.length}</p>
+                </div>
+            </div>
+
+            {/* Search */}
+            <div className="flex items-center gap-2.5">
+                <div className="relative flex-1">
+                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text3)]" />
+                    <input value={q} onChange={e => { setQ(e.target.value); setPage(1) }} placeholder="Search employee by name or ID..."
+                        className="w-full h-11 pl-10 pr-3 rounded-[14px] border border-[var(--border)] text-[13.5px] outline-none focus:border-[var(--accent)] bg-white shadow-[0_2px_10px_rgba(80,80,170,0.05)]" />
+                </div>
+                <button className="w-11 h-11 rounded-[14px] border border-[var(--border)] bg-white flex items-center justify-center text-[var(--text2)] shadow-[0_2px_10px_rgba(80,80,170,0.05)] shrink-0">
+                    <SlidersHorizontal size={17} />
+                </button>
+            </div>
+
+            {/* Mobile card list */}
+            <div className="md:hidden space-y-2.5">
+                {pageRows.length === 0 ? (
+                    <div className="py-12 text-center text-[var(--text3)] bg-white border border-[var(--border)] rounded-[16px] text-[13px]">No employees found</div>
+                ) : pageRows.map(row => {
+                    const isPaid = row.payrollStatus === "PAID"
+                    const initials = row.name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase()
+                    return (
+                        <div key={row.id} className="bg-white border border-[var(--border)] rounded-[16px] px-3.5 py-3 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
+                            {/* Row 1: identity + action */}
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-[var(--accent-light)] flex items-center justify-center text-[12.5px] font-bold text-[var(--accent-text)] shrink-0"
+                                    onClick={() => row.hourlyRate > 0 && setSlipEmp(row)}>
+                                    {initials}
+                                </div>
+                                <div className="min-w-0 flex-1" onClick={() => row.hourlyRate > 0 && setSlipEmp(row)}>
+                                    <p className="text-[14px] font-semibold text-[var(--text)] truncate leading-tight">{row.name}</p>
+                                    <p className="text-[11.5px] text-[var(--accent-text)] font-medium mt-0.5">{row.employeeId}</p>
+                                </div>
+                                {isPaid ? (
+                                    <button onClick={() => markPaid(row.id, row.payrollId, "UNPAID")}
+                                        className="shrink-0 px-3 py-2 rounded-full text-[11px] font-bold bg-green-100 text-green-700 whitespace-nowrap">
+                                        ✓ PAID
+                                    </button>
+                                ) : (
+                                    <button onClick={() => markPaid(row.id, row.payrollId, "PAID")}
+                                        className="shrink-0 px-3 py-2 rounded-full text-[11px] font-semibold bg-[var(--accent-light)] text-[var(--accent-text)] whitespace-nowrap hover:bg-[#e0e0fa] transition-colors">
+                                        Mark Paid
+                                    </button>
+                                )}
+                            </div>
+                            {/* Row 2: stats */}
+                            <div className="grid grid-cols-4 gap-2 mt-2.5 pt-2.5 border-t border-[var(--border)]">
+                                <div>
+                                    <p className="text-[10px] text-[var(--text3)] font-medium">Work Hrs</p>
+                                    <p className="text-[13px] font-bold text-blue-600 mt-0.5">{row.totalWorkingHrs > 0 ? row.totalWorkingHrs.toFixed(2) : "0"}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] text-[var(--text3)] font-medium">OT Hrs</p>
+                                    <p className="text-[13px] font-bold text-orange-500 mt-0.5">{row.otHrs || 0}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] text-[var(--text3)] font-medium">Advance</p>
+                                    <p className="text-[13px] font-bold text-[var(--text)] mt-0.5">{fmt(row.advance)}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] text-[var(--text3)] font-medium">Net Salary</p>
+                                    <p className="text-[13px] font-bold text-green-600 mt-0.5">{fmt(row.netSalary)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                })}
+                {/* Mobile pagination */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 pt-1">
+                        <button disabled={page === 1} onClick={() => setPage(p => p-1)}
+                            className="p-2 rounded-full border border-[var(--border)] bg-white disabled:opacity-40">
+                            <ChevronLeft size={14} />
+                        </button>
+                        <span className="text-[12.5px] text-[var(--text3)]">Page {page} of {totalPages}</span>
+                        <button disabled={page === totalPages} onClick={() => setPage(p => p+1)}
+                            className="p-2 rounded-full border border-[var(--border)] bg-white disabled:opacity-40">
+                            <ChevronRight size={14} />
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* Table (desktop) */}
+            <div className="hidden md:block bg-white border border-[var(--border)] rounded-[16px] overflow-hidden shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
                 <div className="overflow-x-auto">
                     <table className="w-full text-[12px]">
                         <thead>
