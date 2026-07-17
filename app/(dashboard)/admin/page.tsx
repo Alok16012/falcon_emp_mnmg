@@ -58,17 +58,15 @@ export default function AdminDashboard() {
         label: string; value: string | number; sub: string
         icon: React.ElementType; color: string; bg: string; href: string
     }) => (
-        <Link href={href} className="bg-white border border-[var(--border)] rounded-[18px] p-4 md:p-5 shadow-[0_2px_10px_rgba(80,80,170,0.05)] hover:shadow-[0_4px_16px_rgba(80,80,170,0.10)] transition-all block">
-            <div className="flex items-start gap-3">
-                <div className="w-11 h-11 rounded-[13px] flex items-center justify-center shrink-0" style={{ background: bg, color }}>
-                    <Icon size={20} />
+        <Link href={href} className="bg-white border border-[var(--border)] rounded-[18px] p-4 md:p-5 shadow-[0_2px_10px_rgba(80,80,170,0.05)] hover:shadow-[0_4px_16px_rgba(80,80,170,0.10)] transition-all block min-w-0">
+            <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 md:w-11 md:h-11 rounded-[12px] md:rounded-[13px] flex items-center justify-center shrink-0" style={{ background: bg, color }}>
+                    <Icon size={19} />
                 </div>
-                <div className="min-w-0">
-                    <p className="text-[12.5px] font-medium text-[var(--text2)] leading-tight">{label}</p>
-                    <p className="text-[26px] font-bold text-[var(--text)] leading-tight mt-0.5">{loading ? "—" : value}</p>
-                </div>
+                <p className="text-[12.5px] font-medium text-[var(--text2)] leading-snug min-w-0">{label}</p>
             </div>
-            <p className="text-[12px] text-[var(--text3)] mt-2.5">{sub}</p>
+            <p className="text-[23px] md:text-[26px] font-bold text-[var(--text)] leading-tight mt-2 truncate">{loading ? "—" : value}</p>
+            <p className="text-[12px] text-[var(--text3)] mt-1 truncate">{sub}</p>
         </Link>
     )
 
