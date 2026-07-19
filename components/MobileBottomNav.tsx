@@ -5,20 +5,37 @@ import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
+import { MODULES } from "@/lib/modules"
 import {
     Home,
     Users,
     CalendarDays,
     IndianRupee,
     LayoutGrid,
+    UserPlus,
+    Wallet,
+    PackageSearch,
+    Boxes,
+    Cpu,
+    type LucideIcon,
 } from "lucide-react"
 
-const TABS = [
-    { key: "dashboard", label: "Dashboard", href: "/admin", icon: Home },
-    { key: "employees", label: "Employees", href: "/employees", icon: Users },
-    { key: "attendance", label: "Attendance", href: "/attendance", icon: CalendarDays },
-    { key: "payroll", label: "Payroll", href: "/payroll", icon: IndianRupee },
-]
+// Short label + icon per module key; tab order = this priority order.
+// The bar shows the first 4 modules the user may access — the rest stay
+// under "More" (sidebar drawer).
+const TAB_META: Record<string, { label: string; icon: LucideIcon }> = {
+    dashboard: { label: "Dashboard", icon: Home },
+    employees: { label: "Employees", icon: Users },
+    attendance: { label: "Attendance", icon: CalendarDays },
+    payroll: { label: "Payroll", icon: IndianRupee },
+    stock: { label: "Stock", icon: Boxes },
+    inquiries: { label: "Inquiries", icon: PackageSearch },
+    joinings: { label: "Joinings", icon: UserPlus },
+    advances: { label: "Advances", icon: Wallet },
+    hardware: { label: "Hardware", icon: Cpu },
+}
+const TAB_PRIORITY = Object.keys(TAB_META)
+const MODULE_HREFS = Object.fromEntries(MODULES.map(m => [m.key, m.href]))
 
 export function MobileBottomNav({ onMoreClick }: { onMoreClick: () => void }) {
     const pathname = usePathname()
@@ -30,9 +47,12 @@ export function MobileBottomNav({ onMoreClick }: { onMoreClick: () => void }) {
     const allowed = mounted ? (session?.user?.modules || []) : []
     const canSee = (key: string) => role === "ADMIN" || allowed.includes(key)
 
-    const tabs = TABS.filter(t => canSee(t.key))
+    const tabs = TAB_PRIORITY
+        .filter(canSee)
+        .slice(0, 4)
+        .map(key => ({ key, href: MODULE_HREFS[key], ...TAB_META[key] }))
     // "More" is highlighted when the current page is not one of the main tabs
-    const onMainTab = TABS.some(t => pathname === t.href || (t.href !== "/admin" && pathname.startsWith(t.href)))
+    const onMainTab = tabs.some(t => pathname === t.href || (t.href !== "/admin" && pathname.startsWith(t.href)))
 
     return (
         <nav className="fixed bottom-0 inset-x-0 z-40 md:hidden bg-[var(--surface)]/95 backdrop-blur border-t border-[var(--border)] rounded-t-[22px] shadow-[0_-6px_24px_rgba(70,70,160,0.10)] pb-[env(safe-area-inset-bottom)]">

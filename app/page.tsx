@@ -2,6 +2,7 @@
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
+import { homeForUser } from "@/lib/modules"
 
 export default async function Home() {
   const session = await getServerSession(authOptions)
@@ -10,6 +11,6 @@ export default async function Home() {
     redirect("/login")
   }
 
-  // All authenticated users go to admin dashboard
-  redirect("/admin")
+  // Dashboard if permitted, otherwise the user's first granted module
+  redirect(homeForUser(session.user))
 }

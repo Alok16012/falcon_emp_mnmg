@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth"
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
+import { canAccessModule } from "@/lib/modules"
 
 const VALID_TYPES = ["color", "sizeUnit", "qtyUnit"] as const
 
@@ -9,7 +10,7 @@ export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions)
         if (!session) return new NextResponse("Unauthorized", { status: 401 })
-        if (session.user.role !== "ADMIN" && session.user.role !== "MANAGER") {
+        if (!canAccessModule(session.user, "stock")) {
             return new NextResponse("Forbidden", { status: 403 })
         }
 
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
     try {
         const session = await getServerSession(authOptions)
         if (!session) return new NextResponse("Unauthorized", { status: 401 })
-        if (session.user.role !== "ADMIN" && session.user.role !== "MANAGER") {
+        if (!canAccessModule(session.user, "stock")) {
             return new NextResponse("Forbidden", { status: 403 })
         }
 
@@ -63,7 +64,7 @@ export async function DELETE(req: Request) {
     try {
         const session = await getServerSession(authOptions)
         if (!session) return new NextResponse("Unauthorized", { status: 401 })
-        if (session.user.role !== "ADMIN" && session.user.role !== "MANAGER") {
+        if (!canAccessModule(session.user, "stock")) {
             return new NextResponse("Forbidden", { status: 403 })
         }
 

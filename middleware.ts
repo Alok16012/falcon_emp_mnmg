@@ -1,6 +1,7 @@
 
 import { withAuth } from "next-auth/middleware"
 import { NextResponse } from "next/server"
+import { homeForUser } from "@/lib/modules"
 
 export default withAuth(
     function middleware(req) {
@@ -10,7 +11,7 @@ export default withAuth(
         // Redirect logged-in users away from login page
         if (path === "/login") {
             if (token) {
-                return NextResponse.redirect(new URL("/admin", req.url))
+                return NextResponse.redirect(new URL(homeForUser(token), req.url))
             }
             return NextResponse.next()
         }

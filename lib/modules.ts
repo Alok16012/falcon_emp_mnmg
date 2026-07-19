@@ -64,3 +64,28 @@ export function modulesForRole(role: string, saved?: string[] | null): string[] 
     }
     return DEFAULT_ROLE_MODULES[role] ?? ["profile"]
 }
+
+/**
+ * Whether a user (session/token) may access a module. ADMIN → always;
+ * everyone else → only if the module was granted to their role.
+ * Use this in API routes instead of hardcoding role names, so access
+ * follows the User-Management permission matrix.
+ */
+export function canAccessModule(
+    user: { role?: string; modules?: string[] } | null | undefined,
+    key: string
+): boolean {
+    if (!user) return false
+    if (user.role === "ADMIN") return true
+    return (user.modules ?? []).includes(key)
+}
+
+/**
+ * Landing page for a user after login: dashboard if they may see it,
+ * otherwise their first granted module (MODULES order), else profile.
+ */
+export function homeForUser(user: { role?: string; modules?: string[] } | null | undefined): string {
+    if (canAccessModule(user, "dashboard")) return "/admin"
+    const first = MODULES.find(m => canAccessModule(user, m.key))
+    return first?.href ?? "/profile"
+}
