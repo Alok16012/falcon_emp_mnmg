@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { canAccessModule } from "@/lib/modules"
 import prisma from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 
@@ -24,7 +25,7 @@ const str = (v: unknown): string | null => {
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    if (session.user.role !== "ADMIN" && session.user.role !== "MANAGER") {
+    if (!canAccessModule(session.user, "employees")) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 

@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth"
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
+import { canAccessModule } from "@/lib/modules"
 
 const VALID_STATUS = ["ACTIVE", "INACTIVE", "PENDING"] as const
 
@@ -12,7 +13,7 @@ export async function PATCH(
     try {
         const session = await getServerSession(authOptions)
         if (!session) return new NextResponse("Unauthorized", { status: 401 })
-        if (session.user.role !== "ADMIN" && session.user.role !== "MANAGER") {
+        if (!canAccessModule(session.user, "inquiries")) {
             return new NextResponse("Forbidden", { status: 403 })
         }
 
@@ -55,7 +56,7 @@ export async function DELETE(
     try {
         const session = await getServerSession(authOptions)
         if (!session) return new NextResponse("Unauthorized", { status: 401 })
-        if (session.user.role !== "ADMIN" && session.user.role !== "MANAGER") {
+        if (!canAccessModule(session.user, "inquiries")) {
             return new NextResponse("Forbidden", { status: 403 })
         }
 

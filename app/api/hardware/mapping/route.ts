@@ -9,6 +9,7 @@ import { getServerSession } from "next-auth"
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
+import { canAccessModule } from "@/lib/modules"
 
 // GET all employee mappings
 export async function GET() {
@@ -37,7 +38,7 @@ export async function GET() {
 export async function PUT(req: Request) {
     const session = await getServerSession(authOptions)
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
-    if (session.user.role !== "ADMIN" && session.user.role !== "MANAGER") {
+    if (!canAccessModule(session.user, "hardware")) {
         return new NextResponse("Forbidden", { status: 403 })
     }
 

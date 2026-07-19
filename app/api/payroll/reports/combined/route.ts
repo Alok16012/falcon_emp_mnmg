@@ -2,12 +2,12 @@ import { getServerSession } from "next-auth"
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
-import { Role } from "@prisma/client"
+import { canAccessModule } from "@/lib/modules"
 
 export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions)
-        if (!session || (session.user.role !== Role.ADMIN && session.user.role !== Role.MANAGER)) {
+        if (!session || !canAccessModule(session.user, "payroll")) {
             return new NextResponse("Unauthorized", { status: 401 })
         }
 

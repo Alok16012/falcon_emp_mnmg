@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth"
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
+import { canAccessModule } from "@/lib/modules"
 import bcrypt from "bcryptjs"
 
 // Marker that /api/join writes into Employee.notes for self-submitted joining-form
@@ -28,7 +29,7 @@ export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions)
         if (!session) return new NextResponse("Unauthorized", { status: 401 })
-        if (session.user.role !== "ADMIN" && session.user.role !== "MANAGER") {
+        if (!canAccessModule(session.user, "employees")) {
             return new NextResponse("Forbidden", { status: 403 })
         }
 
@@ -115,7 +116,7 @@ export async function POST(req: Request) {
     try {
         const session = await getServerSession(authOptions)
         if (!session) return new NextResponse("Unauthorized", { status: 401 })
-        if (session.user.role !== "ADMIN" && session.user.role !== "MANAGER") {
+        if (!canAccessModule(session.user, "employees")) {
             return new NextResponse("Forbidden", { status: 403 })
         }
 

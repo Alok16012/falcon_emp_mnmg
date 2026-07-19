@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth"
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
+import { canAccessModule } from "@/lib/modules"
 
 export async function GET(
     req: Request,
@@ -10,7 +11,7 @@ export async function GET(
     try {
         const session = await getServerSession(authOptions)
         if (!session) return new NextResponse("Unauthorized", { status: 401 })
-        if (session.user.role !== "ADMIN" && session.user.role !== "MANAGER") {
+        if (!canAccessModule(session.user, "payroll")) {
             return new NextResponse("Forbidden", { status: 403 })
         }
 
@@ -48,7 +49,7 @@ export async function PUT(
     try {
         const session = await getServerSession(authOptions)
         if (!session) return new NextResponse("Unauthorized", { status: 401 })
-        if (session.user.role !== "ADMIN" && session.user.role !== "MANAGER") {
+        if (!canAccessModule(session.user, "payroll")) {
             return new NextResponse("Forbidden", { status: 403 })
         }
 
