@@ -8,6 +8,7 @@ import {
     ChevronLeft, ChevronRight, CheckSquare, Square, Download, Search, SlidersHorizontal
 } from "lucide-react"
 import * as XLSX from "xlsx"
+import { cn } from "@/lib/utils"
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
 const PAGE_SIZES = [10, 20, 40, 100, 500]
@@ -22,11 +23,26 @@ type EmpPayRow = {
     payrollId: string | null; payrollStatus: string | null
 }
 
+// Local YYYY-MM-DD (avoids UTC shift from toISOString)
+function ymd(d: Date) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+function fmtDMY(iso: string) {
+    if (!iso) return ""
+    const [y, m, d] = iso.split("-").map(Number)
+    return `${String(d).padStart(2, "0")} ${MONTHS[m - 1]} ${y}`
+}
+
 export default function PayrollPage() {
     const { data: session, status } = useSession()
     const router = useRouter()
-    const [month, setMonth] = useState(new Date().getMonth() + 1)
-    const [year, setYear]   = useState(new Date().getFullYear())
+    const now = new Date()
+    const [month, setMonth] = useState(now.getMonth() + 1)
+    const [year, setYear]   = useState(now.getFullYear())
+    // Period mode: "month" (whole month) or "range" (custom from–to dates)
+    const [mode, setMode] = useState<"month" | "range">("month")
+    const [fromDate, setFromDate] = useState(ymd(new Date(now.getFullYear(), now.getMonth(), 1)))
+    const [toDate, setToDate]     = useState(ymd(now))
     const [rows, setRows]   = useState<EmpPayRow[]>([])
     const [loading, setLoading] = useState(true)
     const [slipEmp, setSlipEmp] = useState<EmpPayRow | null>(null)
@@ -43,11 +59,18 @@ export default function PayrollPage() {
     const loadData = useCallback(async () => {
         setLoading(true)
         try {
+            // Attendance query differs by mode; advances/payroll stay keyed to the
+            // accounting month (for range mode we use the from-date's month/year).
+            const attQuery = mode === "range"
+                ? `from=${fromDate}&to=${toDate}`
+                : `month=${year}-${String(month).padStart(2, "0")}`
+            const advMonth = mode === "range" ? Number(fromDate.split("-")[1]) : month
+            const advYear = mode === "range" ? Number(fromDate.split("-")[0]) : year
             const [empRes, attRes, advRes, payRes] = await Promise.all([
                 fetch("/api/employees?limit=1000"),
-                fetch(`/api/attendance?month=${year}-${String(month).padStart(2,"0")}&limit=5000`),
-                fetch(`/api/advances?month=${month}&year=${year}`),
-                fetch(`/api/payroll?month=${month}&year=${year}&limit=1000`),
+                fetch(`/api/attendance?${attQuery}&limit=5000`),
+                fetch(`/api/advances?month=${advMonth}&year=${advYear}`),
+                fetch(`/api/payroll?month=${advMonth}&year=${advYear}&limit=1000`),
             ])
             const emps     = empRes.ok ? await empRes.json() : []
             const attData  = attRes.ok ? await attRes.json() : []
@@ -99,7 +122,7 @@ export default function PayrollPage() {
             console.error(e)
             toast.error("Failed to load payroll data")
         } finally { setLoading(false) }
-    }, [month, year])
+    }, [month, year, mode, fromDate, toDate])
 
     useEffect(() => {
         if (status === "unauthenticated") router.push("/login")
@@ -156,6 +179,18 @@ export default function PayrollPage() {
         toast.success(`${targets.length} employees marked as ${newStatus}`)
     }
 
+    // Human-readable period + a filesystem-safe tag, driven by the selected mode
+    const periodLabel = mode === "range"
+        ? `${fmtDMY(fromDate)} – ${fmtDMY(toDate)}`
+        : `${MONTHS[month - 1]} ${year}`
+    const fileTag = mode === "range"
+        ? `${fromDate}_to_${toDate}`
+        : `${MONTHS[month - 1]}_${year}`
+    // Inclusive day count for range mode (e.g. 1–5 Jul = 5 days)
+    const dayCount = mode === "range"
+        ? Math.max(1, Math.round((new Date(toDate).getTime() - new Date(fromDate).getTime()) / 86400000) + 1)
+        : 0
+
     // PDF via print
     const printSlip = () => window.print()
 
@@ -181,8 +216,8 @@ export default function PayrollPage() {
         const colWidths = Object.keys(data[0] ?? {}).map(k => ({ wch: Math.max(k.length + 2, 14) }))
         ws["!cols"] = colWidths
         const wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, ws, `Payroll ${MONTHS[month-1]} ${year}`)
-        XLSX.writeFile(wb, `Payroll_${MONTHS[month-1]}_${year}.xlsx`)
+        XLSX.utils.book_append_sheet(wb, ws, `Payroll`)
+        XLSX.writeFile(wb, `Payroll_${fileTag}.xlsx`)
         toast.success("Excel downloaded!")
     }
 
@@ -219,38 +254,70 @@ export default function PayrollPage() {
     return (
         <div className="w-full space-y-4 md:space-y-5 max-w-screen-xl mx-auto pb-12 p-4 lg:p-0">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                 <div>
                     <h1 className="text-[26px] font-bold text-[var(--text)]">Payroll</h1>
                     <p className="text-[13px] text-[var(--text3)]">Work Hours × Hourly Rate = Salary</p>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                    <div className="flex items-center gap-1.5 bg-white border border-[var(--border)] rounded-[12px] px-2.5 py-2 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
-                        <CalendarDays size={14} className="text-[var(--text3)]" />
-                        <select value={month} onChange={e => setMonth(+e.target.value)}
-                            className="bg-transparent text-[13px] font-semibold outline-none cursor-pointer">
-                            {MONTHS.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
-                        </select>
-                    </div>
-                    <div className="bg-white border border-[var(--border)] rounded-[12px] px-2.5 py-2 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
-                        <select value={year} onChange={e => setYear(+e.target.value)}
-                            className="bg-transparent text-[13px] font-semibold outline-none cursor-pointer">
-                            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 3 + i).map(y => (
-                                <option key={y} value={y}>{y}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <button onClick={exportExcel}
-                        className="flex items-center gap-2 border border-[var(--border)] bg-white rounded-[12px] text-[13px] font-semibold px-4 py-2 hover:bg-[var(--surface2)] transition-colors shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
-                        <Download size={14} className="text-[var(--accent)]" /> Export
-                    </button>
-                    {slipEmp && (
-                        <button onClick={printSlip}
-                            className="flex items-center gap-2 border border-[var(--border)] bg-white rounded-[12px] text-[13px] font-medium px-3 py-2 hover:bg-[var(--surface2)] transition-colors">
-                            <Printer size={14} className="text-blue-600" /> PDF
+                <button onClick={exportExcel}
+                    className="self-start flex items-center gap-2 border border-[var(--border)] bg-white rounded-[12px] text-[13px] font-semibold px-4 py-2.5 hover:bg-[var(--surface2)] transition-colors shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
+                    <Download size={14} className="text-[var(--accent)]" /> Export
+                </button>
+            </div>
+
+            {/* Period selector */}
+            <div className="bg-white border border-[var(--border)] rounded-[16px] p-3.5 shadow-[0_2px_10px_rgba(80,80,170,0.05)] space-y-3">
+                {/* Mode toggle */}
+                <div className="inline-flex bg-[var(--surface2)] rounded-full p-1">
+                    {([["month", "Full Month"], ["range", "Date Range"]] as const).map(([m, label]) => (
+                        <button key={m} onClick={() => setMode(m)}
+                            className={cn(
+                                "px-4 py-1.5 rounded-full text-[12.5px] font-semibold transition-colors",
+                                mode === m ? "bg-[var(--accent)] text-white shadow-sm" : "text-[var(--text2)]"
+                            )}>
+                            {label}
                         </button>
-                    )}
+                    ))}
                 </div>
+
+                {mode === "month" ? (
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 bg-[var(--surface2)] border border-[var(--border)] rounded-[12px] px-2.5 py-2">
+                            <CalendarDays size={14} className="text-[var(--text3)]" />
+                            <select value={month} onChange={e => setMonth(+e.target.value)}
+                                className="bg-transparent text-[13px] font-semibold outline-none cursor-pointer">
+                                {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                            </select>
+                        </div>
+                        <div className="bg-[var(--surface2)] border border-[var(--border)] rounded-[12px] px-2.5 py-2">
+                            <select value={year} onChange={e => setYear(+e.target.value)}
+                                className="bg-transparent text-[13px] font-semibold outline-none cursor-pointer">
+                                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 3 + i).map(y => (
+                                    <option key={y} value={y}>{y}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex items-end gap-2 flex-wrap">
+                        <div>
+                            <label className="block text-[11px] font-medium text-[var(--text3)] mb-1">From</label>
+                            <input type="date" value={fromDate} max={toDate}
+                                onChange={e => setFromDate(e.target.value)}
+                                className="bg-[var(--surface2)] border border-[var(--border)] rounded-[12px] px-3 py-2 text-[13px] font-semibold outline-none focus:border-[var(--accent)]" />
+                        </div>
+                        <div>
+                            <label className="block text-[11px] font-medium text-[var(--text3)] mb-1">To</label>
+                            <input type="date" value={toDate} min={fromDate}
+                                onChange={e => setToDate(e.target.value)}
+                                className="bg-[var(--surface2)] border border-[var(--border)] rounded-[12px] px-3 py-2 text-[13px] font-semibold outline-none focus:border-[var(--accent)]" />
+                        </div>
+                    </div>
+                )}
+                <p className="text-[12px] text-[var(--text2)]">
+                    Showing salary for <span className="font-semibold text-[var(--accent-text)]">{periodLabel}</span>
+                    {mode === "range" && <span className="text-[var(--text3)]"> · {dayCount} day{dayCount !== 1 ? "s" : ""}</span>}
+                </p>
             </div>
 
             {/* Bulk actions */}
@@ -328,6 +395,12 @@ export default function PayrollPage() {
                                     <p className="text-[14px] font-semibold text-[var(--text)] truncate leading-tight">{row.name}</p>
                                     <p className="text-[11.5px] text-[var(--accent-text)] font-medium mt-0.5">{row.employeeId}</p>
                                 </div>
+                                {row.hourlyRate > 0 && (
+                                    <button onClick={() => setSlipEmp(row)} title="Salary slip"
+                                        className="shrink-0 flex items-center justify-center w-9 h-9 rounded-full border border-[var(--border)] text-[var(--accent)] hover:bg-[var(--accent-light)] transition-colors">
+                                        <Printer size={15} />
+                                    </button>
+                                )}
                                 {isPaid ? (
                                     <button onClick={() => markPaid(row.id, row.payrollId, "UNPAID")}
                                         className="shrink-0 px-3 py-2 rounded-full text-[11px] font-bold bg-green-100 text-green-700 whitespace-nowrap">
@@ -536,9 +609,11 @@ export default function PayrollPage() {
 
             {/* Salary Slip Modal (also used for PDF print) */}
             {slipEmp && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:bg-transparent print:inset-auto print:p-0">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm print:shadow-none print:rounded-none" ref={slipRef}>
-                        <div className="flex items-center justify-between px-5 py-3 border-b print:hidden">
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    {/* Print isolation: only the slip prints, not the whole page */}
+                    <style>{`@media print { body * { visibility: hidden !important; } #salary-slip, #salary-slip * { visibility: visible !important; } #salary-slip { position: fixed !important; inset: 0 !important; margin: auto !important; box-shadow: none !important; } .no-print { display: none !important; } }`}</style>
+                    <div id="salary-slip" className="bg-white rounded-xl shadow-2xl w-full max-w-sm" ref={slipRef}>
+                        <div className="flex items-center justify-between px-5 py-3 border-b no-print">
                             <h2 className="text-[14px] font-bold">Salary Slip</h2>
                             <div className="flex gap-2">
                                 <button onClick={printSlip}
@@ -557,13 +632,13 @@ export default function PayrollPage() {
                         <div className="px-5 py-4 text-[12px] space-y-3">
                             <div className="text-center pb-1 border-b border-[var(--border)]">
                                 <div className="text-[17px] font-bold text-[var(--accent)]">Falcon Plus</div>
-                                <div className="text-[11px] text-[var(--text3)]">Salary Slip — {MONTHS[month-1]} {year}</div>
+                                <div className="text-[11px] text-[var(--text3)]">Salary Slip — {periodLabel}</div>
                             </div>
                             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] bg-[var(--surface)] rounded-lg p-3">
                                 <div><span className="text-[var(--text3)]">Name: </span><span className="font-semibold">{slipEmp.name}</span></div>
                                 <div><span className="text-[var(--text3)]">ID: </span><span className="font-mono">{slipEmp.employeeId}</span></div>
                                 <div><span className="text-[var(--text3)]">Designation: </span><span>{slipEmp.designation}</span></div>
-                                <div><span className="text-[var(--text3)]">Month: </span><span>{MONTHS[month-1]} {year}</span></div>
+                                <div className="col-span-2"><span className="text-[var(--text3)]">Period: </span><span className="font-medium">{periodLabel}</span>{mode === "range" && <span className="text-[var(--text3)]"> ({dayCount} days)</span>}</div>
                             </div>
                             <div className="border border-[var(--border)] rounded-lg overflow-hidden">
                                 <div className="bg-[var(--surface)] px-3 py-1.5 text-[10px] font-bold text-[var(--text3)] uppercase tracking-wide">Earnings</div>

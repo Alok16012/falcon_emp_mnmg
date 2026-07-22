@@ -12,6 +12,8 @@ export async function GET(req: Request) {
         const { searchParams } = new URL(req.url)
         const date = searchParams.get("date") // YYYY-MM-DD
         const month = searchParams.get("month") // YYYY-MM
+        const from = searchParams.get("from") // YYYY-MM-DD (range start, inclusive)
+        const to = searchParams.get("to")     // YYYY-MM-DD (range end, inclusive)
         const employeeId = searchParams.get("employeeId")
 
         const where: Record<string, unknown> = {}
@@ -23,6 +25,14 @@ export async function GET(req: Request) {
             const next = new Date(d)
             next.setDate(next.getDate() + 1)
             where.date = { gte: d, lt: next }
+        } else if (from && to) {
+            // Inclusive date range: [from 00:00, to+1 day 00:00)
+            const [fy, fm, fd] = from.split("-").map(Number)
+            const [ty, tm, td] = to.split("-").map(Number)
+            where.date = {
+                gte: new Date(fy, fm - 1, fd),
+                lt: new Date(ty, tm - 1, td + 1),
+            }
         } else if (month) {
             const [yr, mo] = month.split("-").map(Number)
             where.date = {
