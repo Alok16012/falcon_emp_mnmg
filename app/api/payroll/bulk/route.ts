@@ -21,7 +21,10 @@ export async function POST(req: Request) {
 
         const m = parseInt(month)
         const y = parseInt(year)
-        const wDays = workingDays || 26
+        // Salary divisor = real calendar days of the month (31 Jul, 30 Jun, 28 Feb),
+        // so one day's pay is monthly salary ÷ days in that month. An explicit
+        // workingDays in the request still wins.
+        const wDays = workingDays || new Date(y, m, 0).getDate()
 
         const employees = await prisma.employee.findMany({
             where: { status: "ACTIVE" },

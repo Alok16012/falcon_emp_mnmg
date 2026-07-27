@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import * as XLSX from "xlsx"
+import { daysInMonth, dailyRateOf, hourlyRateOf } from "@/lib/utils"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -364,11 +365,12 @@ function EmployeeModal({
         try {
             const url = employee ? `/api/employees/${employee.id}` : "/api/employees"
             const method = employee ? "PUT" : "POST"
-            // basicSalary is the MONTHLY salary. Derive the daily rate as
-            // monthly / 30 (month = 30 days) so attendance/hourly calcs are
-            // consistent. Hourly rate = dailyRate / shiftHours = monthly/30/shift.
+            // basicSalary is the MONTHLY salary. Store the daily rate for THIS month
+            // (monthly ÷ calendar days) so listings have a figure to show; payroll
+            // recomputes it for whichever month is being paid, so the stored value is
+            // a display convenience, never the source of truth.
             const monthly = parseFloat(form.basicSalary || "0")
-            const derivedDaily = monthly > 0 ? (monthly / 30).toFixed(2) : form.dailyRate
+            const derivedDaily = monthly > 0 ? dailyRateOf(monthly).toFixed(2) : form.dailyRate
             const res = await fetch(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
@@ -609,7 +611,7 @@ function EmployeeModal({
                                     )}
                                     {form.basicSalary && (
                                         <p className="text-[11px] text-[var(--text3)] mt-1">
-                                            Daily (÷30): ₹{(parseFloat(form.basicSalary || "0") / 30).toFixed(0)} · Hourly (÷30÷{shiftHoursFromTimes(form.shiftStart, form.shiftEnd) || "8"}hr): ₹{(parseFloat(form.basicSalary || "0") / 30 / (shiftHoursFromTimes(form.shiftStart, form.shiftEnd) || 8)).toFixed(2)}
+                                            Daily (÷{daysInMonth()}): ₹{dailyRateOf(parseFloat(form.basicSalary || "0")).toFixed(0)} · Hourly (÷{daysInMonth()}÷{shiftHoursFromTimes(form.shiftStart, form.shiftEnd) || "8"}hr): ₹{hourlyRateOf(parseFloat(form.basicSalary || "0"), shiftHoursFromTimes(form.shiftStart, form.shiftEnd) || 8).toFixed(2)}
                                         </p>
                                     )}
                                 </div>
@@ -950,12 +952,12 @@ function EmployeeDrawer({
                                     <p className="text-[10.5px] text-[var(--text3)] font-medium uppercase tracking-[0.4px] mb-1.5">Rate Breakdown</p>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                            <p className="text-[10px] text-[var(--text3)]">Daily (÷30)</p>
-                                            <p className="text-[13px] font-semibold text-[var(--text)]">₹{(Number(emp.basicSalary) / 30).toFixed(0)}</p>
+                                            <p className="text-[10px] text-[var(--text3)]">Daily (÷{daysInMonth()})</p>
+                                            <p className="text-[13px] font-semibold text-[var(--text)]">₹{dailyRateOf(Number(emp.basicSalary)).toFixed(0)}</p>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] text-[var(--text3)]">Hourly (÷30÷{emp.shiftHours}hr)</p>
-                                            <p className="text-[13px] font-semibold text-[var(--text)]">₹{(Number(emp.basicSalary) / 30 / Number(emp.shiftHours)).toFixed(2)}</p>
+                                            <p className="text-[10px] text-[var(--text3)]">Hourly (÷{daysInMonth()}÷{emp.shiftHours}hr)</p>
+                                            <p className="text-[13px] font-semibold text-[var(--text)]">₹{hourlyRateOf(Number(emp.basicSalary), Number(emp.shiftHours)).toFixed(2)}</p>
                                         </div>
                                     </div>
                                 </div>

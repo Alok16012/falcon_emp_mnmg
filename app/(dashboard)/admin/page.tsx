@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
+import { daysInMonth, dailyRateOf } from "@/lib/utils"
 
 type Stats = {
     totalEmployees: number
@@ -240,7 +241,7 @@ export default function AdminDashboard() {
                                     </td>
                                     <td className="px-5 py-3 text-[13px] text-[var(--text2)]">
                                         {emp.employeeCategory === "LABOUR"
-                                            ? `₹${emp.dailyRate || 0}/day`
+                                            ? `₹${Math.round(dailyRateOf(emp.basicSalary || 0) || emp.dailyRate || 0)}/day (÷${daysInMonth()})`
                                             : `₹${(emp.basicSalary || 0).toLocaleString()}/mo`}
                                     </td>
                                     <td className="px-5 py-3 text-[13px] text-[var(--text3)]">

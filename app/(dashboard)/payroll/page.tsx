@@ -8,7 +8,7 @@ import {
     ChevronLeft, ChevronRight, CheckSquare, Square, Download, Search, SlidersHorizontal
 } from "lucide-react"
 import * as XLSX from "xlsx"
-import { cn } from "@/lib/utils"
+import { cn, daysInMonth as calendarDays } from "@/lib/utils"
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
 const PAGE_SIZES = [10, 20, 40, 100, 500]
@@ -17,7 +17,7 @@ function fmt(n: number) { return "₹" + Math.round(n).toLocaleString("en-IN") }
 
 type EmpPayRow = {
     id: string; employeeId: string; name: string; designation: string
-    hourlyRate: number; shiftHours: number; totalWorkingHrs: number
+    dailyRate: number; hourlyRate: number; shiftHours: number; totalWorkingHrs: number
     otHrs: number; otPay: number; advance: number
     totalSalary: number; netSalary: number
     payrollId: string | null; payrollStatus: string | null
@@ -66,6 +66,9 @@ export default function PayrollPage() {
                 : `month=${year}-${String(month).padStart(2, "0")}`
             const advMonth = mode === "range" ? Number(fromDate.split("-")[1]) : month
             const advYear = mode === "range" ? Number(fromDate.split("-")[0]) : year
+            // Divisor for the daily rate: real calendar days of the payroll month
+            // (range mode uses the month the range starts in).
+            const daysInMonth = calendarDays(advYear, advMonth)
             const [empRes, attRes, advRes, payRes] = await Promise.all([
                 fetch("/api/employees?limit=1000"),
                 fetch(`/api/attendance?${attQuery}&limit=5000`),
@@ -89,20 +92,24 @@ export default function PayrollPage() {
                 const shiftHours = parseFloat(e.shiftHours) || 8
                 // Derive the TRUE hourly rate. basicSalary is a MONTHLY figure, so we
                 // must convert it — never multiply the monthly salary by hours directly.
-                //   • If a dailyRate is set (labour), hourly = dailyRate ÷ shift hours.
-                //   • Otherwise (monthly staff), hourly = monthly ÷ (26 working days × shift hours).
+                //   • One day's pay = monthly salary ÷ the CALENDAR days in the payroll
+                //     month (31 for Jul, 30 for Jun, 28 for Feb) — not a fixed 26, and
+                //     not the stored dailyRate (which was frozen at monthly ÷ 30).
+                //   • hourly = that daily rate ÷ the employee's shift hours.
                 const monthlySalary = parseFloat(e.basicSalary) || 0
-                const dailyRate = parseFloat(e.dailyRate) || 0
+                const dailyRate = monthlySalary > 0
+                    ? monthlySalary / daysInMonth
+                    : (parseFloat(e.dailyRate) || 0)   // fallback: no monthly salary on record
                 const hourlyRate = dailyRate > 0
                     ? parseFloat((dailyRate / shiftHours).toFixed(2))
-                    : (monthlySalary > 0 ? parseFloat((monthlySalary / (26 * shiftHours)).toFixed(2)) : 0)
+                    : 0
                 const totalSalary = parseFloat((totalWorkingHrs * hourlyRate).toFixed(2))
                 const pay = (Array.isArray(pays) ? pays : (pays.data ?? [])).find((p: any) => p.employeeId === e.id)
                 return {
                     id: e.id, employeeId: e.employeeId,
                     name: `${e.firstName} ${e.lastName}`,
                     designation: e.designation ?? "—",
-                    hourlyRate, shiftHours, totalWorkingHrs,
+                    dailyRate: parseFloat(dailyRate.toFixed(2)), hourlyRate, shiftHours, totalWorkingHrs,
                     otHrs: 0, otPay: 0,
                     advance: autoAdvance,
                     totalSalary, netSalary: Math.max(0, totalSalary - autoAdvance),
@@ -179,6 +186,10 @@ export default function PayrollPage() {
         toast.success(`${targets.length} employees marked as ${newStatus}`)
     }
 
+    // Calendar days of the payroll month — the divisor behind every daily rate.
+    const daysInMonthLabel = mode === "range"
+        ? calendarDays(Number(fromDate.split("-")[0]), Number(fromDate.split("-")[1]))
+        : calendarDays(year, month)
     // Human-readable period + a filesystem-safe tag, driven by the selected mode
     const periodLabel = mode === "range"
         ? `${fmtDMY(fromDate)} – ${fmtDMY(toDate)}`
@@ -201,6 +212,7 @@ export default function PayrollPage() {
             "Employee ID": r.employeeId,
             "Name": r.name,
             "Designation": r.designation,
+            "Daily Rate (₹)": r.dailyRate,
             "Hourly Rate (₹)": r.hourlyRate,
             "Shift Hours": r.shiftHours,
             "Work Hours": r.totalWorkingHrs,
@@ -643,6 +655,9 @@ export default function PayrollPage() {
                             <div className="border border-[var(--border)] rounded-lg overflow-hidden">
                                 <div className="bg-[var(--surface)] px-3 py-1.5 text-[10px] font-bold text-[var(--text3)] uppercase tracking-wide">Earnings</div>
                                 <div className="px-3 py-2 space-y-1.5 text-[11px]">
+                                    <div className="flex justify-between">
+                                        <span className="text-[var(--text3)]">Daily Rate ({daysInMonthLabel} days)</span><span>₹{slipEmp.dailyRate}/day</span>
+                                    </div>
                                     <div className="flex justify-between">
                                         <span className="text-[var(--text3)]">Hourly Rate</span><span>₹{slipEmp.hourlyRate}/hr</span>
                                     </div>

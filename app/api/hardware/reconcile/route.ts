@@ -137,14 +137,17 @@ export async function GET(req: Request) {
         }
     }
 
-    // Backfill: ?backfill=1&from=YYYY-MM-DD → pull older punches the normal 30h
-    // sync missed (e.g. after the device was offline for days). Fetches ONE DAY
-    // at a time so each window stays under the device's ~1000-record cap and its
-    // time filter keeps working. Default range: last 7 days.
+    // Backfill: ?backfill=1&from=YYYY-MM-DD[&to=YYYY-MM-DD] → pull older punches the
+    // normal 30h sync missed (e.g. after the device was offline for days). Fetches
+    // ONE DAY at a time so each window stays under the device's ~1000-record cap and
+    // its time filter keeps working. Default range: last 7 days up to today.
+    // `to` bounds the loop — recovering a 2-day gap should not walk 20 days of
+    // device queries and time the request out.
     if (url.searchParams.get("backfill") === "1") {
         try {
             const { syncPunches } = await import("@/lib/channelSync")
             const fromParam = url.searchParams.get("from")
+            const toParam = url.searchParams.get("to")
             const DAY = 86400
             const now = Math.floor(Date.now() / 1000)
             // Start at 00:00 of `from` (IST≈UTC+5:30; we use UTC-day windows with a
@@ -155,10 +158,14 @@ export async function GET(req: Request) {
             } else {
                 startEpoch = now - 7 * DAY
             }
+            // Inclusive last day; never past today.
+            const endEpoch = toParam && /^\d{4}-\d{2}-\d{2}$/.test(toParam)
+                ? Math.min(Math.floor(new Date(toParam + "T00:00:00Z").getTime() / 1000) + DAY, now + DAY)
+                : now + DAY
             const days: { window: string; newPunches: number; scanned: number }[] = []
             let totalNew = 0, totalScanned = 0
             // Each iteration covers a 24h window with a small overlap buffer.
-            for (let s = startEpoch; s < now + DAY; s += DAY) {
+            for (let s = startEpoch; s < endEpoch; s += DAY) {
                 const start = s - 3600            // 1h back-buffer for clock skew
                 const end = s + DAY + 3600        // 1h forward-buffer
                 const r = await syncPunches(conn[0].deviceId, { start, end })
@@ -166,7 +173,12 @@ export async function GET(req: Request) {
                 totalNew += r.newPunches
                 totalScanned += r.scanned
             }
-            return NextResponse.json({ ran: "backfill", from: new Date(startEpoch * 1000).toISOString().slice(0, 10), totalNew, totalScanned, days })
+            return NextResponse.json({
+                ran: "backfill",
+                from: new Date(startEpoch * 1000).toISOString().slice(0, 10),
+                to: new Date((endEpoch - DAY) * 1000).toISOString().slice(0, 10),
+                totalNew, totalScanned, days,
+            })
         } catch (e) {
             return NextResponse.json({ ran: "backfill", error: e instanceof Error ? e.message : String(e) }, { status: 200 })
         }

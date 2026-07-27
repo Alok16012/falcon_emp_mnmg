@@ -81,7 +81,10 @@ export async function POST(req: Request) {
 
         const m = parseInt(month)
         const y = parseInt(year)
-        const wDays = workingDays || 26
+        // Salary divisor = real calendar days of the month (31 Jul, 30 Jun, 28 Feb),
+        // so one day's pay is monthly salary ÷ days in that month. An explicit
+        // workingDays in the request still wins.
+        const wDays = workingDays || new Date(y, m, 0).getDate()
 
         // Fetch attendance for the month
         const startDate = new Date(y, m - 1, 1)
@@ -112,8 +115,12 @@ export async function POST(req: Request) {
         let esiEmployer = 0
 
         if (isLabour) {
-            // LABOUR: daily rate × effective days
-            const rate = (employee as any).dailyRate || employee.basicSalary
+            // LABOUR: daily rate × effective days. One day = monthly salary ÷ days in
+            // the month; the stored dailyRate is only a fallback for employees with no
+            // monthly salary on record (it was frozen at monthly ÷ 30).
+            const rate = employee.basicSalary > 0
+                ? employee.basicSalary / wDays
+                : ((employee as any).dailyRate || 0)
             earnedBasic = rate * (effectiveDays > 0 ? effectiveDays : wDays)
             // Labour usually no PF/HRA unless configured
         } else {

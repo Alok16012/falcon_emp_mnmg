@@ -35,6 +35,17 @@ type AttRecord = {
     punchLogs?: PunchLog[]
 }
 
+type FailedScans = {
+    date: string
+    deviceConnected: boolean
+    total: number
+    matched: number
+    failed: number
+    failedTimes: string[]
+    byHour: Record<string, number>
+    noAttendance: { employeeId: string; name: string; hardwareUserId?: string | null }[]
+}
+
 const STATUS_COLOR: Record<string, { color: string; bg: string; label: string }> = {
     PRESENT:    { color: "#16a34a", bg: "#dcfce7", label: "Present" },
     ABSENT:     { color: "#dc2626", bg: "#fee2e2", label: "Absent" },
@@ -102,6 +113,10 @@ export default function AttendancePage() {
     const [filter, setFilter] = useState<"ALL" | "LABOUR" | "STAFF">("ALL")
     const [statusFilter, setStatusFilter] = useState<"ALL" | "PRESENT" | "ABSENT">("ALL")
     const [search, setSearch] = useState("")
+    // Scans the device logged but could NOT recognise (blank UserID) — these are
+    // dropped by the punch pipeline, so the person silently shows absent.
+    const [failedScans, setFailedScans] = useState<FailedScans | null>(null)
+    const [showFailed, setShowFailed] = useState(false)
 
     const fetchEmployees = useCallback(async () => {
         try {
@@ -123,7 +138,16 @@ export default function AttendancePage() {
         finally { setLoading(false) }
     }, [date])
 
+    const fetchFailedScans = useCallback(async () => {
+        setFailedScans(null)
+        try {
+            const r = await fetch(`/api/hardware/failed-scans?date=${date}`)
+            setFailedScans(r.ok ? await r.json() : null)
+        } catch { /* device offline / no permission — panel just stays hidden */ }
+    }, [date])
+
     useEffect(() => { Promise.all([fetchEmployees(), fetchAttendance()]) }, [fetchEmployees, fetchAttendance])
+    useEffect(() => { setShowFailed(false); fetchFailedScans() }, [fetchFailedScans])
 
     // Open employee's full attendance page
     const openEmployee = (emp: Employee) => router.push(`/attendance/${emp.id}`)
@@ -245,6 +269,67 @@ export default function AttendancePage() {
                     )
                 })}
             </div>
+
+            {/* Failed scans — the device saw someone but could not recognise them, so
+                no attendance was created. Without this the absence looks unexplained. */}
+            {failedScans && failedScans.failed > 0 && (
+                <div className="bg-white border border-amber-300 rounded-[16px] shadow-[0_2px_10px_rgba(80,80,170,0.05)] overflow-hidden">
+                    <button type="button" onClick={() => setShowFailed(v => !v)}
+                        className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-amber-50/60 transition-colors">
+                        <div className="w-9 h-9 rounded-[10px] bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                            <AlertTriangle size={17} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[13.5px] font-semibold text-[var(--text)]">
+                                {failedScans.failed} scans not recognised
+                            </p>
+                            <p className="text-[11.5px] text-[var(--text3)] leading-tight">
+                                {failedScans.matched} of {failedScans.total} punches matched · these {failedScans.failed} had no face/card match, so no attendance was marked
+                            </p>
+                        </div>
+                        <ChevronRightIcon size={17}
+                            className={`text-[var(--text3)] shrink-0 transition-transform ${showFailed ? "rotate-90" : ""}`} />
+                    </button>
+                    {showFailed && (
+                        <div className="px-4 pb-4 pt-1 border-t border-[var(--border)] space-y-3">
+                            <div>
+                                <p className="text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.4px] mb-1.5">Failed attempts by hour</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {Object.entries(failedScans.byHour).sort().map(([h, n]) => (
+                                        <span key={h} className="px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-[11.5px] font-medium text-amber-800">
+                                            {h}:00 — {n}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <p className="text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.4px] mb-1.5">Times</p>
+                                <p className="text-[11.5px] text-[var(--text2)] leading-relaxed break-words font-mono">
+                                    {failedScans.failedTimes.join("  ·  ")}
+                                </p>
+                            </div>
+                            {failedScans.noAttendance.length > 0 && (
+                                <div>
+                                    <p className="text-[11px] font-semibold text-[var(--text3)] uppercase tracking-[0.4px] mb-1.5">
+                                        No attendance today ({failedScans.noAttendance.length}) — likely among the failed scans
+                                    </p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {failedScans.noAttendance.map(e => (
+                                            <span key={e.employeeId} className="px-2.5 py-1 rounded-full bg-[var(--surface2)] border border-[var(--border)] text-[11.5px] text-[var(--text2)]">
+                                                {e.name} <span className="text-[var(--text3)]">({e.employeeId})</span>
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            <p className="text-[11px] text-[var(--text3)] leading-relaxed">
+                                A failed scan means the device could not match the face or card to anyone enrolled.
+                                Re-enrol these people on the device, and check the camera lens and lighting if it keeps happening at the same hour.
+                            </p>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Controls */}
             <div className="flex flex-col md:flex-row md:items-center gap-3">
