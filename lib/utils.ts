@@ -7,16 +7,21 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // ─── Salary divisor ───────────────────────────────────────────────────────────
-// One day's pay = monthly salary ÷ the CALENDAR days of that month (31 in Jul,
-// 30 in Jun, 28 in Feb) — not a fixed 26 or 30. Every rate shown or paid anywhere
-// in the app must go through these two helpers so the numbers never disagree.
+// One day's pay = monthly salary ÷ 30 for EVERY month (Jan, Jul, Jun … all 30),
+// with February as the only exception — it uses its real length (28 or 29) so a
+// short month is never over-divided. Not a fixed 26, not the true calendar days.
+// Every rate shown or paid anywhere in the app goes through these helpers so the
+// numbers never disagree.
 
-/** Calendar days in a month. `month` is 1-12. Defaults to the current month. */
+/** Payroll divisor for a month: 30 for all months, real days for February.
+ *  `month` is 1-12. Defaults to the current month. */
 export function daysInMonth(year?: number, month?: number) {
     const now = new Date()
     const y = year ?? now.getFullYear()
     const m = month ?? now.getMonth() + 1
-    return new Date(y, m, 0).getDate()
+    // February → its actual length (28 or 29); every other month → flat 30.
+    if (m === 2) return new Date(y, 2, 0).getDate()
+    return 30
 }
 
 /** One day's pay for a monthly salary, in the given month (default: current). */

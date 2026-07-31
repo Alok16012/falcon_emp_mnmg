@@ -92,10 +92,10 @@ export default function PayrollPage() {
                 const shiftHours = parseFloat(e.shiftHours) || 8
                 // Derive the TRUE hourly rate. basicSalary is a MONTHLY figure, so we
                 // must convert it — never multiply the monthly salary by hours directly.
-                //   • One day's pay = monthly salary ÷ the CALENDAR days in the payroll
-                //     month (31 for Jul, 30 for Jun, 28 for Feb) — not a fixed 26, and
-                //     not the stored dailyRate (which was frozen at monthly ÷ 30).
+                //   • One day's pay = monthly salary ÷ 30 (every month divides by 30;
+                //     February is the only exception, using its real 28/29 days).
                 //   • hourly = that daily rate ÷ the employee's shift hours.
+                //   • salary = hours actually worked × that hourly rate.
                 const monthlySalary = parseFloat(e.basicSalary) || 0
                 const dailyRate = monthlySalary > 0
                     ? monthlySalary / daysInMonth
