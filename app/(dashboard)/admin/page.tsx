@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSession } from "next-auth/react"
 import {
     Users, UserCheck, CalendarOff,
     IndianRupee, ArrowRight, UserPlus,
@@ -27,15 +26,7 @@ type Stats = {
     }[]
 }
 
-function greeting() {
-    const h = new Date().getHours()
-    if (h < 12) return "Good Morning"
-    if (h < 17) return "Good Afternoon"
-    return "Good Evening"
-}
-
 export default function AdminDashboard() {
-    const { data: session } = useSession()
     const [stats, setStats] = useState<Stats | null>(null)
     const [loading, setLoading] = useState(true)
     const now = new Date()
@@ -72,20 +63,27 @@ export default function AdminDashboard() {
     )
 
     return (
-        <div className="p-4 md:p-6 space-y-4 md:space-y-6 min-h-screen">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-[24px] md:text-[26px] font-bold text-[var(--text)] leading-tight">
-                        {greeting()}, {session?.user?.name?.split(" ")[0] || "Admin"} 👋
-                    </h1>
-                    <p className="text-[13.5px] text-[var(--text3)] mt-1">
-                        {format(now, "EEEE, dd MMMM yyyy")}
-                    </p>
+        <div className="px-4 md:px-6 pt-1 pb-4 space-y-4 md:space-y-5">
+            {/* Hero card */}
+            <div className="relative overflow-hidden rounded-[22px] p-5 md:p-6 text-white shadow-[0_10px_28px_rgba(11,92,255,0.28)]" style={{ background: "linear-gradient(135deg, #0b5cff 0%, #0847c7 100%)" }}>
+                <svg aria-hidden viewBox="0 0 24 24" className="absolute -right-4 -top-4 w-36 h-36 text-white/15" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+                </svg>
+                <div className="relative flex items-start justify-between gap-3">
+                    <p className="text-[11px] font-bold tracking-[0.1em] uppercase text-white/80">{format(now, "EEEE, dd MMMM yyyy")}</p>
+                    <button onClick={fetchStats} aria-label="Refresh" className="press -mt-1 p-2 rounded-full bg-white/15 hover:bg-white/25 transition-colors">
+                        <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+                    </button>
                 </div>
-                <button onClick={fetchStats} className="p-2.5 rounded-full border border-[var(--border)] bg-white hover:bg-[var(--surface2)] transition-colors text-[var(--text3)] shadow-sm">
-                    <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
-                </button>
+                <p className="relative mt-1 text-[22px] md:text-[26px] font-extrabold leading-tight max-w-[420px]">
+                    {loading ? "Loading today\u2019s attendance…" : `${stats?.attendance?.present ?? 0} of ${stats?.totalEmployees ?? 0} present today`}
+                </p>
+                <p className="relative mt-1 text-[13px] text-white/80">
+                    Keep an eye on attendance, leaves and payroll from here.
+                </p>
+                <Link href="/attendance" className="press relative mt-4 inline-flex items-center gap-2 rounded-[14px] px-5 py-3 text-[14px] font-bold text-white shadow-[0_6px_16px_rgba(255,138,31,0.38)]" style={{ background: "linear-gradient(135deg, #ff8a1f, #e8650c)" }}>
+                    Mark Attendance <ArrowRight size={16} />
+                </Link>
             </div>
 
             {/* Top Stats */}

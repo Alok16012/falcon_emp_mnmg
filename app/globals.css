@@ -82,3 +82,28 @@
     letter-spacing: -0.02em;
   }
 }
+
+/* App-feel helpers (Pushpak design) */
+.press { transition: transform 0.12s ease, opacity 0.12s ease; }
+.press:active { transform: scale(0.97); opacity: 0.9; }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.fade-up { animation: fade-up 0.35s ease both; }
+
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: none; }
+}
+.sheet-up { animation: sheet-up 0.28s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up, .sheet-up { animation: none; }
+}
+
+/* iOS zooms into inputs under 16px — keep the app from jumping. */
+@media (max-width: 640px) {
+  input, textarea, select { font-size: 16px !important; }
+}

@@ -12,6 +12,9 @@ const nextConfig = {
         return `build-${Date.now()}`;
     },
     async headers() {
+        // Dev chunk names aren't content-hashed, so caching them forever
+        // pins the browser to stale code after edits.
+        if (process.env.NODE_ENV !== "production") return []
         return [
             {
                 source: "/_next/static/:path*",
