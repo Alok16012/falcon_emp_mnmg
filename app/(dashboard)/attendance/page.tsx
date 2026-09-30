@@ -215,7 +215,7 @@ export default function AttendancePage() {
                     <p className="text-[13px] text-[var(--text3)] mt-0.5">Track punch in / out and working hours</p>
                 </div>
                 <button onClick={exportCSV} disabled={visible.length === 0}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] text-white rounded-[12px] text-[13px] font-semibold disabled:opacity-60 hover:bg-[#4a4ac8] transition-colors shadow-sm">
+                    className="flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] text-white rounded-[12px] text-[13px] font-semibold disabled:opacity-60 hover:bg-[#0847c7] transition-colors shadow-sm">
                     <Download size={15} /> Export Excel
                 </button>
             </div>
@@ -236,7 +236,7 @@ export default function AttendancePage() {
                     </div>
                 </div>
                 <button onClick={() => setDate(format(new Date(), "yyyy-MM-dd"))}
-                    className="px-3.5 py-1.5 rounded-full bg-[var(--accent-light)] text-[var(--accent-text)] text-[12.5px] font-semibold hover:bg-[#e0e0fa] transition-colors shrink-0">
+                    className="px-3.5 py-1.5 rounded-full bg-[var(--accent-light)] text-[var(--accent-text)] text-[12.5px] font-semibold hover:bg-[#dbe5ff] transition-colors shrink-0">
                     Today
                 </button>
                 <button onClick={() => changeDate(1)} className="p-1.5 rounded-[8px] hover:bg-[var(--surface2)] transition-colors">

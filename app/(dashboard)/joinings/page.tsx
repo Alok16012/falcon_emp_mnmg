@@ -148,7 +148,7 @@ export default function JoiningsPage() {
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-[10px] bg-[#5b5bd6] flex items-center justify-center text-white">
+                    <div className="h-10 w-10 rounded-[10px] bg-[#0b5cff] flex items-center justify-center text-white">
                         <UserPlus size={20} />
                     </div>
                     <div>
@@ -167,7 +167,7 @@ export default function JoiningsPage() {
             <div className="mb-5 rounded-[16px] border border-[var(--border)] bg-white p-4 shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                        <div className="h-11 w-11 rounded-[13px] bg-[#5b5bd6] flex items-center justify-center text-white shrink-0">
+                        <div className="h-11 w-11 rounded-[13px] bg-[#0b5cff] flex items-center justify-center text-white shrink-0">
                             <Link2 size={19} />
                         </div>
                         <div className="min-w-0">
@@ -176,10 +176,10 @@ export default function JoiningsPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button onClick={copyLink} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-light)] px-3.5 py-2 text-[12.5px] font-semibold text-[var(--accent-text)] hover:bg-[#e0e0fa] transition-colors">
+                        <button onClick={copyLink} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-light)] px-3.5 py-2 text-[12.5px] font-semibold text-[var(--accent-text)] hover:bg-[#dbe5ff] transition-colors">
                             <Copy size={14} /> Copy
                         </button>
-                        <a href={publicUrl || "/join"} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-light)] px-3.5 py-2 text-[12.5px] font-semibold text-[var(--accent-text)] hover:bg-[#e0e0fa] transition-colors">
+                        <a href={publicUrl || "/join"} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-light)] px-3.5 py-2 text-[12.5px] font-semibold text-[var(--accent-text)] hover:bg-[#dbe5ff] transition-colors">
                             <ExternalLink size={14} /> Open
                         </a>
                     </div>
@@ -188,7 +188,7 @@ export default function JoiningsPage() {
 
             {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-                <StatCard label="Total" value={counts.total} icon={<UserPlus size={16} />} iconColor="#5b5bd6" iconBg="#ececfc" />
+                <StatCard label="Total" value={counts.total} icon={<UserPlus size={16} />} iconColor="#0b5cff" iconBg="#e8effe" />
                 <StatCard label="Pending" value={counts.pending} color="#f59e0b" icon={<Loader2 size={16} />} iconColor="#f59e0b" iconBg="#fef3c7" />
                 <StatCard label="Approved" value={counts.approved} color="#16a34a" icon={<CheckCircle size={16} />} iconColor="#16a34a" iconBg="#dcfce7" />
                 <StatCard label="Rejected" value={counts.rejected} color="#dc2626" icon={<X size={16} />} iconColor="#dc2626" iconBg="#fee2e2" />
@@ -202,13 +202,13 @@ export default function JoiningsPage() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search name, phone, Aadhaar, designation…"
-                        className="w-full h-11 rounded-[14px] border border-[var(--border)] bg-white pl-10 pr-3 text-[13px] outline-none focus:border-[#5b5bd6] shadow-[0_2px_10px_rgba(80,80,170,0.05)]"
+                        className="w-full h-11 rounded-[14px] border border-[var(--border)] bg-white pl-10 pr-3 text-[13px] outline-none focus:border-[#0b5cff] shadow-[0_2px_10px_rgba(80,80,170,0.05)]"
                     />
                 </div>
                 <select
                     value={statusFilter}
                     onChange={e => setStatusFilter(e.target.value)}
-                    className="h-11 rounded-[14px] border border-[var(--border)] bg-white px-3 text-[13px] font-medium text-[var(--text2)] outline-none focus:border-[#5b5bd6] shadow-[0_2px_10px_rgba(80,80,170,0.05)]"
+                    className="h-11 rounded-[14px] border border-[var(--border)] bg-white px-3 text-[13px] font-medium text-[var(--text2)] outline-none focus:border-[#0b5cff] shadow-[0_2px_10px_rgba(80,80,170,0.05)]"
                 >
                     <option value="">All status</option>
                     <option value="INACTIVE">Pending</option>
@@ -323,7 +323,7 @@ export default function JoiningsPage() {
                                                     <span className="h-8 w-8 rounded-full bg-[var(--surface2)] flex items-center justify-center text-[var(--text3)] shrink-0"><User size={15} /></span>
                                                 )}
                                                 <span>
-                                                    <span className="block font-medium text-[var(--text)] group-hover:text-[#5b5bd6]">{r.firstName} {r.lastName}</span>
+                                                    <span className="block font-medium text-[var(--text)] group-hover:text-[#0b5cff]">{r.firstName} {r.lastName}</span>
                                                     <span className="block text-[12px] text-[var(--text3)]">{r.employeeId}</span>
                                                 </span>
                                             </button>
@@ -433,7 +433,7 @@ function ViewModal({ row, onClose, onApprove }: { row: Joining; onClose: () => v
                         ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                 {row.documents.map(d => (
-                                    <a key={d.id} href={d.fileUrl} target="_blank" rel="noreferrer" className="block rounded-[10px] border border-[var(--border)] overflow-hidden hover:border-[#5b5bd6] transition-colors">
+                                    <a key={d.id} href={d.fileUrl} target="_blank" rel="noreferrer" className="block rounded-[10px] border border-[var(--border)] overflow-hidden hover:border-[#0b5cff] transition-colors">
                                         {d.fileUrl.startsWith("data:image") ? (
                                             // eslint-disable-next-line @next/next/no-img-element
                                             <img src={d.fileUrl} alt={d.type} className="h-28 w-full object-cover" />

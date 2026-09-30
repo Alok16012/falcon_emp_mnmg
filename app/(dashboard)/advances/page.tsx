@@ -125,7 +125,7 @@ export default function AdvancesPage() {
                     <p className="text-[13px] text-[var(--text3)] mt-0.5">Track and manage advance salary payments</p>
                 </div>
                 <button onClick={() => setShowModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-[9px] text-[13px] font-semibold hover:bg-[#4a4ac8] transition-colors">
+                    className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-[9px] text-[13px] font-semibold hover:bg-[#0847c7] transition-colors">
                     <Plus size={15} /> Give Advance
                 </button>
             </div>
@@ -416,7 +416,7 @@ export default function AdvancesPage() {
                                     Cancel
                                 </button>
                                 <button type="submit" disabled={saving || !form.employeeId}
-                                    className="flex-1 h-9 rounded-[8px] bg-[var(--accent)] text-white text-[13px] font-semibold hover:bg-[#4a4ac8] transition-colors disabled:opacity-60">
+                                    className="flex-1 h-9 rounded-[8px] bg-[var(--accent)] text-white text-[13px] font-semibold hover:bg-[#0847c7] transition-colors disabled:opacity-60">
                                     {saving ? "Saving..." : "Give Advance"}
                                 </button>
                             </div>

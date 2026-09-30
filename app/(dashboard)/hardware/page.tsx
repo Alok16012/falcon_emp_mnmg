@@ -340,7 +340,7 @@ export default function HardwarePage() {
                 <button
                     onClick={() => handleSync()}
                     disabled={syncing !== null || devices.filter(d => d.enabled).length === 0}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] text-white text-[13px] font-semibold rounded-[12px] hover:bg-[#4a4ac8] disabled:opacity-50 transition-colors shadow-sm"
+                    className="flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] text-white text-[13px] font-semibold rounded-[12px] hover:bg-[#0847c7] disabled:opacity-50 transition-colors shadow-sm"
                 >
                     <RefreshCw size={14} className={cn(syncing ? "animate-spin" : "")} />
                     {syncing === "all" ? "Syncing…" : "Sync All Devices"}
@@ -895,7 +895,7 @@ function DeviceCard({
                     <button
                         onClick={onEnroll}
                         disabled={enrolling || !device.enabled}
-                        className="flex items-center gap-1.5 px-3.5 py-2 text-[12.5px] font-semibold bg-[#6d5be8] text-white rounded-[11px] hover:bg-[#5d4bd8] disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-3.5 py-2 text-[12.5px] font-semibold bg-[#0847c7] text-white rounded-[11px] hover:bg-[#5d4bd8] disabled:opacity-50"
                         title="Push mapped employees (name + ID) to this device so their name appears when enrolling fingerprints"
                     >
                         {enrolling ? <RefreshCw size={13} className="animate-spin" /> : <UserPlus size={13} />}

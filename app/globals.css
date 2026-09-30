@@ -7,22 +7,28 @@
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
 
-    --bg: #ededf9;
+    /* Pushpak palette: blue primary, warm orange for highlights. */
+    --bg: #eef1fb;
     --surface: #ffffff;
-    --surface2: #f4f4fb;
-    --border: #e8e8f4;
-    --border2: #d6d6ea;
-    --text: #17171f;
-    --text2: #62626e;
-    --text3: #94949f;
-    --accent: #5b5bd6;
-    --accent-light: #ececfc;
-    --accent-text: #4f46e5;
-    --accent-grad: linear-gradient(90deg, #4f7cf6 0%, #6d5be8 100%);
+    --surface2: #f0f2f8;
+    --border: #e6eaf5;
+    --border2: #dfe4ef;
+    --text: #0f1729;
+    --text2: #5b6478;
+    --text3: #98a1b5;
+    --accent: #0b5cff;
+    --accent-dark: #0847c7;
+    --accent-light: #e8effe;
+    --accent-text: #0847c7;
+    --accent-grad: linear-gradient(150deg, #0847c7 0%, #0b5cff 100%);
+    --gold: #ff8a1f;
+    --gold-dark: #e8650c;
+    --gold-light: #fff4ea;
     --amber: #d97706;
     --amber-light: #fef3c7;
     --red: #dc2626;
     --red-light: #fef2f2;
+    --shadow-card: 0 2px 10px rgba(15, 23, 41, 0.05);
 
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
@@ -68,5 +74,11 @@
   body {
     background-color: var(--bg);
     color: var(--text);
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    letter-spacing: -0.02em;
   }
 }

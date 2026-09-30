@@ -48,8 +48,8 @@ export async function sendApprovalEmail({
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inspection Report Approved</title>
 </head>
-<body style="margin:0;padding:0;background:#f5f4f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f0;padding:32px 0;">
+<body style="margin:0;padding:0;background:#f0f2f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f2f8;padding:32px 0;">
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
@@ -73,51 +73,51 @@ export async function sendApprovalEmail({
 
           <!-- White card body -->
           <tr>
-            <td style="background:#ffffff;padding:36px 36px 28px;border-left:1px solid #e8e6e1;border-right:1px solid #e8e6e1;">
+            <td style="background:#ffffff;padding:36px 36px 28px;border-left:1px solid #e6eaf5;border-right:1px solid #e6eaf5;">
 
-              <p style="margin:0 0 6px;font-size:22px;font-weight:700;color:#1a1a18;line-height:1.3;">
+              <p style="margin:0 0 6px;font-size:22px;font-weight:700;color:#0f1729;line-height:1.3;">
                 Inspection Report Ready
               </p>
-              <p style="margin:0 0 28px;font-size:14px;color:#6b6860;line-height:1.6;">
-                The inspection report for <strong style="color:#1a1a18;">${projectName}</strong> has been reviewed and approved. You can now view the complete report.
+              <p style="margin:0 0 28px;font-size:14px;color:#5b6478;line-height:1.6;">
+                The inspection report for <strong style="color:#0f1729;">${projectName}</strong> has been reviewed and approved. You can now view the complete report.
               </p>
 
               <!-- Details grid -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f8f5;border-radius:10px;border:1px solid #e8e6e1;margin-bottom:28px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f2f8;border-radius:10px;border:1px solid #e6eaf5;margin-bottom:28px;">
                 <tr>
                   <td style="padding:20px 24px;">
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="padding:6px 0;width:50%;vertical-align:top;">
-                          <p style="margin:0;font-size:10px;font-weight:700;color:#9e9b95;text-transform:uppercase;letter-spacing:0.6px;">Company</p>
-                          <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#1a1a18;">${companyName}</p>
+                          <p style="margin:0;font-size:10px;font-weight:700;color:#98a1b5;text-transform:uppercase;letter-spacing:0.6px;">Company</p>
+                          <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0f1729;">${companyName}</p>
                         </td>
                         <td style="padding:6px 0;width:50%;vertical-align:top;">
-                          <p style="margin:0;font-size:10px;font-weight:700;color:#9e9b95;text-transform:uppercase;letter-spacing:0.6px;">Project</p>
-                          <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#1a1a18;">${projectName}</p>
+                          <p style="margin:0;font-size:10px;font-weight:700;color:#98a1b5;text-transform:uppercase;letter-spacing:0.6px;">Project</p>
+                          <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0f1729;">${projectName}</p>
                         </td>
                       </tr>
                       <tr>
                         <td style="padding:12px 0 6px;vertical-align:top;">
-                          <p style="margin:0;font-size:10px;font-weight:700;color:#9e9b95;text-transform:uppercase;letter-spacing:0.6px;">Inspector</p>
-                          <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#1a1a18;">${inspectorName}</p>
+                          <p style="margin:0;font-size:10px;font-weight:700;color:#98a1b5;text-transform:uppercase;letter-spacing:0.6px;">Inspector</p>
+                          <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0f1729;">${inspectorName}</p>
                         </td>
                         <td style="padding:12px 0 6px;vertical-align:top;">
-                          <p style="margin:0;font-size:10px;font-weight:700;color:#9e9b95;text-transform:uppercase;letter-spacing:0.6px;">Approved On</p>
-                          <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#1a1a18;">${dateStr}</p>
+                          <p style="margin:0;font-size:10px;font-weight:700;color:#98a1b5;text-transform:uppercase;letter-spacing:0.6px;">Approved On</p>
+                          <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#0f1729;">${dateStr}</p>
                         </td>
                       </tr>
                       <tr>
                         <td colspan="2" style="padding:12px 0 6px;vertical-align:top;">
-                          <p style="margin:0;font-size:10px;font-weight:700;color:#9e9b95;text-transform:uppercase;letter-spacing:0.6px;">Approved By</p>
+                          <p style="margin:0;font-size:10px;font-weight:700;color:#98a1b5;text-transform:uppercase;letter-spacing:0.6px;">Approved By</p>
                           <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#1a9e6e;">${approvedByName}</p>
                         </td>
                       </tr>
                       ${reviewerNotes ? `
                       <tr>
                         <td colspan="2" style="padding:12px 0 6px;vertical-align:top;">
-                          <p style="margin:0;font-size:10px;font-weight:700;color:#9e9b95;text-transform:uppercase;letter-spacing:0.6px;">Reviewer Notes</p>
-                          <p style="margin:4px 0 0;font-size:13px;color:#1a1a18;line-height:1.5;">${reviewerNotes}</p>
+                          <p style="margin:0;font-size:10px;font-weight:700;color:#98a1b5;text-transform:uppercase;letter-spacing:0.6px;">Reviewer Notes</p>
+                          <p style="margin:4px 0 0;font-size:13px;color:#0f1729;line-height:1.5;">${reviewerNotes}</p>
                         </td>
                       </tr>` : ""}
                     </table>
@@ -136,7 +136,7 @@ export async function sendApprovalEmail({
                 </tr>
               </table>
 
-              <p style="margin:0;font-size:12px;color:#9e9b95;text-align:center;line-height:1.6;">
+              <p style="margin:0;font-size:12px;color:#98a1b5;text-align:center;line-height:1.6;">
                 This link is shareable and does not require login.<br/>
                 If you have questions, please contact your project manager.
               </p>
@@ -145,11 +145,11 @@ export async function sendApprovalEmail({
 
           <!-- Footer -->
           <tr>
-            <td style="background:#f9f8f5;border:1px solid #e8e6e1;border-top:none;border-radius:0 0 14px 14px;padding:18px 36px;">
+            <td style="background:#f0f2f8;border:1px solid #e6eaf5;border-top:none;border-radius:0 0 14px 14px;padding:18px 36px;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <p style="margin:0;font-size:11px;color:#9e9b95;">
+                    <p style="margin:0;font-size:11px;color:#98a1b5;">
                       CIMS — Quality Inspection Management System<br/>
                       Developed by <a href="#" style="color:#1a9e6e;text-decoration:none;">Blinks AI</a>
                     </p>

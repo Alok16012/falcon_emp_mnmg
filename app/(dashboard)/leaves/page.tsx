@@ -493,7 +493,7 @@ export default function LeavesPage() {
                     <p className="text-[13.5px] text-[var(--text3)] mt-0.5">Manage employee leave requests</p>
                 </div>
                 <button onClick={() => setShowApply(true)}
-                    className="inline-flex items-center gap-2 bg-[var(--accent)] text-white rounded-[12px] text-[13.5px] font-semibold px-4 py-2.5 hover:bg-[#4a4ac8] transition-colors shadow-sm">
+                    className="inline-flex items-center gap-2 bg-[var(--accent)] text-white rounded-[12px] text-[13.5px] font-semibold px-4 py-2.5 hover:bg-[#0847c7] transition-colors shadow-sm">
                     <Plus size={16} /> Apply Leave
                 </button>
             </div>

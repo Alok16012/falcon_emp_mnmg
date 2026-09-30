@@ -376,7 +376,7 @@ export default function ProfilePage() {
         MANAGER:        { bg: "#eff6ff", color: "#1d4ed8" },
         INSPECTION_BOY: { bg: "#fef3c7", color: "#92400e" },
     }
-    const badge = roleBadge[formData.role] ?? { bg: "#f9f8f5", color: "#6b6860" }
+    const badge = roleBadge[formData.role] ?? { bg: "#f0f2f8", color: "#5b6478" }
 
     const tabs = [
         { key: "profile",    label: "Profile",       icon: User },
@@ -391,7 +391,7 @@ export default function ProfilePage() {
         <div className="max-w-3xl mx-auto pb-12 space-y-5 p-4 lg:p-0">
             {/* Header card */}
             <div className="bg-white border border-[var(--border)] rounded-2xl p-6 flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-[#1a1a18] text-white flex items-center justify-center text-[22px] font-bold shrink-0">
+                <div className="w-14 h-14 rounded-full bg-[#0f1729] text-white flex items-center justify-center text-[22px] font-bold shrink-0">
                     {formData.name.charAt(0).toUpperCase()}
                 </div>
                 <div>

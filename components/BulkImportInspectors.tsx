@@ -247,7 +247,7 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <button className="inline-flex items-center justify-center bg-white border border-[#e8e6e1] text-[#6b6860] px-3 rounded-[9px] text-[13px] font-medium hover:bg-[#f9f8f5] transition-colors">
+                <button className="inline-flex items-center justify-center bg-white border border-[#e6eaf5] text-[#5b6478] px-3 rounded-[9px] text-[13px] font-medium hover:bg-[#f0f2f8] transition-colors">
                     <svg className="h-4 w-4 mr-2" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
@@ -260,12 +260,12 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
             <DialogContent className="bg-white rounded-[16px] w-[520px] max-w-[90vw] p-7" style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.12)" }}>
                 <div className="flex items-start justify-between mb-5">
                     <div>
-                        <h2 className="text-[17px] font-semibold text-[#1a1a18]">Bulk Import Inspectors</h2>
-                        <p className="text-[13px] text-[#6b6860] mt-1">Import multiple inspectors from an Excel file and optionally assign to a group</p>
+                        <h2 className="text-[17px] font-semibold text-[#0f1729]">Bulk Import Inspectors</h2>
+                        <p className="text-[13px] text-[#5b6478] mt-1">Import multiple inspectors from an Excel file and optionally assign to a group</p>
                     </div>
                     <button
                         onClick={() => handleOpenChange(false)}
-                        className="w-[30px] h-[30px] rounded-[8px] bg-[#f9f8f5] border border-[#e8e6e1] flex items-center justify-center hover:bg-red-50 hover:border-red-200 transition-colors"
+                        className="w-[30px] h-[30px] rounded-[8px] bg-[#f0f2f8] border border-[#e6eaf5] flex items-center justify-center hover:bg-red-50 hover:border-red-200 transition-colors"
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -276,19 +276,19 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
 
                 {step === "template" && (
                     <div className="space-y-4">
-                        <div className="bg-[#f9f8f5] border border-[#e8e6e1] rounded-[12px] p-4">
+                        <div className="bg-[#f0f2f8] border border-[#e6eaf5] rounded-[12px] p-4">
                             <div className="flex items-center gap-2 mb-1">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a9e6e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
                                     <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
                                 </svg>
-                                <span className="text-[13.5px] font-semibold text-[#1a1a18]">Assign to Group (Optional)</span>
+                                <span className="text-[13.5px] font-semibold text-[#0f1729]">Assign to Group (Optional)</span>
                             </div>
-                            <p className="text-[12.5px] text-[#6b6860] mb-3">Select a project to auto-assign imported inspectors</p>
+                            <p className="text-[12.5px] text-[#5b6478] mb-3">Select a project to auto-assign imported inspectors</p>
                             <div className="space-y-2">
-                                <label className="text-[11.5px] font-medium text-[#9e9b95] uppercase tracking-[0.5px]">Company</label>
+                                <label className="text-[11.5px] font-medium text-[#98a1b5] uppercase tracking-[0.5px]">Company</label>
                                 <select
-                                    className="w-full bg-white border border-[#e8e6e1] rounded-[9px] px-[14px] py-[10px] text-[13px] text-[#1a1a18] focus:border-[#1a9e6e] focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:outline-none transition-all cursor-pointer"
+                                    className="w-full bg-white border border-[#e6eaf5] rounded-[9px] px-[14px] py-[10px] text-[13px] text-[#0f1729] focus:border-[#1a9e6e] focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:outline-none transition-all cursor-pointer"
                                     value={selectedCompanyId}
                                     onChange={(e) => setSelectedCompanyId(e.target.value)}
                                 >
@@ -301,9 +301,9 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
 
                             {selectedCompanyId && (
                                 <div className="space-y-2 mt-3">
-                                    <label className="text-[11.5px] font-medium text-[#9e9b95] uppercase tracking-[0.5px]">Project</label>
+                                    <label className="text-[11.5px] font-medium text-[#98a1b5] uppercase tracking-[0.5px]">Project</label>
                                     <select
-                                        className="w-full bg-white border border-[#e8e6e1] rounded-[9px] px-[14px] py-[10px] text-[13px] text-[#1a1a18] focus:border-[#1a9e6e] focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:outline-none transition-all cursor-pointer"
+                                        className="w-full bg-white border border-[#e6eaf5] rounded-[9px] px-[14px] py-[10px] text-[13px] text-[#0f1729] focus:border-[#1a9e6e] focus:ring-[3px] focus:ring-[rgba(26,158,110,0.08)] focus:outline-none transition-all cursor-pointer"
                                         value={selectedProjectId}
                                         onChange={(e) => setSelectedProjectId(e.target.value)}
                                     >
@@ -317,10 +317,10 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
 
                             {selectedProjectId && managers.length > 0 && (
                                 <div className="space-y-2 mt-3">
-                                    <label className="text-[11.5px] font-medium text-[#9e9b95] uppercase tracking-[0.5px]">Assign Managers (Optional)</label>
-                                    <div className="border border-[#e8e6e1] rounded-[9px] max-h-[100px] overflow-y-auto bg-white">
+                                    <label className="text-[11.5px] font-medium text-[#98a1b5] uppercase tracking-[0.5px]">Assign Managers (Optional)</label>
+                                    <div className="border border-[#e6eaf5] rounded-[9px] max-h-[100px] overflow-y-auto bg-white">
                                         {managers.map((m) => (
-                                            <label key={m.id} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[#f9f8f5] transition-colors border-b border-[#e8e6e1] last:border-b-0">
+                                            <label key={m.id} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[#f0f2f8] transition-colors border-b border-[#e6eaf5] last:border-b-0">
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedManagerIds.includes(m.id)}
@@ -333,13 +333,13 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
                                                     }}
                                                     className="rounded border-[#d4d1ca]"
                                                 />
-                                                <span className="text-[13px] text-[#1a1a18]">{m.name}</span>
-                                                <span className="text-[12px] text-[#9e9b95]">({m.email})</span>
+                                                <span className="text-[13px] text-[#0f1729]">{m.name}</span>
+                                                <span className="text-[12px] text-[#98a1b5]">({m.email})</span>
                                             </label>
                                         ))}
                                     </div>
                                     {selectedManagerIds.length > 0 && (
-                                        <p className="text-[12px] text-[#6b6860]">{selectedManagerIds.length} manager(s) selected</p>
+                                        <p className="text-[12px] text-[#5b6478]">{selectedManagerIds.length} manager(s) selected</p>
                                     )}
                                 </div>
                             )}
@@ -355,7 +355,7 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
                             )}
                         </div>
 
-                        <div className="bg-white border border-[#e8e6e1] rounded-[12px] p-5">
+                        <div className="bg-white border border-[#e6eaf5] rounded-[12px] p-5">
                             <div className="flex items-center gap-2 mb-1">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a9e6e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -363,9 +363,9 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
                                     <line x1="8" y1="13" x2="16" y2="13" />
                                     <line x1="8" y1="17" x2="16" y2="17" />
                                 </svg>
-                                <span className="text-[15px] font-semibold text-[#1a1a18]">Step 1: Download Template</span>
+                                <span className="text-[15px] font-semibold text-[#0f1729]">Step 1: Download Template</span>
                             </div>
-                            <p className="text-[12.5px] text-[#6b6860] mb-4">Download the Excel template and fill in inspector details</p>
+                            <p className="text-[12.5px] text-[#5b6478] mb-4">Download the Excel template and fill in inspector details</p>
                             <button
                                 onClick={downloadTemplate}
                                 className="w-full bg-white border border-[1.5px] border-[#1a9e6e] text-[#0d6b4a] rounded-[9px] py-[10px] px-6 text-[13px] font-medium hover:bg-[#e8f7f1] transition-colors flex items-center justify-center gap-2"
@@ -377,20 +377,20 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
                                 </svg>
                                 Download Excel Template
                             </button>
-                            <p className="text-[12px] text-[#9e9b95] bg-[#f9f8f5] border border-[#e8e6e1] rounded-[6px] p-2 text-center mt-3">
+                            <p className="text-[12px] text-[#98a1b5] bg-[#f0f2f8] border border-[#e6eaf5] rounded-[6px] p-2 text-center mt-3">
                                 Template contains columns: Name, Email, Phone
                             </p>
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <div className="flex-1 h-px bg-[#e8e6e1]"></div>
-                            <span className="text-[12.5px] text-[#6b6860] whitespace-nowrap">After filling the template, upload it below</span>
-                            <div className="flex-1 h-px bg-[#e8e6e1]"></div>
+                            <div className="flex-1 h-px bg-[#e6eaf5]"></div>
+                            <span className="text-[12.5px] text-[#5b6478] whitespace-nowrap">After filling the template, upload it below</span>
+                            <div className="flex-1 h-px bg-[#e6eaf5]"></div>
                         </div>
 
                         <button
                             onClick={() => fileInputRef.current?.click()}
-                            className="w-full bg-[#1a9e6e] text-white rounded-[9px] py-[10px] px-7 text-[13px] font-medium hover:bg-[#4a4ac8] transition-colors flex items-center justify-center gap-2"
+                            className="w-full bg-[#1a9e6e] text-white rounded-[9px] py-[10px] px-7 text-[13px] font-medium hover:bg-[#0847c7] transition-colors flex items-center justify-center gap-2"
                         >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -412,9 +412,9 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
                 {step === "preview" && (
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-[13.5px] font-semibold text-[#1a1a18]">Preview</h3>
+                            <h3 className="text-[13.5px] font-semibold text-[#0f1729]">Preview</h3>
                             <div className="flex items-center gap-2">
-                                <span className="bg-[#f9f8f5] border border-[#e8e6e1] rounded-[20px] px-[10px] py-[2px] text-[11.5px] font-medium text-[#6b6860]">{parsedData.length} inspectors</span>
+                                <span className="bg-[#f0f2f8] border border-[#e6eaf5] rounded-[20px] px-[10px] py-[2px] text-[11.5px] font-medium text-[#5b6478]">{parsedData.length} inspectors</span>
                                 {selectedProjectId && (
                                     <span className="bg-[#e8f7f1] border border-[rgba(26,158,110,0.3)] rounded-[20px] px-[10px] py-[2px] text-[11.5px] font-medium text-[#0d6b4a] flex items-center gap-1">
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -427,21 +427,21 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
                             </div>
                         </div>
 
-                        <div className="border border-[#e8e6e1] rounded-[10px] overflow-hidden max-h-[200px] overflow-y-auto">
+                        <div className="border border-[#e6eaf5] rounded-[10px] overflow-hidden max-h-[200px] overflow-y-auto">
                             <table className="w-full text-[13px]">
-                                <thead className="bg-[#f9f8f5]">
+                                <thead className="bg-[#f0f2f8]">
                                     <tr>
-                                        <th className="px-4 py-2.5 text-left font-medium text-[#6b6860]">Name</th>
-                                        <th className="px-4 py-2.5 text-left font-medium text-[#6b6860]">Email</th>
-                                        <th className="px-4 py-2.5 text-left font-medium text-[#6b6860]">Phone</th>
+                                        <th className="px-4 py-2.5 text-left font-medium text-[#5b6478]">Name</th>
+                                        <th className="px-4 py-2.5 text-left font-medium text-[#5b6478]">Email</th>
+                                        <th className="px-4 py-2.5 text-left font-medium text-[#5b6478]">Phone</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {parsedData.map((row, idx) => (
-                                        <tr key={idx} className="border-t border-[#e8e6e1]">
-                                            <td className="px-4 py-2.5 text-[#1a1a18]">{row.name}</td>
-                                            <td className="px-4 py-2.5 text-[#6b6860]">{row.email}</td>
-                                            <td className="px-4 py-2.5 text-[#9e9b95]">{row.phone || "-"}</td>
+                                        <tr key={idx} className="border-t border-[#e6eaf5]">
+                                            <td className="px-4 py-2.5 text-[#0f1729]">{row.name}</td>
+                                            <td className="px-4 py-2.5 text-[#5b6478]">{row.email}</td>
+                                            <td className="px-4 py-2.5 text-[#98a1b5]">{row.phone || "-"}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -451,13 +451,13 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
                         <div className="flex gap-3">
                             <button
                                 onClick={() => { setStep("template"); setFile(null); }}
-                                className="flex-1 bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[9px] py-[10px] px-4 text-[13px] font-medium hover:bg-[#f9f8f5] transition-colors"
+                                className="flex-1 bg-white border border-[#e6eaf5] text-[#5b6478] rounded-[9px] py-[10px] px-4 text-[13px] font-medium hover:bg-[#f0f2f8] transition-colors"
                             >
                                 Back
                             </button>
                             <button
                                 onClick={handleImport}
-                                className="flex-1 bg-[#1a9e6e] text-white rounded-[9px] py-[10px] px-4 text-[13px] font-medium hover:bg-[#4a4ac8] transition-colors"
+                                className="flex-1 bg-[#1a9e6e] text-white rounded-[9px] py-[10px] px-4 text-[13px] font-medium hover:bg-[#0847c7] transition-colors"
                             >
                                 Import {parsedData.length} Inspectors{selectedProjectId ? " + Assign to Group" : ""}
                             </button>
@@ -470,7 +470,7 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
                         <svg className="h-12 w-12 animate-spin mx-auto text-[#1a9e6e]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                         </svg>
-                        <p className="text-[13px] text-[#6b6860] mt-4">
+                        <p className="text-[13px] text-[#5b6478] mt-4">
                             Importing inspectors{selectedProjectId ? " and assigning to group" : ""}...
                         </p>
                     </div>
@@ -508,21 +508,21 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
                         </div>
 
                         {results.created.length > 0 && (
-                            <div className="border border-[#e8e6e1] rounded-[10px] overflow-hidden max-h-[180px] overflow-y-auto">
+                            <div className="border border-[#e6eaf5] rounded-[10px] overflow-hidden max-h-[180px] overflow-y-auto">
                                 <table className="w-full text-[13px]">
-                                    <thead className="bg-[#f9f8f5]">
+                                    <thead className="bg-[#f0f2f8]">
                                         <tr>
-                                            <th className="px-4 py-2.5 text-left font-medium text-[#6b6860]">Name</th>
-                                            <th className="px-4 py-2.5 text-left font-medium text-[#6b6860]">Email</th>
-                                            <th className="px-4 py-2.5 text-left font-medium text-[#6b6860]">Temp Password</th>
+                                            <th className="px-4 py-2.5 text-left font-medium text-[#5b6478]">Name</th>
+                                            <th className="px-4 py-2.5 text-left font-medium text-[#5b6478]">Email</th>
+                                            <th className="px-4 py-2.5 text-left font-medium text-[#5b6478]">Temp Password</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {results.created.map((row, idx) => (
-                                            <tr key={idx} className="border-t border-[#e8e6e1] bg-[#f0fdf4]">
-                                                <td className="px-4 py-2.5 text-[#1a1a18]">{row.name}</td>
-                                                <td className="px-4 py-2.5 text-[#6b6860]">{row.email}</td>
-                                                <td className="px-4 py-2.5 font-mono text-[12px] text-[#1a1a18]">{row.tempPassword}</td>
+                                            <tr key={idx} className="border-t border-[#e6eaf5] bg-[#f0fdf4]">
+                                                <td className="px-4 py-2.5 text-[#0f1729]">{row.name}</td>
+                                                <td className="px-4 py-2.5 text-[#5b6478]">{row.email}</td>
+                                                <td className="px-4 py-2.5 font-mono text-[12px] text-[#0f1729]">{row.tempPassword}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -531,20 +531,20 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
                         )}
 
                         {results.failed.length > 0 && (
-                            <div className="border border-[#e8e6e1] rounded-[10px] overflow-hidden max-h-[120px] overflow-y-auto">
+                            <div className="border border-[#e6eaf5] rounded-[10px] overflow-hidden max-h-[120px] overflow-y-auto">
                                 <table className="w-full text-[13px]">
-                                    <thead className="bg-[#f9f8f5]">
+                                    <thead className="bg-[#f0f2f8]">
                                         <tr>
-                                            <th className="px-4 py-2.5 text-left font-medium text-[#6b6860]">Name</th>
-                                            <th className="px-4 py-2.5 text-left font-medium text-[#6b6860]">Email</th>
-                                            <th className="px-4 py-2.5 text-left font-medium text-[#6b6860]">Error</th>
+                                            <th className="px-4 py-2.5 text-left font-medium text-[#5b6478]">Name</th>
+                                            <th className="px-4 py-2.5 text-left font-medium text-[#5b6478]">Email</th>
+                                            <th className="px-4 py-2.5 text-left font-medium text-[#5b6478]">Error</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {results.failed.map((row, idx) => (
-                                            <tr key={idx} className="border-t border-[#e8e6e1] bg-[#fef2f2]">
-                                                <td className="px-4 py-2.5 text-[#1a1a18]">{row.name}</td>
-                                                <td className="px-4 py-2.5 text-[#6b6860]">{row.email}</td>
+                                            <tr key={idx} className="border-t border-[#e6eaf5] bg-[#fef2f2]">
+                                                <td className="px-4 py-2.5 text-[#0f1729]">{row.name}</td>
+                                                <td className="px-4 py-2.5 text-[#5b6478]">{row.email}</td>
                                                 <td className="px-4 py-2.5 text-[#dc2626] text-[12px]">{row.error}</td>
                                             </tr>
                                         ))}
@@ -556,7 +556,7 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
                         <div className="flex gap-3 pt-2">
                             <button
                                 onClick={exportResults}
-                                className="bg-white border border-[#e8e6e1] text-[#6b6860] rounded-[9px] py-[10px] px-4 text-[13px] font-medium hover:bg-[#f9f8f5] transition-colors flex items-center gap-2"
+                                className="bg-white border border-[#e6eaf5] text-[#5b6478] rounded-[9px] py-[10px] px-4 text-[13px] font-medium hover:bg-[#f0f2f8] transition-colors flex items-center gap-2"
                             >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -567,7 +567,7 @@ export default function BulkImportInspectors({ onImportComplete }: BulkImportIns
                             </button>
                             <button
                                 onClick={() => handleOpenChange(false)}
-                                className="flex-1 bg-[#1a9e6e] text-white rounded-[9px] py-[10px] px-4 text-[13px] font-medium hover:bg-[#4a4ac8] transition-colors"
+                                className="flex-1 bg-[#1a9e6e] text-white rounded-[9px] py-[10px] px-4 text-[13px] font-medium hover:bg-[#0847c7] transition-colors"
                             >
                                 Done
                             </button>

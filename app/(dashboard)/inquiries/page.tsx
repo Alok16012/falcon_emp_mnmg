@@ -121,7 +121,7 @@ export default function InquiriesPage() {
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-[10px] bg-[#5b5bd6] flex items-center justify-center text-white">
+                    <div className="h-10 w-10 rounded-[10px] bg-[#0b5cff] flex items-center justify-center text-white">
                         <PackageSearch size={20} />
                     </div>
                     <div>
@@ -133,7 +133,7 @@ export default function InquiriesPage() {
                     <button onClick={load} className="inline-flex items-center gap-2 rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] font-medium text-[var(--text2)] hover:bg-[var(--surface2)]">
                         <RefreshCw size={15} /> Refresh
                     </button>
-                    <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 rounded-[8px] bg-[#5b5bd6] px-3 py-2 text-[13px] font-medium text-white hover:opacity-90">
+                    <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 rounded-[8px] bg-[#0b5cff] px-3 py-2 text-[13px] font-medium text-white hover:opacity-90">
                         <Plus size={15} /> Add Inquiry
                     </button>
                 </div>
@@ -143,7 +143,7 @@ export default function InquiriesPage() {
             <div className="mb-5 rounded-[12px] border border-[var(--border)] bg-[var(--surface2)]/40 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
-                        <Link2 size={16} className="text-[#5b5bd6] shrink-0" />
+                        <Link2 size={16} className="text-[#0b5cff] shrink-0" />
                         <div className="min-w-0">
                             <p className="text-[12.5px] font-semibold text-[var(--text)]">External inquiry form link</p>
                             <p className="text-[12px] text-[var(--text2)] truncate">{publicUrl || "…"}</p>
@@ -176,13 +176,13 @@ export default function InquiriesPage() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search name, product, party, location…"
-                        className="w-full rounded-[8px] border border-[var(--border)] bg-white pl-9 pr-3 py-2 text-[13px] outline-none focus:border-[#5b5bd6]"
+                        className="w-full rounded-[8px] border border-[var(--border)] bg-white pl-9 pr-3 py-2 text-[13px] outline-none focus:border-[#0b5cff]"
                     />
                 </div>
                 <select
                     value={statusFilter}
                     onChange={e => setStatusFilter(e.target.value)}
-                    className="rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#5b5bd6]"
+                    className="rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#0b5cff]"
                 >
                     <option value="">All status</option>
                     {STATUS_OPTIONS.map(s => <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>)}
@@ -348,14 +348,14 @@ function AddInquiryModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
                     <Field label="Rate (₹)"><Inp type="number" value={form.rate} onChange={v => set("rate", v)} /></Field>
                     <Field label="Location" className="col-span-2"><Inp value={form.location} onChange={v => set("location", v)} /></Field>
                     <Field label="Status" className="col-span-2">
-                        <select value={form.status} onChange={e => set("status", e.target.value)} className="w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#5b5bd6]">
+                        <select value={form.status} onChange={e => set("status", e.target.value)} className="w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#0b5cff]">
                             {STATUS_OPTIONS.map(s => <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>)}
                         </select>
                     </Field>
                 </div>
                 <div className="flex justify-end gap-2 border-t border-[var(--border)] px-5 py-4">
                     <button onClick={onClose} className="rounded-[8px] border border-[var(--border)] px-4 py-2 text-[13px] font-medium text-[var(--text2)] hover:bg-[var(--surface2)]">Cancel</button>
-                    <button onClick={submit} disabled={saving} className="inline-flex items-center gap-2 rounded-[8px] bg-[#5b5bd6] px-4 py-2 text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-60">
+                    <button onClick={submit} disabled={saving} className="inline-flex items-center gap-2 rounded-[8px] bg-[#0b5cff] px-4 py-2 text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-60">
                         {saving && <Loader2 size={15} className="animate-spin" />} Save
                     </button>
                 </div>
@@ -379,7 +379,7 @@ function Inp({ value, onChange, type = "text" }: { value: string; onChange: (v: 
             type={type}
             value={value}
             onChange={e => onChange(e.target.value)}
-            className="w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#5b5bd6]"
+            className="w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#0b5cff]"
         />
     )
 }

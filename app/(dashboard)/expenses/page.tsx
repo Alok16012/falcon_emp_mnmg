@@ -88,7 +88,7 @@ function categoryStyle(cat: ExpenseCategory): { bg: string; color: string } {
         OFFICE_SUPPLIES: { bg: "#f0fdfa", color: "#0d9488" },
         COMMUNICATION: { bg: "#ecfeff", color: "#0891b2" },
         MEDICAL: { bg: "#fef2f2", color: "#ef4444" },
-        UNIFORM: { bg: "#eef2ff", color: "#6366f1" },
+        UNIFORM: { bg: "#eef2ff", color: "#0b5cff" },
         TRAINING: { bg: "#f0fdf4", color: "#22c55e" },
         OTHER: { bg: "#f9fafb", color: "#6b7280" },
     }

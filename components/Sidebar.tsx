@@ -11,7 +11,6 @@ import {
     UserCheck,
     Wallet,
     X,
-    Sparkles,
     ClipboardList,
     IndianRupee,
     Cpu,
@@ -64,33 +63,33 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
     })).filter(section => section.links.length > 0)
 
     return (
-        <div className="flex h-full w-[230px] flex-col bg-[var(--surface)] border-r border-[var(--border)] overflow-hidden">
+        <div className="flex h-full w-full flex-col overflow-hidden bg-[var(--accent-dark)] text-white">
             {/* Header / Logo */}
-            <div className="flex h-[54px] items-center justify-between px-4 border-b border-[var(--border)] shrink-0">
+            <div className="flex items-center justify-between px-4 pt-[18px] pb-4 shrink-0">
                 <Link href="/" className="flex items-center gap-2.5">
-                    <div className="h-8 w-8 bg-gradient-to-br from-[#4f7cf6] to-[#5b5bd6] rounded-[9px] flex items-center justify-center text-white shrink-0">
+                    <div className="h-[38px] w-[38px] bg-white rounded-full flex items-center justify-center text-[var(--accent)] shrink-0 shadow-sm">
                         <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="currentColor">
                             <path d="M4 4h10c3.3 0 6 2.7 6 6s-2.7 6-6 6H9v4H4V4zm5 8h5c1.1 0 2-.9 2-2s-.9-2-2-2H9v4z"/>
                         </svg>
                     </div>
-                    <div className="flex flex-col leading-none">
-                        <span className="font-black text-[15px] tracking-tight text-[#5b5bd6] uppercase">Falcon</span>
-                        <span className="font-semibold text-[10px] tracking-widest text-[var(--text3)] uppercase">Plus EMP</span>
+                    <div className="flex flex-col leading-tight">
+                        <span className="font-extrabold text-[16px] tracking-tight text-white">Falcon Plus</span>
+                        <span className="font-semibold text-[10px] tracking-[0.08em] text-white/65 uppercase">Admin Panel</span>
                     </div>
                 </Link>
                 {onMobileClose && (
-                    <button onClick={onMobileClose} className="p-1 md:hidden hover:bg-[var(--surface2)] rounded-md transition-colors text-[var(--text3)]">
+                    <button onClick={onMobileClose} className="p-1 md:hidden hover:bg-white/10 rounded-md transition-colors text-white/80">
                         <X size={20} />
                     </button>
                 )}
             </div>
 
             {/* Navigation */}
-            <div className="flex-1 overflow-y-auto pt-4 px-2 scrollbar-thin">
+            <div className="flex-1 overflow-y-auto px-3 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {navigation.map((section) => {
                     return (
-                        <div key={section.title} className="mb-6">
-                            <h3 className="px-3 mb-2 text-[10.5px] font-semibold text-[var(--text3)] tracking-[0.6px] uppercase">
+                        <div key={section.title} className="mb-3.5">
+                            <h3 className="px-2.5 mb-1.5 text-[10.5px] font-bold text-white/50 tracking-[0.08em] uppercase">
                                 {section.title}
                             </h3>
                             <nav className="space-y-0.5">
@@ -103,14 +102,15 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
                                             key={link.href}
                                             href={link.href}
                                             onClick={onMobileClose}
+                                            aria-current={isActive ? "page" : undefined}
                                             className={cn(
-                                                "flex items-center gap-3 rounded-[8px] px-[10px] py-[8px] text-[13px] transition-all group",
+                                                "flex items-center gap-2.5 rounded-[10px] px-2.5 py-[9px] text-[13.5px] transition-colors",
                                                 isActive
-                                                    ? "bg-[var(--accent-light)] text-[var(--accent-text)] font-medium"
-                                                    : "text-[var(--text2)] hover:bg-[var(--surface2)] hover:text-[var(--text)]"
+                                                    ? "bg-white/[0.14] text-white font-bold"
+                                                    : "text-white/[0.78] font-medium hover:bg-white/[0.08] hover:text-white"
                                             )}
                                         >
-                                            <Icon size={18} className={cn(isActive ? "text-[var(--accent-text)]" : "text-[var(--text3)] group-hover:text-[var(--text2)]")} />
+                                            <Icon size={18} className={isActive ? "text-white" : "text-white/70"} />
                                             {link.name}
                                         </Link>
                                     )
@@ -121,24 +121,11 @@ export function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
                 })}
             </div>
 
-            {/* Upgrade Box */}
-            <div className="px-3 mb-4">
-                <div className="bg-[var(--surface2)] border border-[var(--border)] rounded-[12px] p-4 text-center">
-                    <div className="flex justify-center mb-2">
-                        <div className="h-8 w-8 bg-white border border-[var(--border)] rounded-full flex items-center justify-center text-[var(--amber)] shadow-sm">
-                            <Sparkles size={16} fill="currentColor" />
-                        </div>
-                    </div>
-                    <p className="text-[12px] font-medium text-[var(--text)] mb-1">Manage your workforce</p>
-                    <p className="text-[11px] text-[var(--text2)] mb-3">Employee management made simple</p>
-                </div>
-            </div>
-
             {/* Footer */}
-            <div className="px-5 py-4 border-t border-[var(--border)] mt-auto">
-                <div className="flex flex-col gap-1">
-                    <p className="text-[10.5px] text-[var(--text3)]">v1.1.2 · Dashboard</p>
-                    <Link href="/terms" className="text-[10.5px] text-[var(--text3)] hover:text-[var(--text2)]">Terms & Conditions</Link>
+            <div className="mx-3 py-3 border-t border-white/15 mt-auto">
+                <div className="flex flex-col gap-1 px-2.5">
+                    <p className="text-[10.5px] text-white/55">v1.1.2 · Dashboard</p>
+                    <Link href="/terms" className="text-[10.5px] text-white/55 hover:text-white/80">Terms & Conditions</Link>
                 </div>
             </div>
         </div>

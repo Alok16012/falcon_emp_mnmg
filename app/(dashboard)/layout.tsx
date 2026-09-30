@@ -17,22 +17,22 @@ export default function DashboardLayout({
     // But for mobile it should always be closed by default
 
     return (
-        <div className="flex min-h-screen w-full bg-muted/10">
+        <div className="flex min-h-screen w-full bg-[var(--bg)]">
             {/* Sidebar Desktop */}
-            <div className="hidden border-r bg-white md:block w-64 shrink-0 transition-all duration-300">
+            <div className="hidden md:block w-60 shrink-0 sticky top-0 h-screen">
                 <Sidebar />
             </div>
 
             {/* Sidebar Mobile Overlay */}
             {isSidebarOpen && (
                 <div
-                    className="fixed inset-0 z-40 bg-black/60 md:hidden animate-in fade-in duration-300"
+                    className="fixed inset-0 z-40 bg-[rgba(15,23,41,0.4)] md:hidden animate-in fade-in duration-300"
                     onClick={() => setIsSidebarOpen(false)}
                 />
             )}
 
             <div className={cn(
-                "fixed inset-y-0 left-0 z-50 w-72 bg-white transform transition-transform duration-300 ease-in-out md:hidden",
+                "fixed inset-y-0 left-0 z-50 w-[260px] transform transition-transform duration-300 ease-in-out md:hidden",
                 isSidebarOpen ? "translate-x-0" : "-translate-x-full"
             )}>
                 <Sidebar onMobileClose={() => setIsSidebarOpen(false)} />
@@ -45,7 +45,7 @@ export default function DashboardLayout({
                         {children}
                     </div>
                     <footer className="py-4 text-center text-[13px] text-muted-foreground/80 mt-auto">
-                        Developed by <a href="https://blinks-ai.com" target="_blank" rel="noopener noreferrer" className="text-[#5b5bd6] hover:underline font-medium">Blinks AI</a>
+                        Developed by <a href="https://blinks-ai.com" target="_blank" rel="noopener noreferrer" className="text-[#0b5cff] hover:underline font-medium">Blinks AI</a>
                     </footer>
                 </main>
             </div>

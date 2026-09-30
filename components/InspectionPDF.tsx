@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
     companyName: {
         fontSize: 20,
         fontFamily: 'Helvetica-Bold',
-        color: '#1a1a18',
+        color: '#0f1729',
         marginBottom: 3,
     },
     projectName: {
@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
     },
     reportLabel: {
         fontSize: 9,
-        color: '#9e9b95',
+        color: '#98a1b5',
         textTransform: 'uppercase',
         letterSpacing: 1,
         marginBottom: 10,
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     metaLabel: {
-        color: '#9e9b95',
+        color: '#98a1b5',
         fontSize: 7.5,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     metaValue: {
         fontSize: 10,
         fontFamily: 'Helvetica-Bold',
-        color: '#1a1a18',
+        color: '#0f1729',
     },
     statusBadge: {
         backgroundColor: '#dcfce7',
@@ -98,14 +98,14 @@ const styles = StyleSheet.create({
         fontSize: 8.5,
         fontFamily: 'Helvetica-Bold',
         marginBottom: 3,
-        color: '#6b6860',
+        color: '#5b6478',
         textTransform: 'uppercase',
         letterSpacing: 0.3,
     },
     fieldValue: {
         fontSize: 10,
         lineHeight: 1.4,
-        color: '#1a1a18',
+        color: '#0f1729',
     },
     footer: {
         position: 'absolute',
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
         right: 40,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        borderTop: '0.5pt solid #e8e6e1',
+        borderTop: '0.5pt solid #e6eaf5',
         paddingTop: 8,
         color: '#9ca3af',
         fontSize: 7.5,

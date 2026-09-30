@@ -182,7 +182,7 @@ export default function StockPage() {
                     <button onClick={() => { load(); loadOptions() }} className="inline-flex items-center gap-2 rounded-[12px] border border-[var(--border)] bg-white px-4 py-2.5 text-[13px] font-semibold text-[var(--text2)] hover:bg-[var(--surface2)] shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
                         <RefreshCw size={15} /> Refresh
                     </button>
-                    <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-[12px] bg-[#5b5bd6] px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-[#4a4ac8] shadow-sm">
+                    <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-[12px] bg-[#0b5cff] px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-[#0847c7] shadow-sm">
                         <Plus size={15} /> Add Item
                     </button>
                 </div>
@@ -209,7 +209,7 @@ export default function StockPage() {
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-2.5 md:gap-3 mb-5">
-                <StatCard label="Total Items" value={items.length} icon={<Boxes size={15} />} iconColor="#5b5bd6" iconBg="#ececfc" />
+                <StatCard label="Total Items" value={items.length} icon={<Boxes size={15} />} iconColor="#0b5cff" iconBg="#e8effe" />
                 <StatCard label="Low Stock" value={lowStock.length} color="#dc2626" icon={<AlertTriangle size={15} />} iconColor="#dc2626" iconBg="#fee2e2" />
                 <StatCard label="Colors" value={colors.length} color="#16a34a" icon={<Palette size={15} />} iconColor="#16a34a" iconBg="#dcfce7" />
             </div>
@@ -222,7 +222,7 @@ export default function StockPage() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search item code, name, color…"
-                        className="w-full h-11 rounded-[14px] border border-[var(--border)] bg-white pl-10 pr-3 text-[13px] outline-none focus:border-[#5b5bd6] shadow-[0_2px_10px_rgba(80,80,170,0.05)]"
+                        className="w-full h-11 rounded-[14px] border border-[var(--border)] bg-white pl-10 pr-3 text-[13px] outline-none focus:border-[#0b5cff] shadow-[0_2px_10px_rgba(80,80,170,0.05)]"
                     />
                 </div>
                 <button className="w-11 h-11 rounded-[14px] border border-[var(--border)] bg-white flex items-center justify-center text-[var(--text2)] shadow-[0_2px_10px_rgba(80,80,170,0.05)] shrink-0">
@@ -252,7 +252,7 @@ export default function StockPage() {
                                     {low && <span className="ml-1.5 inline-block align-middle rounded-full bg-red-100 px-1.5 py-0.5 text-[9.5px] font-bold text-red-600">LOW</span>}
                                 </p>
                                 <div className="flex gap-0.5 shrink-0">
-                                    <button onClick={() => openEdit(i)} className="p-1.5 text-[var(--text3)] hover:text-[#5b5bd6]" title="Edit">
+                                    <button onClick={() => openEdit(i)} className="p-1.5 text-[var(--text3)] hover:text-[#0b5cff]" title="Edit">
                                         <Pencil size={14} />
                                     </button>
                                     <button onClick={() => remove(i.id)} className="p-1.5 text-[var(--text3)] hover:text-red-600" title="Delete">
@@ -296,8 +296,8 @@ export default function StockPage() {
 
             {/* Bulk action bar */}
             {selected.size > 0 && (
-                <div className="mb-3 flex flex-wrap items-center gap-3 rounded-[10px] border border-[#5b5bd6]/30 bg-[#5b5bd6]/5 px-4 py-2.5">
-                    <span className="text-[13px] font-semibold text-[#5b5bd6]">{selected.size} selected</span>
+                <div className="mb-3 flex flex-wrap items-center gap-3 rounded-[10px] border border-[#0b5cff]/30 bg-[#0b5cff]/5 px-4 py-2.5">
+                    <span className="text-[13px] font-semibold text-[#0b5cff]">{selected.size} selected</span>
                     <div className="flex items-center gap-2">
                         <button onClick={() => setBulkMode("add")} className="inline-flex items-center gap-1 rounded-[7px] border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[12.5px] font-semibold text-emerald-700 hover:bg-emerald-100">
                             <Plus size={14} /> Add Quantity
@@ -324,7 +324,7 @@ export default function StockPage() {
                                             if (e.target.checked) setSelected(new Set(filtered.map(i => i.id)))
                                             else setSelected(new Set())
                                         }}
-                                        className="h-4 w-4 cursor-pointer accent-[#5b5bd6]"
+                                        className="h-4 w-4 cursor-pointer accent-[#0b5cff]"
                                     />
                                 </th>
                                 <th className="px-4 py-3 font-semibold">S.No</th>
@@ -350,9 +350,9 @@ export default function StockPage() {
                                 const low = isLow(i)
                                 const sel = selected.has(i.id)
                                 return (
-                                    <tr key={i.id} className={`border-b border-[var(--border)] last:border-0 ${sel ? "bg-[#5b5bd6]/5" : low ? "bg-red-50 hover:bg-red-100" : "hover:bg-[var(--surface2)]/30"}`}>
+                                    <tr key={i.id} className={`border-b border-[var(--border)] last:border-0 ${sel ? "bg-[#0b5cff]/5" : low ? "bg-red-50 hover:bg-red-100" : "hover:bg-[var(--surface2)]/30"}`}>
                                         <td className="px-4 py-3">
-                                            <input type="checkbox" checked={sel} onChange={() => toggleSelect(i.id)} className="h-4 w-4 cursor-pointer accent-[#5b5bd6]" />
+                                            <input type="checkbox" checked={sel} onChange={() => toggleSelect(i.id)} className="h-4 w-4 cursor-pointer accent-[#0b5cff]" />
                                         </td>
                                         <td className={`px-4 py-3 ${low ? "text-red-700" : "text-[var(--text3)]"}`}>{idx + 1}</td>
                                         <td className={`px-4 py-3 font-mono ${low ? "text-red-700 font-semibold" : "text-[var(--text)]"}`}>{i.itemCode}</td>
@@ -397,7 +397,7 @@ export default function StockPage() {
                                         <td className={`px-4 py-3 text-right ${low ? "text-red-700 font-semibold" : "text-[var(--text2)]"}`}>{i.minStock}</td>
                                         <td className="px-4 py-3 text-right">
                                             <div className="inline-flex items-center gap-1">
-                                                <button onClick={() => openEdit(i)} className="text-[var(--text3)] hover:text-[#5b5bd6] p-1" title="Edit">
+                                                <button onClick={() => openEdit(i)} className="text-[var(--text3)] hover:text-[#0b5cff] p-1" title="Edit">
                                                     <Pencil size={15} />
                                                 </button>
                                                 <button onClick={() => remove(i.id)} className="text-[var(--text3)] hover:text-red-600 p-1" title="Delete">
@@ -499,7 +499,7 @@ function BulkAdjustModal({ mode, items, onClose, onApply }: {
                         value={sameForAll}
                         onChange={e => setSameForAll(e.target.value)}
                         placeholder="e.g. 10 — applies to rows left blank below"
-                        className="mt-1 w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#5b5bd6]"
+                        className="mt-1 w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#0b5cff]"
                     />
                 </div>
 
@@ -518,7 +518,7 @@ function BulkAdjustModal({ mode, items, onClose, onApply }: {
                                     value={amounts[i.id] ?? ""}
                                     onChange={e => setAmounts(a => ({ ...a, [i.id]: e.target.value }))}
                                     placeholder={sameForAll || "0"}
-                                    className="w-20 rounded-[8px] border border-[var(--border)] bg-white px-2 py-1.5 text-[13px] text-center outline-none focus:border-[#5b5bd6]"
+                                    className="w-20 rounded-[8px] border border-[var(--border)] bg-white px-2 py-1.5 text-[13px] text-center outline-none focus:border-[#0b5cff]"
                                 />
                                 <span className={`text-[12px] font-semibold w-16 text-right ${isAdd ? "text-emerald-600" : "text-red-600"}`}>
                                     → {result}
@@ -584,7 +584,7 @@ function AdjustQtyModal({ item, mode, onClose, onApply }: {
                             onChange={e => setAmount(e.target.value)}
                             onKeyDown={e => { if (e.key === "Enter") run() }}
                             placeholder="e.g. 10"
-                            className="w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2.5 text-[18px] font-semibold outline-none focus:border-[#5b5bd6]"
+                            className="w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2.5 text-[18px] font-semibold outline-none focus:border-[#0b5cff]"
                         />
                         {valid && (
                             <p className="mt-2 text-[13px] text-[var(--text2)]">
@@ -737,11 +737,11 @@ function StockFormModal({
                     <Field label="Color">
                         <div className="flex flex-wrap items-center gap-1.5">
                             <button type="button" onClick={() => set("color", "")}
-                                className={`rounded-[8px] border px-3 py-1.5 text-[12.5px] font-medium ${!form.color ? "border-[#5b5bd6] bg-[#5b5bd6] text-white" : "border-[var(--border)] bg-white text-[var(--text2)] hover:bg-[var(--surface2)]"}`}>
+                                className={`rounded-[8px] border px-3 py-1.5 text-[12.5px] font-medium ${!form.color ? "border-[#0b5cff] bg-[#0b5cff] text-white" : "border-[var(--border)] bg-white text-[var(--text2)] hover:bg-[var(--surface2)]"}`}>
                                 None
                             </button>
                             {colors.map(c => (
-                                <span key={c} className={`group inline-flex items-center gap-1 rounded-[8px] border pl-2 pr-1 py-1 text-[12.5px] font-medium ${form.color === c ? "border-[#5b5bd6] bg-[#5b5bd6] text-white" : "border-[var(--border)] bg-white text-[var(--text2)]"}`}>
+                                <span key={c} className={`group inline-flex items-center gap-1 rounded-[8px] border pl-2 pr-1 py-1 text-[12.5px] font-medium ${form.color === c ? "border-[#0b5cff] bg-[#0b5cff] text-white" : "border-[var(--border)] bg-white text-[var(--text2)]"}`}>
                                     <button type="button" onClick={() => set("color", c)} className="inline-flex items-center gap-1.5">
                                         <span className="h-3 w-3 rounded-full border border-black/10" style={{ background: cssColor(c) }} />
                                         {c}
@@ -759,9 +759,9 @@ function StockFormModal({
                                 onChange={e => setNewColor(e.target.value)}
                                 onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); commitNewColor() } }}
                                 placeholder="Add new color…"
-                                className="flex-1 rounded-[8px] border border-[var(--border)] bg-white px-3 py-1.5 text-[12.5px] outline-none focus:border-[#5b5bd6]"
+                                className="flex-1 rounded-[8px] border border-[var(--border)] bg-white px-3 py-1.5 text-[12.5px] outline-none focus:border-[#0b5cff]"
                             />
-                            <button type="button" onClick={commitNewColor} className="rounded-[8px] border border-[var(--border)] px-3 py-1.5 text-[12.5px] font-medium text-[#5b5bd6] hover:bg-[var(--surface2)]">Add</button>
+                            <button type="button" onClick={commitNewColor} className="rounded-[8px] border border-[var(--border)] px-3 py-1.5 text-[12.5px] font-medium text-[#0b5cff] hover:bg-[var(--surface2)]">Add</button>
                         </div>
                     </Field>
 
@@ -775,7 +775,7 @@ function StockFormModal({
                                 const removable = !DEFAULT_SIZE_UNITS.includes(u)
                                 const active = form.sizeUnit === u
                                 return (
-                                    <span key={u} className={`inline-flex items-center gap-1 rounded-[8px] border ${removable ? "pl-3 pr-1" : "px-3"} py-1.5 text-[12.5px] font-medium ${active ? "border-[#5b5bd6] bg-[#5b5bd6] text-white" : "border-[var(--border)] bg-white text-[var(--text2)]"}`}>
+                                    <span key={u} className={`inline-flex items-center gap-1 rounded-[8px] border ${removable ? "pl-3 pr-1" : "px-3"} py-1.5 text-[12.5px] font-medium ${active ? "border-[#0b5cff] bg-[#0b5cff] text-white" : "border-[var(--border)] bg-white text-[var(--text2)]"}`}>
                                         <button type="button" onClick={() => set("sizeUnit", u)}>{u}</button>
                                         {removable && (
                                             <button type="button" title="Remove unit" onClick={() => { if (active) set("sizeUnit", DEFAULT_SIZE_UNITS[0]); onRemoveSizeUnit(u) }}
@@ -791,9 +791,9 @@ function StockFormModal({
                                 onChange={e => setNewSizeUnit(e.target.value)}
                                 onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); commitNewSizeUnit() } }}
                                 placeholder="custom"
-                                className="w-[80px] rounded-[8px] border border-dashed border-[var(--border)] bg-white px-2 py-1.5 text-[12.5px] outline-none focus:border-[#5b5bd6]"
+                                className="w-[80px] rounded-[8px] border border-dashed border-[var(--border)] bg-white px-2 py-1.5 text-[12.5px] outline-none focus:border-[#0b5cff]"
                             />
-                            <button type="button" onClick={commitNewSizeUnit} className="rounded-[8px] border border-[var(--border)] px-2.5 py-1.5 text-[12.5px] font-medium text-[#5b5bd6] hover:bg-[var(--surface2)]">+</button>
+                            <button type="button" onClick={commitNewSizeUnit} className="rounded-[8px] border border-[var(--border)] px-2.5 py-1.5 text-[12.5px] font-medium text-[#0b5cff] hover:bg-[var(--surface2)]">+</button>
                         </div>
                     </Field>
 
@@ -807,7 +807,7 @@ function StockFormModal({
                                 const removable = !DEFAULT_QTY_UNITS.includes(u)
                                 const active = form.quantityUnit === u
                                 return (
-                                    <span key={u} className={`inline-flex items-center gap-1 rounded-[8px] border ${removable ? "pl-3 pr-1" : "px-3"} py-1.5 text-[12.5px] font-medium ${active ? "border-[#5b5bd6] bg-[#5b5bd6] text-white" : "border-[var(--border)] bg-white text-[var(--text2)]"}`}>
+                                    <span key={u} className={`inline-flex items-center gap-1 rounded-[8px] border ${removable ? "pl-3 pr-1" : "px-3"} py-1.5 text-[12.5px] font-medium ${active ? "border-[#0b5cff] bg-[#0b5cff] text-white" : "border-[var(--border)] bg-white text-[var(--text2)]"}`}>
                                         <button type="button" onClick={() => set("quantityUnit", u)}>{u}</button>
                                         {removable && (
                                             <button type="button" title="Remove unit" onClick={() => { if (active) set("quantityUnit", DEFAULT_QTY_UNITS[0]); onRemoveQtyUnit(u) }}
@@ -823,9 +823,9 @@ function StockFormModal({
                                 onChange={e => setNewQtyUnit(e.target.value)}
                                 onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); commitNewQtyUnit() } }}
                                 placeholder="custom"
-                                className="w-[80px] rounded-[8px] border border-dashed border-[var(--border)] bg-white px-2 py-1.5 text-[12.5px] outline-none focus:border-[#5b5bd6]"
+                                className="w-[80px] rounded-[8px] border border-dashed border-[var(--border)] bg-white px-2 py-1.5 text-[12.5px] outline-none focus:border-[#0b5cff]"
                             />
-                            <button type="button" onClick={commitNewQtyUnit} className="rounded-[8px] border border-[var(--border)] px-2.5 py-1.5 text-[12.5px] font-medium text-[#5b5bd6] hover:bg-[var(--surface2)]">+</button>
+                            <button type="button" onClick={commitNewQtyUnit} className="rounded-[8px] border border-[var(--border)] px-2.5 py-1.5 text-[12.5px] font-medium text-[#0b5cff] hover:bg-[var(--surface2)]">+</button>
                         </div>
                     </Field>
 
@@ -844,7 +844,7 @@ function StockFormModal({
                 </div>
                 <div className="flex justify-end gap-2 border-t border-[var(--border)] px-5 py-4 sticky bottom-0 bg-white">
                     <button onClick={onClose} className="rounded-[8px] border border-[var(--border)] px-4 py-2 text-[13px] font-medium text-[var(--text2)] hover:bg-[var(--surface2)]">Cancel</button>
-                    <button onClick={submit} disabled={saving} className="inline-flex items-center gap-2 rounded-[8px] bg-[#5b5bd6] px-4 py-2 text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-60">
+                    <button onClick={submit} disabled={saving} className="inline-flex items-center gap-2 rounded-[8px] bg-[#0b5cff] px-4 py-2 text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-60">
                         {saving && <Loader2 size={15} className="animate-spin" />} Save
                     </button>
                 </div>
@@ -869,7 +869,7 @@ function Inp({ value, onChange, type = "text", placeholder }: { value: string; o
             value={value}
             placeholder={placeholder}
             onChange={e => onChange(e.target.value)}
-            className="w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#5b5bd6]"
+            className="w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#0b5cff]"
         />
     )
 }

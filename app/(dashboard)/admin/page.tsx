@@ -115,7 +115,7 @@ export default function AdminDashboard() {
                         <h2 className="text-[16px] font-bold text-[var(--text)]">Today&apos;s Attendance</h2>
                     </div>
                     <Link href="/attendance"
-                        className="px-3.5 py-2 bg-[var(--accent-light)] text-[var(--accent-text)] rounded-full text-[12.5px] font-semibold hover:bg-[#e0e0fa] transition-colors">
+                        className="px-3.5 py-2 bg-[var(--accent-light)] text-[var(--accent-text)] rounded-full text-[12.5px] font-semibold hover:bg-[#dbe5ff] transition-colors">
                         View Details
                     </Link>
                 </div>
@@ -170,10 +170,10 @@ export default function AdminDashboard() {
                 <div className="grid grid-cols-5 gap-1.5 md:max-w-xl">
                     {[
                         { href: "/employees", icon: UserPlus, label: "Add Employee", color: "#16a34a", bg: "#dcfce7" },
-                        { href: "/attendance", icon: CalendarDays, label: "Mark Attendance", color: "#5b5bd6", bg: "#ececfc" },
+                        { href: "/attendance", icon: CalendarDays, label: "Mark Attendance", color: "#0b5cff", bg: "#e8effe" },
                         { href: "/leaves", icon: CalendarCheck2, label: "Approve Leaves", color: "#ea580c", bg: "#ffedd5" },
                         { href: "/payroll", icon: FileText, label: "Payroll", color: "#a855f7", bg: "#f3e8ff" },
-                        { href: "/advances", icon: IndianRupee, label: "Give Advance", color: "#6366f1", bg: "#e0e7ff" },
+                        { href: "/advances", icon: IndianRupee, label: "Give Advance", color: "#0b5cff", bg: "#e0e7ff" },
                     ].map(({ href, icon: Icon, label, color, bg }) => (
                         <Link key={href} href={href} className="flex flex-col items-center gap-2 group">
                             <div className="w-[52px] h-[52px] rounded-[16px] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95"

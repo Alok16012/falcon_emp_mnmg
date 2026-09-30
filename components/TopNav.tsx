@@ -83,14 +83,14 @@ export function TopNav({ onMenuClick }: { onMenuClick: () => void }) {
                 </button>
                 {/* Mobile brand logo (like the app design) */}
                 <Link href="/admin" className="flex md:hidden items-center gap-2">
-                    <div className="h-8 w-8 bg-gradient-to-br from-[#4f7cf6] to-[#5b5bd6] rounded-[9px] flex items-center justify-center text-white shrink-0 shadow-sm">
+                    <div className="h-8 w-8 bg-gradient-to-br from-[#2f6bff] to-[#0b5cff] rounded-[9px] flex items-center justify-center text-white shrink-0 shadow-sm">
                         <svg viewBox="0 0 24 24" className="w-[17px] h-[17px]" fill="currentColor">
                             <path d="M4 4h10c3.3 0 6 2.7 6 6s-2.7 6-6 6H9v4H4V4zm5 8h5c1.1 0 2-.9 2-2s-.9-2-2-2H9v4z"/>
                         </svg>
                     </div>
                     <span className="text-[17px] font-bold leading-none">
                         <span className="text-[var(--text)]">Falcon</span>{" "}
-                        <span className="text-[#8b8be8] font-semibold">Plus</span>
+                        <span className="text-[var(--gold)] font-semibold">Plus</span>
                     </span>
                 </Link>
                 <div className="hidden md:flex items-center gap-2 text-[13px]">

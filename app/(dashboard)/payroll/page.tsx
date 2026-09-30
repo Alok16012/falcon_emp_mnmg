@@ -351,7 +351,7 @@ export default function PayrollPage() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
                     { label: "Total Hrs", value: totalHrs.toFixed(1) + " hrs", color: "#2563eb", bg: "#eff5ff", icon: <Clock size={18} /> },
-                    { label: "Total Salary", value: fmt(totalSalarySum), color: "#5b5bd6", bg: "#f0f0fd", icon: <IndianRupee size={18} /> },
+                    { label: "Total Salary", value: fmt(totalSalarySum), color: "#0b5cff", bg: "#f0f0fd", icon: <IndianRupee size={18} /> },
                     { label: "Advance", value: fmt(totalAdvance), color: "#ea580c", bg: "#fff5eb", icon: <IndianRupee size={18} /> },
                     { label: "Net Payable", value: fmt(totalNet), color: "#16a34a", bg: "#eefaf2", icon: <IndianRupee size={18} /> },
                 ].map(card => (
@@ -420,7 +420,7 @@ export default function PayrollPage() {
                                     </button>
                                 ) : (
                                     <button onClick={() => markPaid(row.id, row.payrollId, "PAID")}
-                                        className="shrink-0 px-3 py-2 rounded-full text-[11px] font-semibold bg-[var(--accent-light)] text-[var(--accent-text)] whitespace-nowrap hover:bg-[#e0e0fa] transition-colors">
+                                        className="shrink-0 px-3 py-2 rounded-full text-[11px] font-semibold bg-[var(--accent-light)] text-[var(--accent-text)] whitespace-nowrap hover:bg-[#dbe5ff] transition-colors">
                                         Mark Paid
                                     </button>
                                 )}
