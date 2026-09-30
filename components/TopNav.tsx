@@ -90,11 +90,11 @@ export function TopNav() {
     }, [query])
 
     return (
-        <header className="sticky top-0 z-30 bg-[var(--bg)]/90 backdrop-blur-md">
-            <div className="mx-auto w-full max-w-[1180px] flex items-center justify-between gap-3 px-4 md:px-6 pt-[18px] pb-3">
+        <header className="sticky top-0 z-30 bg-[var(--bg)]/90 backdrop-blur-md md:bg-[var(--surface)]/95 md:border-b md:border-[var(--border)]">
+            <div className="mx-auto w-full max-w-[1180px] md:max-w-none flex items-center justify-between gap-3 px-4 md:px-6 pt-[18px] pb-3 md:py-2.5">
                 {/* Left: logo + greeting / page title */}
                 <Link href="/admin" className="flex items-center gap-3 min-w-0">
-                    <BrandMark />
+                    <span className="md:hidden"><BrandMark /></span>
                     {isHome ? (
                         <div className="min-w-0">
                             <p className="text-[12px] text-[var(--text2)] leading-tight">{greeting()},</p>

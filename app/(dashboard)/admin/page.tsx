@@ -63,9 +63,20 @@ export default function AdminDashboard() {
     )
 
     return (
-        <div className="px-4 md:px-6 pt-1 pb-4 space-y-4 md:space-y-5">
-            {/* Hero card */}
-            <div className="relative overflow-hidden rounded-[22px] p-5 md:p-6 text-white shadow-[0_10px_28px_rgba(11,92,255,0.28)]" style={{ background: "linear-gradient(135deg, #0b5cff 0%, #0847c7 100%)" }}>
+        <div className="px-4 md:px-6 pt-1 md:pt-6 pb-4 space-y-4 md:space-y-6">
+            {/* Desktop header (ERP) */}
+            <div className="hidden md:flex items-center justify-between">
+                <div>
+                    <h1 className="text-[26px] font-bold text-[var(--text)] leading-tight">Dashboard</h1>
+                    <p className="text-[13.5px] text-[var(--text3)] mt-1">{format(now, "EEEE, dd MMMM yyyy")}</p>
+                </div>
+                <button onClick={fetchStats} aria-label="Refresh" className="p-2.5 rounded-full border border-[var(--border)] bg-white hover:bg-[var(--surface2)] transition-colors text-[var(--text3)] shadow-sm">
+                    <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+                </button>
+            </div>
+
+            {/* Hero card (phone) */}
+            <div className="md:hidden relative overflow-hidden rounded-[22px] p-5 md:p-6 text-white shadow-[0_10px_28px_rgba(11,92,255,0.28)]" style={{ background: "linear-gradient(135deg, #0b5cff 0%, #0847c7 100%)" }}>
                 <svg aria-hidden viewBox="0 0 24 24" className="absolute -right-4 -top-4 w-36 h-36 text-white/15" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
                 </svg>

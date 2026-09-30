@@ -29,9 +29,11 @@ export const authOptions: NextAuthOptions = {
                 }
 
                 try {
-                    const user = await prisma.user.findUnique({
+                    // Phone keyboards often capitalise the first letter or add a
+                    // trailing space — match the email case-insensitively.
+                    const user = await prisma.user.findFirst({
                         where: {
-                            email: credentials.email,
+                            email: { equals: credentials.email.trim(), mode: "insensitive" },
                         },
                     })
 

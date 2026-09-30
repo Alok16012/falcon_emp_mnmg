@@ -36,7 +36,7 @@ export default function LoginPage() {
         try {
             const result = await signIn("credentials", {
                 redirect: false,
-                email,
+                email: email.trim(),
                 password,
             })
 
@@ -90,6 +90,10 @@ export default function LoginPage() {
                             <Input
                                 id="email"
                                 type="email"
+                                autoComplete="username"
+                                autoCapitalize="none"
+                                autoCorrect="off"
+                                spellCheck={false}
                                 placeholder="user@cims.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -102,6 +106,7 @@ export default function LoginPage() {
                             <Input
                                 id="password"
                                 type="password"
+                                autoComplete="current-password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full py-[10px] px-[14px] bg-[#f0f2f8] border border-[#e6eaf5] rounded-[10px] text-[13px] text-[#0f1729] placeholder:text-[#98a1b5] focus:border-[#0b5cff] focus:bg-white focus:ring-[3px] focus:ring-[rgba(11,92,255,0.12)] focus:outline-none transition-all"
