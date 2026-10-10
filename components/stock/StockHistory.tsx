@@ -11,6 +11,9 @@ export type HistoryItemRef = { id: string; itemCode: string; itemName: string; q
 
 type Txn = {
     id: string
+    stockItemId: string | null
+    itemCode: string
+    itemName: string
     transactionType: "ADD" | "MINUS"
     quantityChanged: number
     previousQuantity: number
@@ -22,8 +25,8 @@ type Txn = {
 }
 
 type HistoryResponse = {
-    item: { id: string; itemCode: string; itemName: string; quantity: number; quantityUnit: string }
-    summary: { totalAdded: number; totalDeducted: number; totalTransactions: number }
+    item: { id: string; itemCode: string; itemName: string; quantity: number; quantityUnit: string } | null
+    summary: { totalAdded: number; totalDeducted: number; totalTransactions: number; itemsAffected: number | null }
     transactions: Txn[]
     total: number
     page: number
@@ -113,8 +116,11 @@ function ChangedQty({ t }: { t: Txn }) {
 }
 
 // ── Full history modal ───────────────────────────────────────────────────────
+// `item` = one product's history; `item={null}` = every product (with an Item column).
 
-export function StockHistoryModal({ item, onClose }: { item: HistoryItemRef; onClose: () => void }) {
+export function StockHistoryModal({ item, onClose }: { item: HistoryItemRef | null; onClose: () => void }) {
+    const allItems = item === null
+    const endpoint = allItems ? "/api/stock/transactions" : `/api/stock/${item.id}/transactions`
     const [preset, setPreset] = useState<Preset>("all")
     const [customFrom, setCustomFrom] = useState("")
     const [customTo, setCustomTo] = useState("")
@@ -149,7 +155,7 @@ export function StockHistoryModal({ item, onClose }: { item: HistoryItemRef; onC
             if (applied.to) qs.set("to", applied.to.toISOString())
             if (type) qs.set("type", type)
             if (search) qs.set("search", search)
-            const res = await fetch(`/api/stock/${item.id}/transactions?${qs}`, { signal: ctrl.signal })
+            const res = await fetch(`${endpoint}?${qs}`, { signal: ctrl.signal })
             if (!res.ok) throw new Error(await readError(res))
             setData(await res.json())
         } catch (e) {
@@ -158,7 +164,7 @@ export function StockHistoryModal({ item, onClose }: { item: HistoryItemRef; onC
         } finally {
             if (reqRef.current === ctrl) setLoading(false)
         }
-    }, [item.id, page, pageSize, applied, type, search])
+    }, [endpoint, page, pageSize, applied, type, search])
 
     useEffect(() => { load() }, [load])
     useEffect(() => () => reqRef.current?.abort(), [])
@@ -201,7 +207,9 @@ export function StockHistoryModal({ item, onClose }: { item: HistoryItemRef; onC
     const totalPages = Math.max(1, Math.ceil(total / pageSize))
     const startN = total === 0 ? 0 : (page - 1) * pageSize + 1
     const endN = Math.min(page * pageSize, total)
-    const unit = data?.item.quantityUnit || item.quantityUnit
+    // All-products totals mix units (pcs, kg…), so they are shown without a unit.
+    const unit = allItems ? "" : (data?.item?.quantityUnit || item.quantityUnit)
+    const withUnit = (v: string) => (unit ? `${v} ${unit}` : v)
     const filtersActive = preset !== "all" || !!type || !!search
 
     return (
@@ -218,7 +226,9 @@ export function StockHistoryModal({ item, onClose }: { item: HistoryItemRef; onC
                             <History size={17} className="text-[#0b5cff]" /> Stock Transaction History
                         </h2>
                         <p className="text-[12.5px] text-[var(--text2)] mt-0.5 truncate">
-                            <span className="font-mono font-semibold text-[var(--accent-text)]">{item.itemCode}</span> · {item.itemName}
+                            {allItems
+                                ? "All products"
+                                : <><span className="font-mono font-semibold text-[var(--accent-text)]">{item.itemCode}</span> · {item.itemName}</>}
                         </p>
                     </div>
                     <button onClick={onClose} aria-label="Close" className="text-[var(--text3)] hover:text-[var(--text)] p-1"><X size={18} /></button>
@@ -227,9 +237,11 @@ export function StockHistoryModal({ item, onClose }: { item: HistoryItemRef; onC
                 <div className="overflow-y-auto">
                     {/* Summary */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 px-4 sm:px-5 pt-4">
-                        <SummaryCard label="Current Stock" value={data ? `${fmtQty(data.item.quantity)} ${unit}` : null} />
-                        <SummaryCard label="Total Added" value={data ? `+${fmtQty(data.summary.totalAdded)} ${unit}` : null} tone="add" />
-                        <SummaryCard label="Total Deducted" value={data ? `−${fmtQty(data.summary.totalDeducted)} ${unit}` : null} tone="minus" />
+                        {allItems
+                            ? <SummaryCard label="Products Affected" value={data ? String(data.summary.itemsAffected ?? 0) : null} />
+                            : <SummaryCard label="Current Stock" value={data?.item ? withUnit(fmtQty(data.item.quantity)) : null} />}
+                        <SummaryCard label="Total Added" value={data ? withUnit(`+${fmtQty(data.summary.totalAdded)}`) : null} tone="add" />
+                        <SummaryCard label="Total Deducted" value={data ? withUnit(`−${fmtQty(data.summary.totalDeducted)}`) : null} tone="minus" />
                         <SummaryCard label="Total Transactions" value={data ? String(data.summary.totalTransactions) : null} />
                     </div>
                     {filtersActive && data && (
@@ -316,7 +328,7 @@ export function StockHistoryModal({ item, onClose }: { item: HistoryItemRef; onC
                                 <Inbox size={22} className="mx-auto text-[var(--text3)]" />
                                 <p className="mt-2 text-[13.5px] font-semibold text-[var(--text)]">No transactions found</p>
                                 <p className="text-[12.5px] text-[var(--text3)] mt-0.5">
-                                    {filtersActive ? "Try a different date range, type or search." : "Stock ADD / MINUS changes will appear here from now on."}
+                                    {filtersActive ? "Try a different date range, type or search." : "Stock ADD / MINUS changes will appear here as they happen."}
                                 </p>
                             </div>
                         ) : data && (
@@ -328,6 +340,7 @@ export function StockHistoryModal({ item, onClose }: { item: HistoryItemRef; onC
                                             <tr className="border-b border-[var(--border)] bg-[var(--surface2)]/40 text-left text-[var(--text2)]">
                                                 <th className="px-3 py-2.5 font-semibold">S.No</th>
                                                 <th className="px-3 py-2.5 font-semibold">Date &amp; Time</th>
+                                                {allItems && <th className="px-3 py-2.5 font-semibold">Item</th>}
                                                 <th className="px-3 py-2.5 font-semibold">Type</th>
                                                 <th className="px-3 py-2.5 font-semibold text-right">Previous Qty</th>
                                                 <th className="px-3 py-2.5 font-semibold text-right">Changed Qty</th>
@@ -341,9 +354,19 @@ export function StockHistoryModal({ item, onClose }: { item: HistoryItemRef; onC
                                                 <tr key={t.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface2)]/30">
                                                     <td className="px-3 py-2.5 text-[var(--text3)]">{startN + i}</td>
                                                     <td className="px-3 py-2.5 whitespace-nowrap text-[var(--text)]">{fmtDateTime(t.createdAt)}</td>
+                                                    {allItems && (
+                                                        <td className="px-3 py-2.5 min-w-[150px]">
+                                                            <span className="font-mono text-[12px] font-semibold text-[var(--accent-text)]">{t.itemCode}</span>
+                                                            <span className="block text-[12.5px] text-[var(--text)] leading-tight">{t.itemName}</span>
+                                                            {!t.stockItemId && <span className="text-[10.5px] font-semibold text-[var(--text3)]">DELETED</span>}
+                                                        </td>
+                                                    )}
                                                     <td className="px-3 py-2.5"><TypeBadge type={t.transactionType} /></td>
                                                     <td className="px-3 py-2.5 text-right text-[var(--text2)]">{fmtQty(t.previousQuantity)}</td>
-                                                    <td className="px-3 py-2.5 text-right"><ChangedQty t={t} /></td>
+                                                    <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                                                        <ChangedQty t={t} />
+                                                        {allItems && <span className="ml-1 text-[11px] text-[var(--text3)]">{t.quantityUnit}</span>}
+                                                    </td>
                                                     <td className="px-3 py-2.5 text-right font-semibold text-[var(--text)]">{fmtQty(t.newQuantity)}</td>
                                                     <td className="px-3 py-2.5 text-[var(--text2)]">{t.performedByName}</td>
                                                     <td className="px-3 py-2.5 text-[var(--text2)] max-w-[220px] truncate" title={t.remarks || undefined}>{t.remarks || "—"}</td>
@@ -364,6 +387,12 @@ export function StockHistoryModal({ item, onClose }: { item: HistoryItemRef; onC
                                                 </div>
                                                 <span className="text-[14px]"><ChangedQty t={t} /> <span className="text-[11px] text-[var(--text3)]">{t.quantityUnit}</span></span>
                                             </div>
+                                            {allItems && (
+                                                <p className="mt-1.5 text-[12.5px] text-[var(--text)] truncate">
+                                                    <span className="font-mono font-semibold text-[var(--accent-text)]">{t.itemCode}</span> · {t.itemName}
+                                                    {!t.stockItemId && <span className="ml-1 text-[10.5px] font-semibold text-[var(--text3)]">DELETED</span>}
+                                                </p>
+                                            )}
                                             <p className="mt-1.5 text-[12.5px] text-[var(--text2)]">
                                                 {fmtQty(t.previousQuantity)} → <span className="font-semibold text-[var(--text)]">{fmtQty(t.newQuantity)}</span>
                                             </p>

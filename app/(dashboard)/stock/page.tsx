@@ -51,6 +51,7 @@ export default function StockPage() {
     const [selected, setSelected] = useState<Set<string>>(new Set())
     const [bulkMode, setBulkMode] = useState<"add" | "remove" | null>(null)
     const [historyItem, setHistoryItem] = useState<StockItem | null>(null)
+    const [showAllHistory, setShowAllHistory] = useState(false)
     const [lastTxnItem, setLastTxnItem] = useState<StockItem | null>(null)
     const [colors, setColors] = useState<string[]>([])
     const [sizeUnits, setSizeUnits] = useState<string[]>(DEFAULT_SIZE_UNITS)
@@ -205,6 +206,9 @@ export default function StockPage() {
                 <div className="flex items-center justify-end gap-2 mt-3">
                     <button onClick={() => { load(); loadOptions() }} className="inline-flex items-center gap-2 rounded-[12px] border border-[var(--border)] bg-white px-4 py-2.5 text-[13px] font-semibold text-[var(--text2)] hover:bg-[var(--surface2)] shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
                         <RefreshCw size={15} /> Refresh
+                    </button>
+                    <button onClick={() => setShowAllHistory(true)} className="inline-flex items-center gap-2 rounded-[12px] border border-[var(--border)] bg-white px-4 py-2.5 text-[13px] font-semibold text-[var(--text2)] hover:bg-[var(--surface2)] shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
+                        <History size={15} /> <span className="hidden sm:inline">Transaction</span> History
                     </button>
                     <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-[12px] bg-[#0b5cff] px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-[#0847c7] shadow-sm">
                         <Plus size={15} /> Add Item
@@ -494,6 +498,10 @@ export default function StockPage() {
 
             {historyItem && (
                 <StockHistoryModal item={historyItem} onClose={() => setHistoryItem(null)} />
+            )}
+
+            {showAllHistory && (
+                <StockHistoryModal item={null} onClose={() => setShowAllHistory(false)} />
             )}
 
             {lastTxnItem && (
