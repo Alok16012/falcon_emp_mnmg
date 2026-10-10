@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
 import { canAccessModule } from "@/lib/modules"
+import { StockError, actorFromSession, createStockItem, parseAmount } from "@/lib/stockLedger"
 
 export async function GET() {
     try {
@@ -45,23 +46,25 @@ export async function POST(req: Request) {
             return new NextResponse("Item code already exists", { status: 409 })
         }
 
-        const item = await prisma.stockItem.create({
-            data: {
-                itemCode: String(itemCode).trim(),
-                itemName: String(itemName).trim(),
-                color: color ? String(color).trim() : null,
-                size: size ? String(size).trim() : null,
-                sizeUnit: sizeUnit ? String(sizeUnit).trim() : null,
-                quantity: quantity != null ? parseFloat(quantity) : 0,
-                quantityUnit: quantityUnit ? String(quantityUnit).trim() : "pcs",
-                minStock: minStock != null ? parseFloat(minStock) : 0,
-                rackNumber: rackNumber ? String(rackNumber).trim() : null,
-                ratePerUnit: ratePerUnit != null && ratePerUnit !== "" ? parseFloat(ratePerUnit) : null,
-            },
-        })
+        const initialQty = quantity != null && quantity !== "" ? parseAmount(quantity) : 0
+        if (initialQty < 0) return new NextResponse("Quantity cannot be negative", { status: 400 })
+
+        const item = await createStockItem({
+            itemCode: String(itemCode).trim(),
+            itemName: String(itemName).trim(),
+            color: color ? String(color).trim() : null,
+            size: size ? String(size).trim() : null,
+            sizeUnit: sizeUnit ? String(sizeUnit).trim() : null,
+            quantity: initialQty,
+            quantityUnit: quantityUnit ? String(quantityUnit).trim() : "pcs",
+            minStock: minStock != null ? parseFloat(minStock) : 0,
+            rackNumber: rackNumber ? String(rackNumber).trim() : null,
+            ratePerUnit: ratePerUnit != null && ratePerUnit !== "" ? parseFloat(ratePerUnit) : null,
+        }, actorFromSession(session.user))
 
         return NextResponse.json(item, { status: 201 })
     } catch (error) {
+        if (error instanceof StockError) return new NextResponse(error.message, { status: error.status })
         console.error("[STOCK_POST]", error)
         return new NextResponse("Internal Error", { status: 500 })
     }

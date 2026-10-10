@@ -1757,7 +1757,41 @@ model StockItem {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  transactions StockTransaction[]
+
   @@index([itemCode])
+}
+
+enum StockTransactionType {
+  ADD
+  MINUS
+}
+
+// Immutable audit log of every stock quantity change. Written in the same DB
+// transaction as the StockItem update. Item code/name/unit and the user's name
+// are snapshotted so history stays readable after the item is deleted
+// (stockItemId is then set to NULL, never cascaded away).
+model StockTransaction {
+  id               String               @id @default(uuid())
+  seq              Int                  @default(autoincrement()) // insert order; breaks same-millisecond ties
+  stockItemId      String?
+  stockItem        StockItem?           @relation(fields: [stockItemId], references: [id], onDelete: SetNull)
+  itemCode         String
+  itemName         String
+  quantityUnit     String               @default("pcs")
+  transactionType  StockTransactionType
+  quantityChanged  Float                // always positive; sign comes from transactionType
+  previousQuantity Float
+  newQuantity      Float
+  performedById    String?
+  performedByName  String
+  remarks          String?
+  requestId        String?              @unique // client idempotency key (blocks double submits)
+  createdAt        DateTime             @default(now())
+
+  @@index([stockItemId, createdAt, seq])
+  @@index([createdAt])
+  @@index([transactionType])
 }
 
 // Reusable dropdown values for the stock form (colors, size units, qty units).

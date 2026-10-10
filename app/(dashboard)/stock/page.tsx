@@ -5,7 +5,9 @@ import { toast } from "sonner"
 import {
     Boxes, Plus, Search, X, Loader2, Trash2, RefreshCw,
     Pencil, Minus, AlertTriangle, ChevronRight, Palette, SlidersHorizontal,
+    History, ArrowDownUp,
 } from "lucide-react"
+import { StockHistoryModal, LastTransactionsModal } from "@/components/stock/StockHistory"
 
 type StockItem = {
     id: string
@@ -28,6 +30,17 @@ type Option = { id: string; type: string; value: string }
 const DEFAULT_SIZE_UNITS = ["cm", "inch", "feet"]
 const DEFAULT_QTY_UNITS = ["pcs", "kg", "cm", "meter", "box", "litre"]
 
+// Idempotency key per submit, so a retried/double-clicked request is applied once.
+function newRequestId(): string {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID()
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`
+}
+
+async function errorText(res: Response, fallback: string) {
+    const t = await res.text().catch(() => "")
+    return t && t.length < 200 ? t : fallback
+}
+
 export default function StockPage() {
     const [items, setItems] = useState<StockItem[]>([])
     const [loading, setLoading] = useState(true)
@@ -37,6 +50,8 @@ export default function StockPage() {
     const [adjustItem, setAdjustItem] = useState<{ item: StockItem; mode: "add" | "remove" } | null>(null)
     const [selected, setSelected] = useState<Set<string>>(new Set())
     const [bulkMode, setBulkMode] = useState<"add" | "remove" | null>(null)
+    const [historyItem, setHistoryItem] = useState<StockItem | null>(null)
+    const [lastTxnItem, setLastTxnItem] = useState<StockItem | null>(null)
     const [colors, setColors] = useState<string[]>([])
     const [sizeUnits, setSizeUnits] = useState<string[]>(DEFAULT_SIZE_UNITS)
     const [qtyUnits, setQtyUnits] = useState<string[]>(DEFAULT_QTY_UNITS)
@@ -71,19 +86,23 @@ export default function StockPage() {
 
     useEffect(() => { load(); loadOptions() }, [load, loadOptions])
 
-    async function adjust(id: string, delta: number) {
-        const prev = items
-        setItems(list => list.map(i => i.id === id ? { ...i, quantity: Math.max(0, i.quantity + delta) } : i))
+    // Returns true on success. The server is authoritative: it locks the row,
+    // rejects a MINUS larger than the stock, and logs the transaction.
+    async function adjust(id: string, delta: number, remarks: string, requestId: string): Promise<boolean> {
         try {
             const res = await fetch(`/api/stock/${id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ adjust: delta }),
+                body: JSON.stringify({ adjust: delta, remarks: remarks || undefined, requestId }),
             })
-            if (!res.ok) throw new Error()
-        } catch {
-            setItems(prev)
-            toast.error("Failed to update quantity")
+            if (!res.ok) throw new Error(await errorText(res, "Failed to update quantity"))
+            const updated: StockItem = await res.json()
+            setItems(list => list.map(i => i.id === id ? { ...i, quantity: updated.quantity, updatedAt: updated.updatedAt } : i))
+            toast.success(delta > 0 ? `Added ${delta}` : `Deducted ${Math.abs(delta)}`)
+            return true
+        } catch (e) {
+            toast.error((e as Error).message || "Failed to update quantity")
+            return false
         }
     }
 
@@ -96,26 +115,31 @@ export default function StockPage() {
     }
 
     // Apply per-item deltas in bulk; mode决定 sign handled by caller (deltas already signed)
-    async function applyBulk(deltas: { id: string; delta: number }[]) {
-        const prev = items
-        setItems(list => list.map(i => {
-            const d = deltas.find(x => x.id === i.id)
-            return d ? { ...i, quantity: Math.max(0, i.quantity + d.delta) } : i
+    // Each item is its own atomic, logged adjustment; report partial failures.
+    async function applyBulk(deltas: { id: string; delta: number; requestId: string }[], remarks: string) {
+        const results = await Promise.allSettled(deltas.map(async d => {
+            const r = await fetch(`/api/stock/${d.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ adjust: d.delta, remarks: remarks || undefined, requestId: d.requestId }),
+            })
+            if (!r.ok) throw new Error(await errorText(r, "Failed"))
+            return (await r.json()) as StockItem
         }))
-        try {
-            await Promise.all(deltas.map(d =>
-                fetch(`/api/stock/${d.id}`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ adjust: d.delta }),
-                }).then(r => { if (!r.ok) throw new Error() })
-            ))
-            toast.success(`${deltas.length} item${deltas.length > 1 ? "s" : ""} updated`)
+        const ok = results.flatMap(r => r.status === "fulfilled" ? [r.value] : [])
+        setItems(list => list.map(i => {
+            const u = ok.find(x => x.id === i.id)
+            return u ? { ...i, quantity: u.quantity, updatedAt: u.updatedAt } : i
+        }))
+        const failed = results.length - ok.length
+        if (failed === 0) {
+            toast.success(`${ok.length} item${ok.length > 1 ? "s" : ""} updated`)
             setSelected(new Set())
             setBulkMode(null)
-        } catch {
-            setItems(prev)
-            toast.error("Failed to update some items")
+        } else {
+            const firstErr = results.find(r => r.status === "rejected") as PromiseRejectedResult | undefined
+            toast.error(`${failed} of ${results.length} failed${firstErr ? `: ${(firstErr.reason as Error).message}` : ""}`)
+            load()
         }
     }
 
@@ -252,6 +276,12 @@ export default function StockPage() {
                                     {low && <span className="ml-1.5 inline-block align-middle rounded-full bg-red-100 px-1.5 py-0.5 text-[9.5px] font-bold text-red-600">LOW</span>}
                                 </p>
                                 <div className="flex gap-0.5 shrink-0">
+                                    <button onClick={() => setHistoryItem(i)} className="p-1.5 text-[var(--text3)] hover:text-[#0b5cff]" title="History" aria-label="Transaction history">
+                                        <History size={14} />
+                                    </button>
+                                    <button onClick={() => setLastTxnItem(i)} className="p-1.5 text-[var(--text3)] hover:text-[#0b5cff]" title="Last Add / Minus" aria-label="Last Add / Minus">
+                                        <ArrowDownUp size={14} />
+                                    </button>
                                     <button onClick={() => openEdit(i)} className="p-1.5 text-[var(--text3)] hover:text-[#0b5cff]" title="Edit">
                                         <Pencil size={14} />
                                     </button>
@@ -316,7 +346,7 @@ export default function StockPage() {
                     <table className="w-full text-[13px]">
                         <thead>
                             <tr className="border-b border-[var(--border)] bg-[var(--surface2)]/40 text-left text-[var(--text2)]">
-                                <th className="px-4 py-3 font-semibold w-10">
+                                <th className="px-2 xl:px-3 py-3 font-semibold w-10">
                                     <input
                                         type="checkbox"
                                         checked={filtered.length > 0 && filtered.every(i => selected.has(i.id))}
@@ -327,16 +357,16 @@ export default function StockPage() {
                                         className="h-4 w-4 cursor-pointer accent-[#0b5cff]"
                                     />
                                 </th>
-                                <th className="px-4 py-3 font-semibold">S.No</th>
-                                <th className="px-4 py-3 font-semibold">Item Code</th>
-                                <th className="px-4 py-3 font-semibold">Item Name</th>
-                                <th className="px-4 py-3 font-semibold">Color</th>
-                                <th className="px-4 py-3 font-semibold">Size</th>
-                                <th className="px-4 py-3 font-semibold">Rack No</th>
-                                <th className="px-4 py-3 font-semibold text-center">Quantity</th>
-                                <th className="px-4 py-3 font-semibold text-right">Rate/Unit</th>
-                                <th className="px-4 py-3 font-semibold text-right">Min Stock</th>
-                                <th className="px-4 py-3 font-semibold text-right">Action</th>
+                                <th className="px-2 xl:px-3 py-3 font-semibold">S.No</th>
+                                <th className="px-2 xl:px-3 py-3 font-semibold whitespace-nowrap">Item Code</th>
+                                <th className="px-2 xl:px-3 py-3 font-semibold">Item Name</th>
+                                <th className="px-2 xl:px-3 py-3 font-semibold">Color</th>
+                                <th className="px-2 xl:px-3 py-3 font-semibold">Size</th>
+                                <th className="px-2 xl:px-3 py-3 font-semibold whitespace-nowrap hidden min-[1440px]:table-cell">Rack No</th>
+                                <th className="px-2 xl:px-3 py-3 font-semibold text-center">Quantity</th>
+                                <th className="px-2 xl:px-3 py-3 font-semibold text-right whitespace-nowrap hidden min-[1440px]:table-cell">Rate/Unit</th>
+                                <th className="px-2 xl:px-3 py-3 font-semibold text-right">Min Stock</th>
+                                <th className="px-2 xl:px-3 py-3 font-semibold text-right sticky right-0 z-[1] bg-[#f9fafc] shadow-[-8px_0_8px_-8px_rgba(15,23,42,0.18)]">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -350,17 +380,23 @@ export default function StockPage() {
                                 const low = isLow(i)
                                 const sel = selected.has(i.id)
                                 return (
-                                    <tr key={i.id} className={`border-b border-[var(--border)] last:border-0 ${sel ? "bg-[#0b5cff]/5" : low ? "bg-red-50 hover:bg-red-100" : "hover:bg-[var(--surface2)]/30"}`}>
-                                        <td className="px-4 py-3">
+                                    <tr key={i.id} className={`group border-b border-[var(--border)] last:border-0 ${sel ? "bg-[#0b5cff]/5" : low ? "bg-red-50 hover:bg-red-100" : "hover:bg-[var(--surface2)]/30"}`}>
+                                        <td className="px-2 xl:px-3 py-3">
                                             <input type="checkbox" checked={sel} onChange={() => toggleSelect(i.id)} className="h-4 w-4 cursor-pointer accent-[#0b5cff]" />
                                         </td>
-                                        <td className={`px-4 py-3 ${low ? "text-red-700" : "text-[var(--text3)]"}`}>{idx + 1}</td>
-                                        <td className={`px-4 py-3 font-mono ${low ? "text-red-700 font-semibold" : "text-[var(--text)]"}`}>{i.itemCode}</td>
-                                        <td className={`px-4 py-3 font-medium ${low ? "text-red-700" : "text-[var(--text)]"}`}>
+                                        <td className={`px-2 xl:px-3 py-3 ${low ? "text-red-700" : "text-[var(--text3)]"}`}>{idx + 1}</td>
+                                        <td className={`px-2 xl:px-3 py-3 font-mono whitespace-nowrap ${low ? "text-red-700 font-semibold" : "text-[var(--text)]"}`}>{i.itemCode}</td>
+                                        <td className={`px-2 xl:px-3 py-3 font-medium min-w-[112px] ${low ? "text-red-700" : "text-[var(--text)]"}`}>
                                             {i.itemName}
                                             {low && <span className="ml-2 inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10.5px] font-bold text-red-700">LOW</span>}
+                                            {/* Rack / Rate columns are hidden below 1440px — show them here instead */}
+                                            {(i.rackNumber || i.ratePerUnit != null) && (
+                                                <p className="min-[1440px]:hidden mt-0.5 text-[11.5px] font-normal text-[var(--text3)]">
+                                                    {[i.rackNumber && `Rack ${i.rackNumber}`, i.ratePerUnit != null && `₹${i.ratePerUnit.toLocaleString("en-IN")}/unit`].filter(Boolean).join(" · ")}
+                                                </p>
+                                            )}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 xl:px-3 py-3">
                                             {i.color ? (
                                                 <span className="inline-flex items-center gap-1.5">
                                                     <span className="h-3 w-3 rounded-full border border-[var(--border)]" style={{ background: cssColor(i.color) }} />
@@ -368,35 +404,41 @@ export default function StockPage() {
                                                 </span>
                                             ) : <span className="text-[var(--text3)]">—</span>}
                                         </td>
-                                        <td className={`px-4 py-3 ${low ? "text-red-700" : "text-[var(--text2)]"}`}>
+                                        <td className={`px-2 xl:px-3 py-3 ${low ? "text-red-700" : "text-[var(--text2)]"}`}>
                                             {i.size ? `${i.size} ${i.sizeUnit || ""}`.trim() : "—"}
                                         </td>
-                                        <td className={`px-4 py-3 ${low ? "text-red-700" : "text-[var(--text2)]"}`}>
+                                        <td className={`px-2 xl:px-3 py-3 hidden min-[1440px]:table-cell ${low ? "text-red-700" : "text-[var(--text2)]"}`}>
                                             {i.rackNumber || "—"}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 xl:px-3 py-3">
                                             <div className="flex items-center justify-center gap-2">
-                                                <span className={`min-w-[64px] text-center text-[15px] font-bold ${low ? "text-red-700" : "text-[var(--text)]"}`}>
+                                                <span className={`min-w-[48px] text-center text-[15px] font-bold whitespace-nowrap ${low ? "text-red-700" : "text-[var(--text)]"}`}>
                                                     {i.quantity} <span className="text-[11px] font-normal text-[var(--text3)]">{i.quantityUnit}</span>
                                                 </span>
                                                 <div className="flex gap-1">
-                                                    <button onClick={() => setAdjustItem({ item: i, mode: "remove" })} title="Minus stock (used)"
+                                                    <button onClick={() => setAdjustItem({ item: i, mode: "remove" })} title="Minus stock (used)" aria-label="Minus stock"
                                                         className="inline-flex items-center gap-1 rounded-[7px] border border-red-200 bg-red-50 px-2 py-1 text-[12px] font-semibold text-red-600 hover:bg-red-100">
-                                                        <Minus size={13} /> Minus
+                                                        <Minus size={13} /><span className="hidden min-[1440px]:inline">Minus</span>
                                                     </button>
-                                                    <button onClick={() => setAdjustItem({ item: i, mode: "add" })} title="Add stock (received)"
+                                                    <button onClick={() => setAdjustItem({ item: i, mode: "add" })} title="Add stock (received)" aria-label="Add stock"
                                                         className="inline-flex items-center gap-1 rounded-[7px] border border-emerald-200 bg-emerald-50 px-2 py-1 text-[12px] font-semibold text-emerald-600 hover:bg-emerald-100">
-                                                        <Plus size={13} /> Add
+                                                        <Plus size={13} /><span className="hidden min-[1440px]:inline">Add</span>
                                                     </button>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className={`px-4 py-3 text-right ${low ? "text-red-700" : "text-[var(--text2)]"}`}>
+                                        <td className={`px-2 xl:px-3 py-3 text-right whitespace-nowrap hidden min-[1440px]:table-cell ${low ? "text-red-700" : "text-[var(--text2)]"}`}>
                                             {i.ratePerUnit != null ? `₹${i.ratePerUnit.toLocaleString("en-IN")}` : "—"}
                                         </td>
-                                        <td className={`px-4 py-3 text-right ${low ? "text-red-700 font-semibold" : "text-[var(--text2)]"}`}>{i.minStock}</td>
-                                        <td className="px-4 py-3 text-right">
-                                            <div className="inline-flex items-center gap-1">
+                                        <td className={`px-2 xl:px-3 py-3 text-right ${low ? "text-red-700 font-semibold" : "text-[var(--text2)]"}`}>{i.minStock}</td>
+                                        <td className={`px-2 xl:px-3 py-3 text-right sticky right-0 z-[1] shadow-[-8px_0_8px_-8px_rgba(15,23,42,0.18)] ${sel ? "bg-[#f3f7ff]" : low ? "bg-red-50 group-hover:bg-red-100" : "bg-white group-hover:bg-[#fafbfd]"}`}>
+                                            <div className="inline-flex items-center gap-0.5 whitespace-nowrap">
+                                                <button onClick={() => setHistoryItem(i)} className="text-[var(--text3)] hover:text-[#0b5cff] p-1" title="History" aria-label="Transaction history">
+                                                    <History size={15} />
+                                                </button>
+                                                <button onClick={() => setLastTxnItem(i)} className="text-[var(--text3)] hover:text-[#0b5cff] p-1" title="Last Add / Minus" aria-label="Last Add / Minus">
+                                                    <ArrowDownUp size={15} />
+                                                </button>
                                                 <button onClick={() => openEdit(i)} className="text-[var(--text3)] hover:text-[#0b5cff] p-1" title="Edit">
                                                     <Pencil size={15} />
                                                 </button>
@@ -435,9 +477,8 @@ export default function StockPage() {
                     item={adjustItem.item}
                     mode={adjustItem.mode}
                     onClose={() => setAdjustItem(null)}
-                    onApply={async (delta) => {
-                        await adjust(adjustItem.item.id, delta)
-                        setAdjustItem(null)
+                    onApply={async (delta, remarks, requestId) => {
+                        if (await adjust(adjustItem.item.id, delta, remarks, requestId)) setAdjustItem(null)
                     }}
                 />
             )}
@@ -450,6 +491,18 @@ export default function StockPage() {
                     onApply={applyBulk}
                 />
             )}
+
+            {historyItem && (
+                <StockHistoryModal item={historyItem} onClose={() => setHistoryItem(null)} />
+            )}
+
+            {lastTxnItem && (
+                <LastTransactionsModal
+                    item={lastTxnItem}
+                    onClose={() => setLastTxnItem(null)}
+                    onViewAll={() => { setHistoryItem(lastTxnItem); setLastTxnItem(null) }}
+                />
+            )}
         </div>
     )
 }
@@ -458,12 +511,16 @@ function BulkAdjustModal({ mode, items, onClose, onApply }: {
     mode: "add" | "remove"
     items: StockItem[]
     onClose: () => void
-    onApply: (deltas: { id: string; delta: number }[]) => void | Promise<void>
+    onApply: (deltas: { id: string; delta: number; requestId: string }[], remarks: string) => void | Promise<void>
 }) {
     const isAdd = mode === "add"
     const [amounts, setAmounts] = useState<Record<string, string>>({})
     const [sameForAll, setSameForAll] = useState("")
+    const [remarks, setRemarks] = useState("")
     const [busy, setBusy] = useState(false)
+    // One key per item for the lifetime of this modal: a re-submit after a
+    // partial failure re-applies only the items that did not go through.
+    const [requestIds] = useState(() => Object.fromEntries(items.map(i => [i.id, newRequestId()])) as Record<string, string>)
 
     function effectiveAmt(id: string): number {
         const raw = amounts[id] !== undefined && amounts[id] !== "" ? amounts[id] : sameForAll
@@ -471,15 +528,18 @@ function BulkAdjustModal({ mode, items, onClose, onApply }: {
         return Number.isNaN(n) ? 0 : n
     }
 
+    const overdrawn = isAdd ? [] : items.filter(i => effectiveAmt(i.id) > i.quantity)
+
     async function run() {
+        if (busy) return
+        if (overdrawn.length > 0) { toast.error(`Not enough stock for ${overdrawn[0].itemName}`); return }
         const deltas = items
             .map(i => ({ id: i.id, amt: effectiveAmt(i.id) }))
             .filter(x => x.amt > 0)
-            .map(x => ({ id: x.id, delta: isAdd ? x.amt : -x.amt }))
+            .map(x => ({ id: x.id, delta: isAdd ? x.amt : -x.amt, requestId: requestIds[x.id] }))
         if (deltas.length === 0) { toast.error("Enter at least one amount"); return }
         setBusy(true)
-        await onApply(deltas)
-        setBusy(false)
+        try { await onApply(deltas, remarks.trim()) } finally { setBusy(false) }
     }
 
     return (
@@ -506,9 +566,10 @@ function BulkAdjustModal({ mode, items, onClose, onApply }: {
                 <div className="overflow-y-auto p-5 space-y-2">
                     {items.map(i => {
                         const amt = effectiveAmt(i.id)
-                        const result = isAdd ? i.quantity + amt : Math.max(0, i.quantity - amt)
+                        const result = isAdd ? i.quantity + amt : i.quantity - amt
+                        const over = !isAdd && result < 0
                         return (
-                            <div key={i.id} className="flex items-center gap-3 rounded-[8px] border border-[var(--border)] px-3 py-2">
+                            <div key={i.id} className={`flex items-center gap-3 rounded-[8px] border px-3 py-2 ${over ? "border-red-300 bg-red-50" : "border-[var(--border)]"}`}>
                                 <div className="min-w-0 flex-1">
                                     <p className="text-[13px] font-medium text-[var(--text)] truncate">{i.itemName}</p>
                                     <p className="text-[11px] text-[var(--text3)]">{i.itemCode} · now {i.quantity} {i.quantityUnit}</p>
@@ -521,16 +582,23 @@ function BulkAdjustModal({ mode, items, onClose, onApply }: {
                                     className="w-20 rounded-[8px] border border-[var(--border)] bg-white px-2 py-1.5 text-[13px] text-center outline-none focus:border-[#0b5cff]"
                                 />
                                 <span className={`text-[12px] font-semibold w-16 text-right ${isAdd ? "text-emerald-600" : "text-red-600"}`}>
-                                    → {result}
+                                    {over ? "Too much" : `→ ${result}`}
                                 </span>
                             </div>
                         )
                     })}
                 </div>
 
+                <div className="px-5 pb-3">
+                    <label className="text-[12px] font-medium text-[var(--text2)]">Remarks (optional)</label>
+                    <input value={remarks} onChange={e => setRemarks(e.target.value)} maxLength={500}
+                        placeholder={isAdd ? "e.g. Received from supplier" : "e.g. Used in production"}
+                        className="mt-1 w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#0b5cff]" />
+                </div>
+
                 <div className="flex justify-end gap-2 border-t border-[var(--border)] px-5 py-4">
                     <button onClick={onClose} className="rounded-[8px] border border-[var(--border)] px-4 py-2 text-[13px] font-medium text-[var(--text2)] hover:bg-[var(--surface2)]">Cancel</button>
-                    <button onClick={run} disabled={busy}
+                    <button onClick={run} disabled={busy || overdrawn.length > 0}
                         className={`inline-flex items-center gap-2 rounded-[8px] px-4 py-2 text-[13px] font-semibold text-white hover:opacity-90 disabled:opacity-50 ${isAdd ? "bg-emerald-600" : "bg-red-600"}`}>
                         {busy ? <Loader2 size={15} className="animate-spin" /> : isAdd ? <Plus size={15} /> : <Minus size={15} />}
                         {isAdd ? "Add to all" : "Subtract from all"}
@@ -545,20 +613,25 @@ function AdjustQtyModal({ item, mode, onClose, onApply }: {
     item: StockItem
     mode: "add" | "remove"
     onClose: () => void
-    onApply: (delta: number) => void | Promise<void>
+    onApply: (delta: number, remarks: string, requestId: string) => void | Promise<void>
 }) {
     const [amount, setAmount] = useState("")
+    const [remarks, setRemarks] = useState("")
     const [busy, setBusy] = useState(false)
+    // Stable for this modal: a double click / retry re-sends the same key.
+    const [requestId] = useState(newRequestId)
     const amt = parseFloat(amount)
-    const valid = !Number.isNaN(amt) && amt > 0
     const isAdd = mode === "add"
-    const result = isAdd ? item.quantity + (valid ? amt : 0) : Math.max(0, item.quantity - (valid ? amt : 0))
+    const exceeds = !isAdd && !Number.isNaN(amt) && amt > item.quantity
+    const valid = !Number.isNaN(amt) && amt > 0 && !exceeds
+    const result = isAdd ? item.quantity + (valid ? amt : 0) : item.quantity - (valid ? amt : 0)
 
     async function run() {
+        if (busy) return
+        if (exceeds) { toast.error(`Only ${item.quantity} ${item.quantityUnit} in stock`); return }
         if (!valid) { toast.error("Enter a valid amount"); return }
         setBusy(true)
-        await onApply(isAdd ? amt : -amt)
-        setBusy(false)
+        try { await onApply(isAdd ? amt : -amt, remarks.trim(), requestId) } finally { setBusy(false) }
     }
 
     return (
@@ -591,6 +664,22 @@ function AdjustQtyModal({ item, mode, onClose, onApply }: {
                                 New quantity: <span className={`font-bold ${isAdd ? "text-emerald-600" : "text-red-600"}`}>{result} {item.quantityUnit}</span>
                             </p>
                         )}
+                        {exceeds && (
+                            <p className="mt-2 text-[12.5px] font-medium text-red-600">
+                                Only {item.quantity} {item.quantityUnit} in stock — cannot minus more than that.
+                            </p>
+                        )}
+                    </div>
+                    <div>
+                        <label className="mb-1 block text-[12px] font-medium text-[var(--text2)]">Remarks (optional)</label>
+                        <input
+                            value={remarks}
+                            onChange={e => setRemarks(e.target.value)}
+                            onKeyDown={e => { if (e.key === "Enter") run() }}
+                            maxLength={500}
+                            placeholder={isAdd ? "e.g. Received from supplier" : "e.g. Used in production"}
+                            className="w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-[13px] outline-none focus:border-[#0b5cff]"
+                        />
                     </div>
                 </div>
                 <div className="flex gap-2 border-t border-[var(--border)] px-5 py-4">
@@ -687,12 +776,12 @@ function StockFormModal({
             })
             if (!res.ok) {
                 if (res.status === 409) { toast.error("Item code already exists"); return }
-                throw new Error()
+                throw new Error(await errorText(res, "Failed to save item"))
             }
             toast.success(item ? "Item updated" : "Item added")
             onSaved()
-        } catch {
-            toast.error("Failed to save item")
+        } catch (e) {
+            toast.error((e as Error).message || "Failed to save item")
         } finally {
             setSaving(false)
         }
