@@ -662,7 +662,7 @@ function RulesPanel() {
         },
         {
             n: 4, color: "#7c3aed", bg: "#f5f0ff", title: "Working on Sunday = 2×",
-            body: <>Sunday shift ends at <b>5:30 PM</b>. Working till 5:30 PM = <b>full shift hours</b>, paid <b>double</b>. Late / leaving before 5:30 is cut. No extra free-day salary for that Sunday.<br />
+            body: <>Sunday shift ends at <b>5:00 PM</b>. Working till 5:00 PM = <b>full shift hours</b>, paid <b>double</b>. Late / leaving before 5:00 is cut. No extra free-day salary for that Sunday.<br />
                 <span className="font-mono text-[11px]">Sunday pay = (shift hrs − late − early) × hourly × 2</span></>,
         },
     ]
@@ -699,7 +699,7 @@ function RulesPanel() {
                     <div className="font-bold text-[var(--text)] text-[11px] mb-1">Example — ₹30,000 salary, 9-hour shift</div>
                     <div>Hourly = 30,000 ÷ (30 × 9) = <b>₹111.11</b> · Daily = <b>₹1,000</b></div>
                     <div>Left 30 min early → 8.5 h × 111.11 = <b>₹944.44</b></div>
-                    <div>Sunday 8:30 AM – 5:30 PM → full 9 h × 111.11 × 2 = <b>₹2,000</b></div>
+                    <div>Sunday 8:30 AM – 5:00 PM → full 9 h × 111.11 × 2 = <b>₹2,000</b></div>
                     <div>Worked 18 days → 3 free Sundays = <b>₹3,000</b></div>
                 </div>
             </div>

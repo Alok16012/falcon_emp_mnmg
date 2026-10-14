@@ -12,15 +12,15 @@
 //  3. Free Sundays (paid without working) depend on days worked in the month:
 //       0–5 → 0 · 6–11 → 1 · 12–17 → 2 · 18–23 → 3 · 24+ → 4   (max 4)
 //     Each free Sunday = one day's salary (monthly ÷ 30).
-//  4. Working on a Sunday is paid double. Sunday shift ends at 5:30 PM for
-//     everyone; working from shift start till 5:30 PM counts as the FULL
-//     regular shift hours (e.g. 10 h). Late / leaving before 5:30 PM is cut.
-//       Sunday pay = (shift hrs − late − early-before-5:30) × hourly × 2
+//  4. Working on a Sunday is paid double. Sunday shift ends at 5:00 PM for
+//     everyone; working from shift start till 5:00 PM counts as the FULL
+//     regular shift hours (e.g. 10 h). Late / leaving before 5:00 PM is cut.
+//       Sunday pay = (shift hrs − late − early-before-5:00) × hourly × 2
 //     That Sunday gets ONLY the double pay — no extra free-day salary on top.
 
 export const SALARY_BASE_DAYS = 30
 export const MAX_FREE_SUNDAYS = 4
-export const SUNDAY_END_MIN = 17 * 60 + 30 // 5:30 PM
+export const SUNDAY_END_MIN = 17 * 60 // 5:00 PM
 const IST_OFFSET_MIN = 330 // punches are stored as true instants; the site runs on IST
 
 export const FREE_SUNDAY_SLABS = [
@@ -194,9 +194,9 @@ export function calcHourlyPayroll(
         const halfDay = a.status === "HALF_DAY"
 
         if (isSunday) {
-            // Sunday shift = usual shift start → 5:30 PM, but working it fully is
+            // Sunday shift = usual shift start → 5:00 PM, but working it fully is
             // paid as the FULL regular shift hours (e.g. 10 h), then doubled.
-            // Late arrival / leaving before 5:30 PM is cut like a normal day.
+            // Late arrival / leaving before 5:00 PM is cut like a normal day.
             let hours = 0, late = 0, early = 0
             const notes: string[] = []
             if (inMin != null && outMin != null) {
@@ -213,7 +213,7 @@ export function calcHourlyPayroll(
             }
             late = r2(late); early = r2(early); hours = r2(hours)
             if (late > 0) notes.push(`${Math.round(late * 60)} min late (${late} hr cut)`)
-            if (early > 0) notes.push(`left ${Math.round(early * 60)} min before 5:30 PM (${early} hr cut)`)
+            if (early > 0) notes.push(`left ${Math.round(early * 60)} min before 5:00 PM (${early} hr cut)`)
             const remark = ["Sunday (Double Pay)", ...notes].join(" · ")
             if (hours > 0) {
                 sundaysWorked++
