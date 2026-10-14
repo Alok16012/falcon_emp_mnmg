@@ -12,9 +12,11 @@
 //  3. Free Sundays (paid without working) depend on days worked in the month:
 //       0–5 → 0 · 6–11 → 1 · 12–17 → 2 · 18–23 → 3 · 24+ → 4   (max 4)
 //     Each free Sunday = one day's salary (monthly ÷ 30).
-//  4. Working on a Sunday: hourly × 2 for the hours worked. Sunday shift ends at
-//     5:30 PM for everyone. That Sunday gets ONLY the double pay — no extra
-//     free-day salary on top of it.
+//  4. Working on a Sunday is paid double. Sunday shift ends at 5:30 PM for
+//     everyone; working from shift start till 5:30 PM counts as the FULL
+//     regular shift hours (e.g. 10 h). Late / leaving before 5:30 PM is cut.
+//       Sunday pay = (shift hrs − late − early-before-5:30) × hourly × 2
+//     That Sunday gets ONLY the double pay — no extra free-day salary on top.
 
 export const SALARY_BASE_DAYS = 30
 export const MAX_FREE_SUNDAYS = 4
@@ -192,23 +194,27 @@ export function calcHourlyPayroll(
         const halfDay = a.status === "HALF_DAY"
 
         if (isSunday) {
-            let hours = 0, remark = "Sunday (Double Pay)"
+            // Sunday shift = usual shift start → 5:30 PM, but working it fully is
+            // paid as the FULL regular shift hours (e.g. 10 h), then doubled.
+            // Late arrival / leaving before 5:30 PM is cut like a normal day.
+            let hours = 0, late = 0, early = 0
+            const notes: string[] = []
             if (inMin != null && outMin != null) {
-                const start = shiftStart != null ? Math.max(inMin, shiftStart) : inMin
-                const end = Math.min(outMin, SUNDAY_END_MIN)
-                hours = Math.max(0, end - start) / 60
-                if (outMin > SUNDAY_END_MIN) remark += " · counted till 5:30 PM"
+                late = shiftStart != null ? Math.max(0, inMin - shiftStart) / 60 : 0
+                early = Math.max(0, SUNDAY_END_MIN - outMin) / 60
+                hours = Math.max(0, shiftHours - late - early)
             } else if (inMin != null) {
                 missingPunchDays++
-                remark = "Sunday · out punch missing (0 hrs)"
+                notes.push("Out punch missing (0 hrs)")
             } else {
-                // Marked present by hand, no punch times → shift start till 5:30 PM
-                const start = shiftStart ?? (SUNDAY_END_MIN - shiftHours * 60)
-                hours = Math.max(0, SUNDAY_END_MIN - start) / 60
-                if (halfDay) hours /= 2
-                remark = "Sunday (Double Pay) · marked manually"
+                // Marked present by hand, no punch times → full shift (half for HALF_DAY)
+                hours = halfDay ? shiftHours / 2 : shiftHours
+                notes.push("marked manually")
             }
-            hours = r2(hours)
+            late = r2(late); early = r2(early); hours = r2(hours)
+            if (late > 0) notes.push(`${Math.round(late * 60)} min late (${late} hr cut)`)
+            if (early > 0) notes.push(`left ${Math.round(early * 60)} min before 5:30 PM (${early} hr cut)`)
+            const remark = ["Sunday (Double Pay)", ...notes].join(" · ")
             if (hours > 0) {
                 sundaysWorked++
                 workedSundayKeys.add(key)
@@ -216,7 +222,7 @@ export function calcHourlyPayroll(
             const amount = r2(hours * hourlyRate * 2)
             sundayHours += hours
             sundayPay += amount
-            lines.push({ date: key, weekday, isSunday, kind: "SUNDAY_WORK", inTime, outTime, hours, lateHrs: 0, earlyHrs: 0, rate: r2(hourlyRate * 2), amount, remark })
+            lines.push({ date: key, weekday, isSunday, kind: "SUNDAY_WORK", inTime, outTime, hours, lateHrs: late, earlyHrs: early, rate: r2(hourlyRate * 2), amount, remark })
             continue
         }
 

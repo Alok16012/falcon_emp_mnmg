@@ -479,7 +479,7 @@ export default function PayrollPage() {
                                 <th className="px-2 py-3 text-center font-semibold text-blue-600">Days<Sub>Mon–Sat</Sub></th>
                                 <th className="px-2 py-3 text-right font-semibold text-blue-600">Paid Hrs<Sub>after late/early</Sub></th>
                                 <th className="px-2 py-3 text-right font-semibold text-blue-600">Day Pay</th>
-                                <th className="px-2 py-3 text-right font-semibold text-purple-600">Sunday Work<Sub>hrs × rate × 2</Sub></th>
+                                <th className="px-2 py-3 text-right font-semibold text-purple-600">Sunday Work<Sub>shift hrs × rate × 2</Sub></th>
                                 <th className="px-2 py-3 text-right font-semibold text-teal-600">Free Sundays<Sub>by days worked</Sub></th>
                                 <th className="px-2 py-3 text-center font-semibold text-[var(--text3)]">OT Hrs<Sub>×1.5, manual</Sub></th>
                                 <th className="px-2 py-3 text-right font-semibold text-[var(--accent)]">Gross</th>
@@ -662,7 +662,8 @@ function RulesPanel() {
         },
         {
             n: 4, color: "#7c3aed", bg: "#f5f0ff", title: "Working on Sunday = 2×",
-            body: <>Hours worked on Sunday are paid <b>double</b>, counted till <b>5:30 PM</b>. That Sunday gets only the double pay — no extra free-day salary.</>,
+            body: <>Sunday shift ends at <b>5:30 PM</b>. Working till 5:30 PM = <b>full shift hours</b>, paid <b>double</b>. Late / leaving before 5:30 is cut. No extra free-day salary for that Sunday.<br />
+                <span className="font-mono text-[11px]">Sunday pay = (shift hrs − late − early) × hourly × 2</span></>,
         },
     ]
     return (
@@ -698,7 +699,7 @@ function RulesPanel() {
                     <div className="font-bold text-[var(--text)] text-[11px] mb-1">Example — ₹30,000 salary, 9-hour shift</div>
                     <div>Hourly = 30,000 ÷ (30 × 9) = <b>₹111.11</b> · Daily = <b>₹1,000</b></div>
                     <div>Left 30 min early → 8.5 h × 111.11 = <b>₹944.44</b></div>
-                    <div>Sunday 8.5 h → 8.5 × 111.11 × 2 = <b>₹1,888.89</b></div>
+                    <div>Sunday 8:30 AM – 5:30 PM → full 9 h × 111.11 × 2 = <b>₹2,000</b></div>
                     <div>Worked 18 days → 3 free Sundays = <b>₹3,000</b></div>
                 </div>
             </div>
