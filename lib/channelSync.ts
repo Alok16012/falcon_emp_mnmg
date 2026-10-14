@@ -9,7 +9,7 @@
 
 import prisma from "@/lib/prisma"
 import { sendToDeviceAwait, getConnectedDevices } from "@/lib/dahuaAutoReg"
-import { processHardwareRecord } from "@/app/api/hardware/sync/route"
+import { processHardwareRecord } from "@/lib/hardwarePunch"
 
 function parseRecords(body: string): Record<string, string>[] {
     const map = new Map<string, Record<string, string>>()
@@ -143,7 +143,33 @@ export function startChannelSyncScheduler(intervalMs = 90_000) {
     }, intervalMs)
 }
 
-export async function runChannelSyncAll(): Promise<{ devices: number; imported: number; linked: number; newPunches: number }> {
+// Pull older punches day-by-day (each day stays under the device's ~1000-record
+// cap so its time filter keeps working). Waits for any running channel sync so
+// the two never fight over the device socket (one command in flight per device).
+export async function backfillPunches(
+    deviceId: string,
+    fromEpoch: number,
+    toEpoch: number,
+): Promise<{ totalNew: number; totalScanned: number; days: { day: string; newPunches: number; scanned: number }[] }> {
+    while (channelBusy) await new Promise(r => setTimeout(r, 1000))
+    channelBusy = true
+    const DAY = 86400
+    const days: { day: string; newPunches: number; scanned: number }[] = []
+    let totalNew = 0, totalScanned = 0
+    try {
+        for (let s = fromEpoch; s < toEpoch; s += DAY) {
+            const r = await syncPunches(deviceId, { start: s - 3600, end: s + DAY + 3600 })
+            days.push({ day: new Date(s * 1000).toISOString().slice(0, 10), newPunches: r.newPunches, scanned: r.scanned })
+            totalNew += r.newPunches
+            totalScanned += r.scanned
+        }
+    } finally {
+        channelBusy = false
+    }
+    return { totalNew, totalScanned, days }
+}
+
+export async function runChannelSyncAll():Promise<{ devices: number; imported: number; linked: number; newPunches: number }> {
     if (channelBusy) return { devices: 0, imported: 0, linked: 0, newPunches: 0 }
     channelBusy = true
     let imported = 0, linked = 0, newPunches = 0

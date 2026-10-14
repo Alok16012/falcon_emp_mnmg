@@ -10,7 +10,7 @@ import { getServerSession } from "next-auth"
 import { NextResponse } from "next/server"
 import { authOptions } from "@/lib/auth"
 import { sendToDeviceAwait, getConnectedDevices } from "@/lib/dahuaAutoReg"
-import { processHardwareRecord } from "@/app/api/hardware/sync/route"
+import { processHardwareRecord } from "@/lib/hardwarePunch"
 
 // Device CreateTime is unix epoch seconds (a true instant). We store it as the
 // real UTC wall-clock string; the browser (IST) then renders the correct local

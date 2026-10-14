@@ -11,7 +11,7 @@
  */
 
 import { NextResponse } from "next/server"
-import { processHardwareRecord } from "@/app/api/hardware/sync/route"
+import { processHardwareRecord } from "@/lib/hardwarePunch"
 import type { AccessControlRecord } from "@/lib/dahua"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

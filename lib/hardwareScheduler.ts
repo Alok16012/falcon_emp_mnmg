@@ -11,7 +11,7 @@
 
 import prisma from "@/lib/prisma"
 import { fetchAccessRecords } from "@/lib/dahua"
-import { processHardwareRecord } from "@/app/api/hardware/sync/route"
+import { processHardwareRecord } from "@/lib/hardwarePunch"
 
 const SYNC_INTERVAL_MS = 30 * 60 * 1000 // 30 minutes
 let isRunning = false

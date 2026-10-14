@@ -129,7 +129,7 @@ export async function GET(req: Request) {
             RecNo: parseInt(r["RecNo"] || "0"), Door: 0, Direction: 0, Method: 0,
         }
         try {
-            const { processHardwareRecord } = await import("@/app/api/hardware/sync/route")
+            const { processHardwareRecord } = await import("@/lib/hardwarePunch")
             const result = await processHardwareRecord(rec)
             return NextResponse.json({ testrec, rec, result })
         } catch (e) {

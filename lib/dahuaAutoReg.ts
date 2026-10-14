@@ -16,7 +16,7 @@
 import net from "net"
 import crypto from "crypto"
 import prisma from "@/lib/prisma"
-import { processHardwareRecord } from "@/app/api/hardware/sync/route"
+import { processHardwareRecord } from "@/lib/hardwarePunch"
 
 const AUTO_REG_PORT = parseInt(process.env.DAHUA_AUTO_REG_PORT || "8099")
 
@@ -129,9 +129,10 @@ function handleSocket(socket: net.Socket) {
         // ── Step 2: Device returns 401 with Digest challenge ──────────────────
         else if (msg.includes("HTTP/1.1 401 Unauthorized")) {
             // Find matching device credentials from DB
+            // DB unreachable → fall back to env creds so the login still completes.
             const device = await prisma.hardwareDevice.findFirst({
                 where: { ip: remoteIp, enabled: true }
-            })
+            }).catch(() => null)
 
             const username = device?.username || process.env.DAHUA_REG_USER || "admin"
             const password = device?.password || process.env.DAHUA_REG_PASS || "admin"

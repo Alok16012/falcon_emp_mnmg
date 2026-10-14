@@ -44,3 +44,10 @@ next-env.d.ts
 .netlify
 .env*.local
 .claude/
+
+# biometric agent build output
+/biometric-agent/dist/
+/biometric-agent/*.zip
+/biometric-agent/.cache/
+/biometric-agent/.env.agent
+!/biometric-agent/windows/.env.example
