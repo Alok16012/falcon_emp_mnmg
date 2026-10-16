@@ -653,7 +653,7 @@ function RulesPanel() {
         },
         {
             n: 2, color: "#dc2626", bg: "#fff1f1", title: "Hourly, shift-wise",
-            body: <>Each employee is paid for their own shift timing. Coming <b>late</b> or leaving <b>early</b> is cut by the exact minutes.<br />
+            body: <>Each employee is paid for their own shift timing. Coming <b>late</b> or leaving <b>early</b> is cut by the exact minutes. <b>7 min grace</b>: coming in up to 7 min after shift start is not cut.<br />
                 <span className="font-mono text-[11px]">Day pay = (shift hrs − late − early) × hourly</span></>,
         },
         {

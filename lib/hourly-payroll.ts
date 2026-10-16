@@ -8,7 +8,8 @@
 //       Hourly rate = monthly ÷ (30 × shift hours)
 //  2. Working day (Mon–Sat): paid hours = shift hours − late hours − early hours.
 //     Coming early / staying late adds nothing; coming late / leaving early is cut
-//     at the exact minute.
+//     at the exact minute. Grace: arriving up to 7 min after shift start is not
+//     late (no cut); from the 8th minute the full lateness from shift start is cut.
 //  3. Free Sundays (paid without working) depend on days worked in the month:
 //       0–5 → 0 · 6–11 → 1 · 12–17 → 2 · 18–23 → 3 · 24+ → 4   (max 4)
 //     Each free Sunday = one day's salary (monthly ÷ 30).
@@ -21,6 +22,7 @@
 export const SALARY_BASE_DAYS = 30
 export const MAX_FREE_SUNDAYS = 4
 export const SUNDAY_END_MIN = 17 * 60 // 5:00 PM
+export const LATE_GRACE_MIN = 7       // in by shift start + 7 min = on time
 const IST_OFFSET_MIN = 330 // punches are stored as true instants; the site runs on IST
 
 export const FREE_SUNDAY_SLABS = [
@@ -123,6 +125,13 @@ export function minToLabel(min: number) {
     return `${h12}:${String(mm).padStart(2, "0")} ${ap}`
 }
 
+/** Late hours for an IN time: 0 within the grace window, else the full minutes after shift start. */
+function lateHrsOf(inMin: number, shiftStart: number | null) {
+    if (shiftStart == null) return 0
+    const lateMin = inMin - shiftStart
+    return lateMin > LATE_GRACE_MIN ? lateMin / 60 : 0
+}
+
 export function shiftLabelOf(start?: string | null, end?: string | null) {
     const s = hmToMin(start), e = hmToMin(end)
     if (s == null || e == null) return ""
@@ -200,7 +209,7 @@ export function calcHourlyPayroll(
             let hours = 0, late = 0, early = 0
             const notes: string[] = []
             if (inMin != null && outMin != null) {
-                late = shiftStart != null ? Math.max(0, inMin - shiftStart) / 60 : 0
+                late = lateHrsOf(inMin, shiftStart)
                 early = Math.max(0, SUNDAY_END_MIN - outMin) / 60
                 hours = Math.max(0, shiftHours - late - early)
             } else if (inMin != null) {
@@ -232,7 +241,7 @@ export function calcHourlyPayroll(
         const notes: string[] = []
         if (inMin != null && outMin != null) {
             if (shiftStart != null && shiftEnd != null) {
-                late = Math.max(0, inMin - shiftStart) / 60
+                late = lateHrsOf(inMin, shiftStart)
                 early = Math.max(0, shiftEnd - outMin) / 60
                 hours = Math.max(0, shiftHours - late - early)
             } else {
