@@ -30,8 +30,9 @@ The PC's IP must not change. Give it a static IP (or a DHCP reservation on the r
 
 - **Status:** http://localhost:8098/
 - **Logs:** `C:\falcon-biometric-agent\logs\agent.log`
-- **Missed punches** (after the PC was off): every time the machine connects, the agent
-  re-pulls the last 3 days by itself. For a longer gap, open
+- **Missed punches** (after the PC was off, e.g. every night): every time the machine
+  connects, the agent re-pulls everything since the newest punch already in the ERP
+  (up to 31 days) by itself. For a longer gap, open
   `http://localhost:8098/backfill?from=YYYY-MM-DD&to=YYYY-MM-DD`
 - **Remove:** double-click `C:\falcon-biometric-agent\uninstall.bat`.
 

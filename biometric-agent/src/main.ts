@@ -1,11 +1,15 @@
 import http from "http"
 import { startAutoRegServer, getConnectedDevices, deviceSessions } from "@/lib/dahuaAutoReg"
 import { startChannelSyncScheduler, backfillPunches } from "@/lib/channelSync"
+import prisma from "@/lib/prisma"
 
 const STATUS_PORT = parseInt(process.env.AGENT_STATUS_PORT || "8098")
-// On every (re)connect, re-pull this many past days so punches stored on the
-// device while the agent/PC/network was down reach the ERP automatically.
-const AUTO_BACKFILL_DAYS = parseInt(process.env.AGENT_BACKFILL_DAYS || "3")
+// On every (re)connect, re-pull everything since the newest punch already in
+// the ERP, so punches stored on the device while the PC was off (every night,
+// weekends, long holidays) reach the ERP automatically. Capped so a wiped DB
+// doesn't trigger a months-long pull; with no punches at all, fall back to 3 days.
+const AUTO_BACKFILL_MAX_DAYS = parseInt(process.env.AGENT_BACKFILL_MAX_DAYS || "31")
+const AUTO_BACKFILL_DEFAULT_DAYS = 3
 const DAY = 86400
 
 const startedAt = new Date()
@@ -30,15 +34,24 @@ async function runBackfill(deviceId: string, fromEpoch: number, toEpoch: number)
     return r
 }
 
+// Start of the auto-backfill: the UTC day before the newest stored punch (the
+// extra day covers early-morning IST punches that fall on the previous UTC day).
+async function autoBackfillFrom(today: number): Promise<number> {
+    const latest = await prisma.punchLog.findFirst({ orderBy: { punchTime: "desc" }, select: { punchTime: true } })
+    if (!latest) return today - AUTO_BACKFILL_DEFAULT_DAYS * DAY
+    const latestDay = dayStartEpoch(latest.punchTime.toISOString().slice(0, 10))
+    return Math.max(today - AUTO_BACKFILL_MAX_DAYS * DAY, Math.min(today, latestDay) - DAY)
+}
+
 // Watch for newly connected device sessions and backfill each one once.
 function startAutoBackfill() {
     setInterval(() => {
         for (const s of deviceSessions.values()) {
             if (!s.socket.writable || backfilledSockets.has(s.socket)) continue
             backfilledSockets.add(s.socket)
-            const now = Math.floor(Date.now() / 1000)
             const today = dayStartEpoch(new Date().toISOString().slice(0, 10))
-            runBackfill(s.deviceId, today - AUTO_BACKFILL_DAYS * DAY, Math.min(today + DAY, now + DAY))
+            autoBackfillFrom(today)
+                .then(from => runBackfill(s.deviceId, from, today + DAY))
                 .catch(e => console.error("[AGENT] auto backfill failed:", e))
         }
     }, 15_000)

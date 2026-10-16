@@ -44,10 +44,14 @@ netsh advfirewall firewall add rule name="Falcon Biometric 8099" dir=in action=a
 echo [4/5] PC ka sleep band kar rahe hain...
 powercfg /change standby-timeout-ac 0
 powercfg /change hibernate-timeout-ac 0
+REM Fast Startup turns "Shut down" into a half-hibernate, after which the
+REM at-startup task may not fire. Hibernate off = Fast Startup off = clean boots.
+powercfg /h off
 
 echo [5/5] Auto-start task bana rahe hain...
 REM Task Scheduler stops tasks after 72h by default - ExecutionTimeLimit 0 = run forever
-powershell -NoProfile -Command "$a=New-ScheduledTaskAction -Execute '%DEST%\run.bat'; $t=New-ScheduledTaskTrigger -AtStartup; $s=New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1); Register-ScheduledTask -TaskName FalconBiometric -Action $a -Trigger $t -Settings $s -User SYSTEM -RunLevel Highest -Force | Out-Null" || ( echo  [X] Task create failed & pause & exit /b 1 )
+REM At-logon is a backup start; if the agent is already running it is ignored (IgnoreNew).
+powershell -NoProfile -Command "$a=New-ScheduledTaskAction -Execute '%DEST%\run.bat'; $t=@((New-ScheduledTaskTrigger -AtStartup), (New-ScheduledTaskTrigger -AtLogOn));$s=New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1); Register-ScheduledTask -TaskName FalconBiometric -Action $a -Trigger $t -Settings $s -User SYSTEM -RunLevel Highest -Force | Out-Null" || ( echo  [X] Task create failed & pause & exit /b 1 )
 schtasks /run /tn "FalconBiometric" >nul
 
 echo.
