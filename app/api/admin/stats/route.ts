@@ -29,9 +29,9 @@ export async function GET() {
             thisMonthAdvances,
             recentEmployees,
         ] = await Promise.all([
-            prisma.employee.count({ where: { status: "ACTIVE", OR: NOT_JOIN_FORM } }),
-            prisma.employee.count({ where: { status: "ACTIVE", employeeCategory: "LABOUR", OR: NOT_JOIN_FORM } }),
-            prisma.employee.count({ where: { status: "ACTIVE", employeeCategory: "STAFF", OR: NOT_JOIN_FORM } }),
+            prisma.employee.count({ where: { status: "ACTIVE", deletedAt: null, OR: NOT_JOIN_FORM } }),
+            prisma.employee.count({ where: { status: "ACTIVE", deletedAt: null, employeeCategory: "LABOUR", OR: NOT_JOIN_FORM } }),
+            prisma.employee.count({ where: { status: "ACTIVE", deletedAt: null, employeeCategory: "STAFF", OR: NOT_JOIN_FORM } }),
             prisma.attendance.findMany({
                 where: { date: { gte: todayStart, lt: todayEnd } },
                 select: { status: true },
@@ -47,7 +47,7 @@ export async function GET() {
                 _count: true,
             }),
             prisma.employee.findMany({
-                where: { status: "ACTIVE", OR: NOT_JOIN_FORM },
+                where: { status: "ACTIVE", deletedAt: null, OR: NOT_JOIN_FORM },
                 orderBy: { createdAt: "desc" },
                 take: 6,
                 select: {

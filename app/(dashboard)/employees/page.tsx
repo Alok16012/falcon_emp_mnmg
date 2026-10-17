@@ -1290,11 +1290,11 @@ export default function EmployeesPage() {
     }
 
     const handleHardDelete = async (id: string, name: string) => {
-        if (!confirm(`PERMANENTLY DELETE "${name}"?\n\nYeh employee aur uske saare records (attendance, leaves, payroll) hamesha ke liye delete ho jaayenge. Yeh action undo nahi ho sakta.`)) return
+        if (!confirm(`DELETE "${name}"?\n\nEmployee list se hat jaayega. Attendance, leaves, payroll ka data safe rahega.`)) return
         try {
-            const res = await fetch(`/api/employees/${id}?force=true`, { method: "DELETE" })
+            const res = await fetch(`/api/employees/${id}`, { method: "DELETE" })
             if (!res.ok) throw new Error(await res.text())
-            toast.success("Employee permanently deleted")
+            toast.success("Employee deleted")
             removeFromList([id])
             fetchEmployees()
         } catch (err: unknown) {
@@ -1329,13 +1329,13 @@ export default function EmployeesPage() {
     const handleBulkDelete = async () => {
         const ids = Array.from(selectedIds)
         if (ids.length === 0) return
-        if (!confirm(`PERMANENTLY DELETE ${ids.length} employee(s)?\n\nUnke saare records (attendance, leaves, payroll) bhi hamesha ke liye delete ho jaayenge. Yeh undo nahi ho sakta.`)) return
+        if (!confirm(`DELETE ${ids.length} employee(s)?\n\nList se hat jaayenge. Attendance, leaves, payroll ka data safe rahega.`)) return
         setBulkDeleting(true)
         try {
             const res = await fetch("/api/employees/bulk-delete", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ids, force: true }),
+                body: JSON.stringify({ ids }),
             })
             const data = await res.json()
             if (!res.ok) throw new Error(data.error || "Failed")

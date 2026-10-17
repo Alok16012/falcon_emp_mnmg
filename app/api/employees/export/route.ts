@@ -40,8 +40,8 @@ export async function GET(req: Request) {
 
     const employees = await prisma.employee.findMany({
         where: includeInactive
-            ? notJoinForm
-            : { AND: [notJoinForm, { status: { notIn: ["TERMINATED", "RESIGNED"] } }] },
+            ? { AND: [notJoinForm, { deletedAt: null }] }
+            : { AND: [notJoinForm, { deletedAt: null }, { status: { notIn: ["TERMINATED", "RESIGNED"] } }] },
         include: {
             branch: { select: { name: true } },
             department: { select: { name: true } },

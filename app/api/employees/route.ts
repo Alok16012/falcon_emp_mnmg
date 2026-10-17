@@ -4,7 +4,6 @@ import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
 import { canAccessModule } from "@/lib/modules"
 import bcrypt from "bcryptjs"
-import { withoutRecreatedDeleted } from "@/lib/deletedDeviceUsers"
 
 // Marker that /api/join writes into Employee.notes for self-submitted joining-form
 // entries. Those workers live ONLY in the Joinings dashboard and must never appear
@@ -67,6 +66,7 @@ export async function GET(req: Request) {
         // the Joinings dashboard. (null-safe: keep employees with no notes.)
         where.AND = [
             { OR: [{ notes: null }, { notes: { not: { contains: JOIN_MARKER } } }] },
+            { deletedAt: null }, // deleted in the portal = hidden
         ]
 
         const employees = await prisma.employee.findMany({
@@ -101,7 +101,7 @@ export async function GET(req: Request) {
         })
 
         // No caching: a cached list kept showing employees right after they were deleted.
-        return NextResponse.json(await withoutRecreatedDeleted(employees), {
+        return NextResponse.json(employees, {
             headers: { "Cache-Control": "no-store" },
         })
     } catch (error) {

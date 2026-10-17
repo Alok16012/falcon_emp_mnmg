@@ -411,6 +411,7 @@ model Employee {
   branchId               String?
   dateOfJoining          DateTime?
   dateOfLeaving          DateTime?
+  deletedAt              DateTime? // set by Delete in the portal: hidden from lists, all data kept
   status                 EmployeeStatus            @default(ACTIVE)
   employmentType         String                    @default("Full-time")
   employeeCategory       String                    @default("STAFF")

@@ -3,7 +3,6 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
 import { canAccessModule } from "@/lib/modules"
-import { hardDeleteEmployee } from "@/lib/deletedDeviceUsers"
 
 // Compute shift duration in hours from "HH:MM" start/end times (handles overnight shifts)
 function hoursFromShiftTimes(start?: string | null, end?: string | null): number | null {
@@ -200,58 +199,14 @@ export async function DELETE(
             return new NextResponse("Forbidden", { status: 403 })
         }
 
-        const { searchParams } = new URL(req.url)
-        const force = searchParams.get("force") === "true"
-
-        const employee = await prisma.employee.findUnique({
-            where: { id: params.id },
-            include: {
-                _count: {
-                    select: {
-                        attendances: true,
-                        leaves: true,
-                        payrolls: true,
-                        deployments: true,
-                    },
-                },
-            },
-        })
-
+        const employee = await prisma.employee.findUnique({ where: { id: params.id }, select: { id: true } })
         if (!employee) return new NextResponse("Not Found", { status: 404 })
 
-        if (force) {
-            // Permanent delete. Biometric-enrolled workers are tombstoned inside
-            // hardDeleteEmployee so the device sync doesn't re-create them.
-            await hardDeleteEmployee(params.id)
-            return NextResponse.json({ success: true, softDeleted: false, hardDeleted: true })
-        }
-
-        // Without force, device-linked workers are only TERMINATED (keeping
-        // hardwareUserId) so the device sync keeps recognising them.
-        if (employee.hardwareUserId) {
-            const updated = await prisma.employee.update({
-                where: { id: params.id },
-                data: { status: "TERMINATED" },
-            })
-            return NextResponse.json({ success: true, softDeleted: true, deviceLinked: true, employee: updated })
-        }
-
-        const hasRecords =
-            employee._count.attendances > 0 ||
-            employee._count.leaves > 0 ||
-            employee._count.payrolls > 0 ||
-            employee._count.deployments > 0
-
-        if (hasRecords) {
-            const updated = await prisma.employee.update({
-                where: { id: params.id },
-                data: { status: "TERMINATED" },
-            })
-            return NextResponse.json({ success: true, softDeleted: true, employee: updated })
-        }
-
-        await prisma.employee.delete({ where: { id: params.id } })
-        return NextResponse.json({ success: true, softDeleted: false })
+        // Delete only hides the employee from the portal. Attendance, punches,
+        // payroll etc. are kept, and since hardwareUserId stays, the device sync
+        // recognises them and doesn't re-create them.
+        await prisma.employee.update({ where: { id: params.id }, data: { deletedAt: new Date() } })
+        return NextResponse.json({ success: true, hidden: true })
     } catch (error) {
         console.error("[EMPLOYEE_DELETE]", error)
         return new NextResponse("Internal Error", { status: 500 })
