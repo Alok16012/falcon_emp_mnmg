@@ -13,6 +13,7 @@ import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
 import { canAccessModule } from "@/lib/modules"
 import { sendToDeviceAwait, getConnectedDevices } from "@/lib/dahuaAutoReg"
+import { getDeletedDeviceUsers, isDeletedDeviceUser } from "@/lib/deletedDeviceUsers"
 
 type DevUser = { userId: string; name: string }
 
@@ -75,7 +76,14 @@ export async function POST(req: Request) {
     let imported = 0, linked = 0, skipped = 0
     const results: { userId: string; name: string; action: string }[] = []
 
+    const deleted = await getDeletedDeviceUsers()
     for (const u of users) {
+        if (isDeletedDeviceUser(deleted, u.userId, u.name)) {
+            skipped++
+            results.push({ userId: u.userId, name: u.name, action: "deleted in ERP" })
+            continue
+        }
+
         // Already linked to an employee?
         const existing = await prisma.employee.findFirst({
             where: { hardwareUserId: u.userId },

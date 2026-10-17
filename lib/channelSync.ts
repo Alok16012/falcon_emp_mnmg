@@ -10,6 +10,7 @@
 import prisma from "@/lib/prisma"
 import { sendToDeviceAwait, getConnectedDevices } from "@/lib/dahuaAutoReg"
 import { processHardwareRecord } from "@/lib/hardwarePunch"
+import { getDeletedDeviceUsers, isDeletedDeviceUser } from "@/lib/deletedDeviceUsers"
 
 function parseRecords(body: string): Record<string, string>[] {
     const map = new Map<string, Record<string, string>>()
@@ -46,11 +47,13 @@ export async function importDeviceUsers(deviceId: string): Promise<{ imported: n
     const res = await sendToDeviceAwait(deviceId, "GET", "/cgi-bin/recordFinder.cgi?action=find&name=AccessControlCard&count=1000", "", 30000)
     if (!res.ok) return { imported: 0, linked: 0 }
 
+    const deleted = await getDeletedDeviceUsers()
     let imported = 0, linked = 0
     for (const r of parseRecords(res.body)) {
         const userId = (r["UserID"] || "").trim()
         if (!userId) continue
         const name = (r["CardName"] || "").trim()
+        if (isDeletedDeviceUser(deleted, userId, name)) continue // permanently deleted in ERP
 
         const existing = await prisma.employee.findFirst({ where: { hardwareUserId: userId }, select: { id: true } })
         if (existing) continue

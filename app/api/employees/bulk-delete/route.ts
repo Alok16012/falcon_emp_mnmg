@@ -10,6 +10,7 @@ import { getServerSession } from "next-auth"
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
+import { hardDeleteEmployee } from "@/lib/deletedDeviceUsers"
 
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions)
@@ -26,12 +27,7 @@ export async function POST(req: Request) {
     for (const id of ids) {
         try {
             if (force) {
-                await prisma.punchLog.deleteMany({ where: { employeeId: id } })
-                await prisma.attendance.deleteMany({ where: { employeeId: id } })
-                await prisma.leave.deleteMany({ where: { employeeId: id } })
-                await prisma.payroll.deleteMany({ where: { employeeId: id } })
-                await prisma.advanceAndReimbursement.deleteMany({ where: { employeeId: id } })
-                await prisma.employee.delete({ where: { id } })
+                await hardDeleteEmployee(id)
                 deleted++
             } else {
                 const emp = await prisma.employee.findUnique({

@@ -1719,6 +1719,16 @@ model HardwareSyncLog {
   syncedAt     DateTime @default(now())
 }
 
+// ─── Deleted Device Users ─────────────────────────────────────────────────────
+// Tombstones for employees permanently deleted from the ERP while still
+// enrolled on a biometric device. Device-user import skips these so the
+// deleted worker isn't re-created by the 90s channel sync.
+model DeletedDeviceUser {
+  hardwareUserId String   @id
+  name           String?  // device CardName at delete time; a different name on the same ID is treated as a new person
+  deletedAt      DateTime @default(now())
+}
+
 // ─── Product Inquiry ──────────────────────────────────────────────────────────
 enum InquiryStatus {
   ACTIVE
