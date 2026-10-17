@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
 import { canAccessModule } from "@/lib/modules"
 import bcrypt from "bcryptjs"
+import { withoutRecreatedDeleted } from "@/lib/deletedDeviceUsers"
 
 // Marker that /api/join writes into Employee.notes for self-submitted joining-form
 // entries. Those workers live ONLY in the Joinings dashboard and must never appear
@@ -99,12 +100,9 @@ export async function GET(req: Request) {
             orderBy: { createdAt: "desc" },
         })
 
-        return NextResponse.json(employees, {
-            headers: {
-                // Browser/CDN caches for 30s, serves stale while revalidating for 60s
-                // This means 2nd page load within 30s = instant (from cache)
-                "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
-            },
+        // No caching: a cached list kept showing employees right after they were deleted.
+        return NextResponse.json(await withoutRecreatedDeleted(employees), {
+            headers: { "Cache-Control": "no-store" },
         })
     } catch (error) {
         console.error("[EMPLOYEES_GET]", error)

@@ -1124,7 +1124,7 @@ export default function EmployeesPage() {
     const fetchEmployees = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await fetch("/api/employees")
+            const res = await fetch("/api/employees", { cache: "no-store" })
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data = await res.json()
             const list = Array.isArray(data) ? data : []
@@ -1282,12 +1282,20 @@ export default function EmployeesPage() {
         }
     }
 
+    // Drop deleted rows from the table immediately, without waiting for the refetch
+    const removeFromList = (ids: string[]) => {
+        const gone = new Set(ids)
+        setAllEmployees(prev => prev.filter(e => !gone.has(e.id)))
+        setEmployees(prev => prev.filter(e => !gone.has(e.id)))
+    }
+
     const handleHardDelete = async (id: string, name: string) => {
         if (!confirm(`PERMANENTLY DELETE "${name}"?\n\nYeh employee aur uske saare records (attendance, leaves, payroll) hamesha ke liye delete ho jaayenge. Yeh action undo nahi ho sakta.`)) return
         try {
             const res = await fetch(`/api/employees/${id}?force=true`, { method: "DELETE" })
             if (!res.ok) throw new Error(await res.text())
             toast.success("Employee permanently deleted")
+            removeFromList([id])
             fetchEmployees()
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "Failed to delete")
@@ -1333,6 +1341,7 @@ export default function EmployeesPage() {
             if (!res.ok) throw new Error(data.error || "Failed")
             toast.success(data.message || "Deleted")
             setSelectedIds(new Set())
+            removeFromList(ids)
             fetchEmployees()
         } catch (err: unknown) {
             toast.error(err instanceof Error ? err.message : "Bulk delete failed")
