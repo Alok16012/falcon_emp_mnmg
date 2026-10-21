@@ -2,7 +2,8 @@
 import { useState, useEffect, useCallback } from "react"
 import { format } from "date-fns"
 import { toast } from "sonner"
-import { Plus, IndianRupee, X, Trash2, Search, Calendar } from "lucide-react"
+import { Plus, IndianRupee, X, Trash2, Search, Calendar, Download } from "lucide-react"
+import * as XLSX from "xlsx"
 
 type Employee = {
     id: string; employeeId: string; firstName: string; lastName: string
@@ -116,6 +117,43 @@ export default function AdvancesPage() {
 
     const totalAmount = filtered.reduce((s, a) => s + a.amount, 0)
 
+    // Excel of the given advances: one row per advance plus a total row
+    const exportExcel = (list: Advance[], fileTag: string) => {
+        if (list.length === 0) { toast.error("No advance records to download"); return }
+        const rows: Record<string, string | number>[] = list.map((a, i) => ({
+            "S.No": i + 1,
+            "Employee ID": a.employee.employeeId,
+            "Name": `${a.employee.firstName} ${a.employee.lastName}`.replace(/ \.$/, ""),
+            "Type": a.employee.employeeCategory === "LABOUR" ? "Labour" : "Staff",
+            "Department": a.employee.department?.name || "",
+            "Designation": a.employee.designation || "",
+            "Amount (₹)": a.amount,
+            "Advance Date": format(new Date(a.advanceDate || a.createdAt), "dd-MM-yyyy"),
+            "Deduct Month": `${MONTHS[a.monthToImpact - 1]} ${a.yearToImpact}`,
+            "Reason": a.reason || "",
+            "Status": a.status,
+        }))
+        rows.push({ "S.No": "", "Employee ID": "", "Name": "TOTAL", "Amount (₹)": list.reduce((s, a) => s + a.amount, 0) })
+        const ws = XLSX.utils.json_to_sheet(rows)
+        ws["!cols"] = [6, 12, 24, 8, 16, 16, 12, 13, 13, 28, 10].map(wch => ({ wch }))
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, "Advances")
+        XLSX.writeFile(wb, `Advances_${fileTag}.xlsx`)
+    }
+
+    const [exportingAll, setExportingAll] = useState(false)
+    const exportAll = async () => {
+        setExportingAll(true)
+        try {
+            const r = await fetch("/api/advances", { cache: "no-store" })
+            if (!r.ok) throw new Error()
+            const all: Advance[] = await r.json()
+            all.sort((a, b) => (b.yearToImpact - a.yearToImpact) || (b.monthToImpact - a.monthToImpact))
+            exportExcel(all, "All")
+        } catch { toast.error("Failed to download") }
+        finally { setExportingAll(false) }
+    }
+
     return (
         <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
             {/* Header */}
@@ -124,10 +162,20 @@ export default function AdvancesPage() {
                     <h1 className="text-[22px] font-bold text-[var(--text)]">Advance Salary</h1>
                     <p className="text-[13px] text-[var(--text3)] mt-0.5">Track and manage advance salary payments</p>
                 </div>
-                <button onClick={() => setShowModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-[9px] text-[13px] font-semibold hover:bg-[#0847c7] transition-colors">
-                    <Plus size={15} /> Give Advance
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                    <button onClick={() => exportExcel(filtered, `${MONTHS[filterMonth-1]}_${filterYear}`)}
+                        className="flex items-center gap-2 px-3.5 py-2 bg-white border border-[var(--border)] text-[var(--text)] rounded-[9px] text-[13px] font-semibold hover:bg-[var(--surface2)] transition-colors">
+                        <Download size={14} className="text-[var(--accent)]" /> Excel ({MONTHS[filterMonth-1]})
+                    </button>
+                    <button onClick={exportAll} disabled={exportingAll}
+                        className="flex items-center gap-2 px-3.5 py-2 bg-white border border-[var(--border)] text-[var(--text)] rounded-[9px] text-[13px] font-semibold hover:bg-[var(--surface2)] transition-colors disabled:opacity-60">
+                        <Download size={14} className="text-[var(--accent)]" /> {exportingAll ? "Downloading…" : "Excel (All)"}
+                    </button>
+                    <button onClick={() => setShowModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-[9px] text-[13px] font-semibold hover:bg-[#0847c7] transition-colors">
+                        <Plus size={15} /> Give Advance
+                    </button>
+                </div>
             </div>
 
             {/* Summary */}
