@@ -183,7 +183,8 @@ export default function PayrollPage() {
 
     // Excel export: summary sheet + day-wise sheet (so every rupee can be traced)
     const exportExcel = () => {
-        const summary = displayRows.map((r, i) => ({
+        if (displayRows.length === 0) { toast.error("No payroll rows to download"); return }
+        const summary: Record<string, string | number>[] = displayRows.map((r, i) => ({
             "#": i + 1,
             "Employee ID": r.employeeId,
             "Name": r.name,
@@ -209,6 +210,21 @@ export default function PayrollPage() {
             "Net Payable (₹)": r.calc.net,
             "Status": r.payrollStatus === "PAID" ? "PAID" : "PENDING",
         }))
+        const sum = (f: (r: typeof displayRows[number]) => number) =>
+            Math.round(displayRows.reduce((s, r) => s + (f(r) || 0), 0) * 100) / 100
+        summary.push({
+            "#": "", "Employee ID": "", "Name": "TOTAL",
+            "Days Worked (Mon–Sat)": sum(r => r.calc.daysWorked),
+            "Paid Hours": sum(r => r.calc.workHours),
+            "Working Day Pay (₹)": sum(r => r.calc.workPay),
+            "Sunday Pay ×2 (₹)": sum(r => r.calc.sundayPay),
+            "Free Sunday Pay (₹)": sum(r => r.calc.freeSundayPay),
+            "OT Hours": sum(r => r.calc.otHrs),
+            "OT Pay (₹)": sum(r => r.calc.otPay),
+            "Gross (₹)": sum(r => r.calc.gross),
+            "Advance (₹)": sum(r => r.calc.advance),
+            "Net Payable (₹)": sum(r => r.calc.net),
+        })
         const daywise = displayRows.flatMap(r => r.calc.lines.map(l => ({
             "Employee ID": r.employeeId,
             "Name": r.name,
@@ -301,7 +317,7 @@ export default function PayrollPage() {
                     </button>
                     <button onClick={exportExcel}
                         className="flex items-center gap-2 border border-[var(--border)] bg-white rounded-[12px] text-[13px] font-semibold px-4 py-2.5 hover:bg-[var(--surface2)] transition-colors shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
-                        <Download size={14} className="text-[var(--accent)]" /> Export
+                        <Download size={14} className="text-[var(--accent)]" /> Download Excel
                     </button>
                 </div>
             </div>
