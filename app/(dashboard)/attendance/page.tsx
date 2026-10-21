@@ -7,6 +7,7 @@ import {
     Calendar, Users, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight,
     LogIn, LogOut, Search, Download, AlertTriangle, ChevronRight as ChevronRightIcon
 } from "lucide-react"
+import * as XLSX from "xlsx"
 
 type Employee = {
     id: string
@@ -182,28 +183,100 @@ export default function AttendancePage() {
         return true
     })
 
-    // CSV export of today's table
-    const exportCSV = () => {
-        const rows = [["Employee", "ID", "Type", "Punch In", "Punch Out", "Total Hours", "Status"]]
-        visible.forEach(e => {
+    const empName = (e: Employee) => `${e.firstName} ${e.lastName}`.replace(/ \.$/, "")
+    const statusLabel = (rec?: AttRecord) => rec ? (STATUS_COLOR[rec.status]?.label || rec.status) : "Absent"
+    const hrsCell = (rec?: AttRecord) => { const h = totalHrs(rec); return h > 0 ? Math.round(h * 100) / 100 : "" }
+    const timeCell = (dt: string) => { const t = fmtTime(dt); return t === "—" ? "" : t }
+    const fitCols = (ws: XLSX.WorkSheet, rows: Record<string, unknown>[]) => {
+        ws["!cols"] = Object.keys(rows[0] ?? {}).map(k => ({ wch: Math.max(k.length + 2, 10) }))
+    }
+
+    // Excel of the selected day — same rows as the table (respects type / search / status card)
+    const exportDayExcel = () => {
+        const rows = visible.map((e, i) => {
             const rec = attMap[e.id]
-            rows.push([
-                `${e.firstName} ${e.lastName}`,
-                e.employeeId,
-                e.employeeCategory,
-                fmtTime(punchIn(rec)),
-                fmtTime(punchOut(rec)),
-                fmtHrsMin(totalHrs(rec)),
-                rec ? (STATUS_COLOR[rec.status]?.label || rec.status) : "Absent",
-            ])
+            return {
+                "#": i + 1,
+                "Employee ID": e.employeeId,
+                "Name": empName(e),
+                "Type": e.employeeCategory === "LABOUR" ? "Labour" : "Staff",
+                "Department": e.department?.name || "",
+                "Punch In": timeCell(punchIn(rec)),
+                "Punch Out": timeCell(punchOut(rec)),
+                "Total Hours": hrsCell(rec),
+                "Status": statusLabel(rec),
+            }
         })
-        const csv = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n")
-        const blob = new Blob([csv], { type: "text/csv" })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        const tag = statusFilter === "ALL" ? "" : `-${statusFilter.toLowerCase()}`
-        a.href = url; a.download = `attendance-${date}${tag}.csv`; a.click()
-        URL.revokeObjectURL(url)
+        const ws = XLSX.utils.json_to_sheet(rows)
+        fitCols(ws, rows); ws["!cols"]![2] = { wch: 24 }
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, "Attendance")
+        const tag = statusFilter === "ALL" ? "" : `_${statusFilter.toLowerCase()}`
+        XLSX.writeFile(wb, `Attendance_${format(parseISO(date), "dd-MM-yyyy")}${tag}.xlsx`)
+    }
+
+    // Monthly register for the month of the selected date: employee × day grid
+    // (P / A / HD / H / WO) + a day-wise detail sheet with punch times
+    const [exportingMonth, setExportingMonth] = useState(false)
+    const exportMonthExcel = async () => {
+        setExportingMonth(true)
+        try {
+            const d = parseISO(date)
+            const y = d.getFullYear(), m = d.getMonth() + 1
+            const r = await fetch(`/api/attendance?month=${y}-${String(m).padStart(2, "0")}`, { cache: "no-store" })
+            if (!r.ok) throw new Error()
+            const recs: AttRecord[] = await r.json()
+            const byEmpDay = new Map<string, AttRecord>()
+            for (const rec of recs) if (rec.date) byEmpDay.set(`${rec.employeeId}|${Number(rec.date.slice(8, 10))}`, rec)
+
+            const daysInMonth = new Date(y, m, 0).getDate()
+            const CODE: Record<string, string> = { PRESENT: "P", ABSENT: "A", HALF_DAY: "HD", HOLIDAY: "H", WEEKLY_OFF: "WO" }
+            const register = filtered.map((e, i) => {
+                const row: Record<string, string | number> = {
+                    "#": i + 1, "Employee ID": e.employeeId, "Name": empName(e),
+                    "Type": e.employeeCategory === "LABOUR" ? "Labour" : "Staff",
+                }
+                let present = 0, half = 0, hrs = 0
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const rec = byEmpDay.get(`${e.id}|${day}`)
+                    row[String(day)] = rec ? (CODE[rec.status] || rec.status) : "A"
+                    if (rec?.status === "PRESENT") present++
+                    if (rec?.status === "HALF_DAY") half++
+                    hrs += totalHrs(rec)
+                }
+                row["Present"] = present
+                row["Half Day"] = half
+                row["Total Hours"] = Math.round(hrs * 100) / 100
+                return row
+            })
+            const details = filtered.flatMap(e => {
+                const out: Record<string, string | number>[] = []
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const rec = byEmpDay.get(`${e.id}|${day}`)
+                    if (!rec) continue
+                    out.push({
+                        "Date": format(new Date(y, m - 1, day), "dd-MM-yyyy"),
+                        "Day": format(new Date(y, m - 1, day), "EEE"),
+                        "Employee ID": e.employeeId, "Name": empName(e),
+                        "Punch In": timeCell(punchIn(rec)), "Punch Out": timeCell(punchOut(rec)),
+                        "Total Hours": hrsCell(rec), "Status": statusLabel(rec),
+                    })
+                }
+                return out
+            })
+            if (register.length === 0) { toast.error("No employees to download"); return }
+
+            const wb = XLSX.utils.book_new()
+            const ws1 = XLSX.utils.json_to_sheet(register)
+            ws1["!cols"] = Object.keys(register[0]).map(k =>
+                ({ wch: k === "Name" ? 24 : /^\d+$/.test(k) ? 4 : Math.max(k.length + 2, 8) }))
+            XLSX.utils.book_append_sheet(wb, ws1, "Monthly Register")
+            const ws2 = XLSX.utils.json_to_sheet(details.length ? details : [{ "Date": "No punches this month" }])
+            fitCols(ws2, details); if (ws2["!cols"]?.[3]) ws2["!cols"][3] = { wch: 24 }
+            XLSX.utils.book_append_sheet(wb, ws2, "Day-wise")
+            XLSX.writeFile(wb, `Attendance_${format(d, "MMM_yyyy")}.xlsx`)
+        } catch { toast.error("Failed to download monthly attendance") }
+        finally { setExportingMonth(false) }
     }
 
     return (
@@ -214,10 +287,16 @@ export default function AttendancePage() {
                     <h1 className="text-[24px] font-bold text-[var(--text)]">Attendance</h1>
                     <p className="text-[13px] text-[var(--text3)] mt-0.5">Track punch in / out and working hours</p>
                 </div>
-                <button onClick={exportCSV} disabled={visible.length === 0}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] text-white rounded-[12px] text-[13px] font-semibold disabled:opacity-60 hover:bg-[#0847c7] transition-colors shadow-sm">
-                    <Download size={15} /> Export Excel
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                    <button onClick={exportDayExcel} disabled={visible.length === 0}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[var(--border)] text-[var(--text)] rounded-[12px] text-[13px] font-semibold disabled:opacity-60 hover:bg-[var(--surface2)] transition-colors shadow-sm">
+                        <Download size={15} className="text-[var(--accent)]" /> Excel ({format(parseISO(date), "dd MMM")})
+                    </button>
+                    <button onClick={exportMonthExcel} disabled={exportingMonth}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] text-white rounded-[12px] text-[13px] font-semibold disabled:opacity-60 hover:bg-[#0847c7] transition-colors shadow-sm">
+                        <Download size={15} /> {exportingMonth ? "Downloading…" : `Excel (${format(parseISO(date), "MMM yyyy")})`}
+                    </button>
+                </div>
             </div>
 
             {/* Date Navigator */}
