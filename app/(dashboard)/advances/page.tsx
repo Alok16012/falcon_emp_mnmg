@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { format } from "date-fns"
 import { toast } from "sonner"
-import { Plus, IndianRupee, X, Trash2, Search, Calendar, Download } from "lucide-react"
+import { Plus, IndianRupee, X, Trash2, Pencil, Search, Calendar, Download } from "lucide-react"
 import * as XLSX from "xlsx"
 
 type Employee = {
@@ -43,6 +43,7 @@ export default function AdvancesPage() {
     })
     const [saving, setSaving] = useState(false)
     const [empSearch, setEmpSearch] = useState("")
+    const [editingId, setEditingId] = useState<string | null>(null)
 
     const fetchAdvances = useCallback(async () => {
         setLoading(true)
@@ -80,21 +81,40 @@ export default function AdvancesPage() {
         }
     }
 
+    const closeModal = () => {
+        setShowModal(false)
+        setEditingId(null)
+        setForm({ employeeId: "", amount: "", reason: "", advanceDate: todayStr(), monthToImpact: String(now.getMonth() + 1), yearToImpact: String(now.getFullYear()) })
+        setEmpSearch("")
+    }
+
+    const openEdit = (adv: Advance) => {
+        setEditingId(adv.id)
+        setForm({
+            employeeId: adv.employeeId,
+            amount: String(adv.amount),
+            reason: adv.reason || "",
+            advanceDate: adv.advanceDate ? adv.advanceDate.slice(0, 10) : todayStr(),
+            monthToImpact: String(adv.monthToImpact),
+            yearToImpact: String(adv.yearToImpact),
+        })
+        setEmpSearch(`${adv.employee.firstName} ${adv.employee.lastName}`)
+        setShowModal(true)
+    }
+
     const handleSubmit = async (ev: React.FormEvent) => {
         ev.preventDefault()
         if (!form.employeeId || !form.amount) { toast.error("Employee and amount required"); return }
         setSaving(true)
         try {
             const r = await fetch("/api/advances", {
-                method: "POST",
+                method: editingId ? "PUT" : "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(form),
+                body: JSON.stringify(editingId ? { ...form, id: editingId } : form),
             })
             if (!r.ok) throw new Error()
-            toast.success("Advance salary recorded!")
-            setShowModal(false)
-            setForm({ employeeId: "", amount: "", reason: "", advanceDate: todayStr(), monthToImpact: String(now.getMonth() + 1), yearToImpact: String(now.getFullYear()) })
-            setEmpSearch("")
+            toast.success(editingId ? "Advance updated!" : "Advance salary recorded!")
+            closeModal()
             fetchAdvances()
         } catch { toast.error("Failed to save advance") }
         finally { setSaving(false) }
@@ -249,10 +269,16 @@ export default function AdvancesPage() {
                                             : format(new Date(adv.createdAt), "dd MMM yyyy")}
                                     </p>
                                 </div>
-                                <button onClick={() => handleDelete(adv.id)}
-                                    className="p-1.5 rounded-[8px] hover:bg-red-50 text-[var(--text3)] hover:text-red-600 transition-colors shrink-0">
-                                    <Trash2 size={15} />
-                                </button>
+                                <div className="flex items-center gap-1 shrink-0">
+                                    <button onClick={() => openEdit(adv)}
+                                        className="p-1.5 rounded-[8px] hover:bg-[var(--surface2)] text-[var(--text3)] hover:text-[var(--accent)] transition-colors">
+                                        <Pencil size={15} />
+                                    </button>
+                                    <button onClick={() => handleDelete(adv.id)}
+                                        className="p-1.5 rounded-[8px] hover:bg-red-50 text-[var(--text3)] hover:text-red-600 transition-colors">
+                                        <Trash2 size={15} />
+                                    </button>
+                                </div>
                             </div>
                             <div className="flex items-center gap-3 mt-2.5 pt-2.5 border-t border-[var(--border)] text-[11.5px] text-[var(--text2)]">
                                 <span><span className="text-[var(--text3)]">Deduct:</span> {MONTHS[adv.monthToImpact - 1]} {adv.yearToImpact}</span>
@@ -344,10 +370,16 @@ export default function AdvancesPage() {
                                     </td>
                                     <td className="px-4 py-3 text-[13px] text-[var(--text2)]">{adv.reason || "—"}</td>
                                     <td className="px-4 py-3">
-                                        <button onClick={() => handleDelete(adv.id)}
-                                            className="p-1.5 rounded-[6px] hover:bg-red-50 text-[var(--text3)] hover:text-red-600 transition-colors">
-                                            <Trash2 size={14} />
-                                        </button>
+                                        <div className="flex items-center gap-1">
+                                            <button onClick={() => openEdit(adv)}
+                                                className="p-1.5 rounded-[6px] hover:bg-[var(--surface2)] text-[var(--text3)] hover:text-[var(--accent)] transition-colors">
+                                                <Pencil size={14} />
+                                            </button>
+                                            <button onClick={() => handleDelete(adv.id)}
+                                                className="p-1.5 rounded-[6px] hover:bg-red-50 text-[var(--text3)] hover:text-red-600 transition-colors">
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -369,8 +401,8 @@ export default function AdvancesPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
                     <div className="bg-white rounded-[16px] border border-[var(--border)] w-full max-w-md shadow-xl">
                         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
-                            <h2 className="text-[16px] font-semibold text-[var(--text)]">Give Advance Salary</h2>
-                            <button onClick={() => setShowModal(false)} className="text-[var(--text3)] hover:text-[var(--text)] p-1 rounded-md hover:bg-[var(--surface2)]">
+                            <h2 className="text-[16px] font-semibold text-[var(--text)]">{editingId ? "Edit Advance Salary" : "Give Advance Salary"}</h2>
+                            <button onClick={closeModal} className="text-[var(--text3)] hover:text-[var(--text)] p-1 rounded-md hover:bg-[var(--surface2)]">
                                 <X size={18} />
                             </button>
                         </div>
@@ -459,13 +491,13 @@ export default function AdvancesPage() {
                             </div>
 
                             <div className="flex gap-2 pt-2">
-                                <button type="button" onClick={() => setShowModal(false)}
+                                <button type="button" onClick={closeModal}
                                     className="flex-1 h-9 rounded-[8px] border border-[var(--border)] text-[13px] text-[var(--text2)] hover:bg-[var(--surface2)] transition-colors">
                                     Cancel
                                 </button>
                                 <button type="submit" disabled={saving || !form.employeeId}
                                     className="flex-1 h-9 rounded-[8px] bg-[var(--accent)] text-white text-[13px] font-semibold hover:bg-[#0847c7] transition-colors disabled:opacity-60">
-                                    {saving ? "Saving..." : "Give Advance"}
+                                    {saving ? "Saving..." : editingId ? "Save Changes" : "Give Advance"}
                                 </button>
                             </div>
                         </form>

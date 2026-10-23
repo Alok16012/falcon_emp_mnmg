@@ -81,6 +81,43 @@ export async function POST(req: Request) {
     }
 }
 
+export async function PUT(req: Request) {
+    try {
+        const session = await getServerSession(authOptions)
+        if (!session) return new NextResponse("Unauthorized", { status: 401 })
+        if (!canAccessModule(session.user, "advances")) {
+            return new NextResponse("Forbidden", { status: 403 })
+        }
+
+        const { id, employeeId, amount, reason, monthToImpact, yearToImpact, advanceDate } = await req.json()
+
+        if (!id) return new NextResponse("id required", { status: 400 })
+        if (!employeeId || !amount || !monthToImpact || !yearToImpact) {
+            return new NextResponse("employeeId, amount, monthToImpact, yearToImpact required", { status: 400 })
+        }
+
+        const advance = await prisma.advanceAndReimbursement.update({
+            where: { id },
+            data: {
+                employeeId,
+                amount: parseFloat(amount),
+                reason: reason || null,
+                advanceDate: advanceDate ? new Date(advanceDate) : new Date(),
+                monthToImpact: parseInt(monthToImpact),
+                yearToImpact: parseInt(yearToImpact),
+            },
+            include: {
+                employee: { select: { firstName: true, lastName: true, employeeId: true } },
+            },
+        })
+
+        return NextResponse.json(advance)
+    } catch (err) {
+        console.error("[ADVANCES_PUT]", err)
+        return new NextResponse("Internal Error", { status: 500 })
+    }
+}
+
 export async function DELETE(req: Request) {
     try {
         const session = await getServerSession(authOptions)
