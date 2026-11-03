@@ -212,10 +212,19 @@ export default function PayrollPage() {
         : `${MONTHS[month - 1]}_${year}`
     const calendarDayCount = Math.round((Date.parse(period.to) - Date.parse(period.from)) / 86400000) + 1
 
+    // Rows the Excel covers: ticked employees if any, else the current search
+    // result, else everyone — so a filtered view downloads only what is shown.
+    const exportRows = selected.size > 0
+        ? displayRows.filter(r => selected.has(r.id))
+        : q
+            ? displayRows.filter(r => `${r.name} ${r.employeeId}`.toLowerCase().includes(q.toLowerCase()))
+            : displayRows
+    const exportFiltered = exportRows.length !== displayRows.length
+
     // Excel export: summary sheet + day-wise sheet (so every rupee can be traced)
     const exportExcel = () => {
-        if (displayRows.length === 0) { toast.error("No payroll rows to download"); return }
-        const summary: Record<string, string | number>[] = displayRows.map((r, i) => ({
+        if (exportRows.length === 0) { toast.error("No payroll rows to download"); return }
+        const summary: Record<string, string | number>[] = exportRows.map((r, i) => ({
             "#": i + 1,
             "Employee ID": r.employeeId,
             "Name": r.name,
@@ -248,8 +257,8 @@ export default function PayrollPage() {
             "Balance to Next Month (₹)": r.payrollStatus === "PAID" ? r.calc.net - (r.paidAmount ?? r.calc.net) : "",
             "Status": r.payrollStatus === "PAID" ? "PAID" : "PENDING",
         }))
-        const sum = (f: (r: typeof displayRows[number]) => number) =>
-            Math.round(displayRows.reduce((s, r) => s + (f(r) || 0), 0) * 100) / 100
+        const sum = (f: (r: typeof exportRows[number]) => number) =>
+            Math.round(exportRows.reduce((s, r) => s + (f(r) || 0), 0) * 100) / 100
         summary.push({
             "#": "", "Employee ID": "", "Name": "TOTAL",
             "Days Present (Mon–Sat)": sum(r => r.calc.daysWorked),
@@ -265,7 +274,7 @@ export default function PayrollPage() {
             "Previous Balance (₹)": sum(r => r.calc.carryForward),
             "Net Payable (₹)": sum(r => r.calc.net),
         })
-        const daywise = displayRows.flatMap(r => r.calc.lines.map(l => ({
+        const daywise = exportRows.flatMap(r => r.calc.lines.map(l => ({
             "Employee ID": r.employeeId,
             "Name": r.name,
             "Date": fmtDMY(l.date),
@@ -284,8 +293,8 @@ export default function PayrollPage() {
             ws["!cols"] = Object.keys((data as any[])[0] ?? {}).map(k => ({ wch: Math.max(k.length + 2, 12) }))
             XLSX.utils.book_append_sheet(wb, ws, name)
         }
-        XLSX.writeFile(wb, `Payroll_${fileTag}.xlsx`)
-        toast.success("Excel downloaded!")
+        XLSX.writeFile(wb, `Payroll_${fileTag}${exportFiltered ? `_${exportRows.length}_employees` : ""}.xlsx`)
+        toast.success(`Excel downloaded — ${exportRows.length} employee${exportRows.length !== 1 ? "s" : ""}`)
     }
 
     if (status === "loading" || loading) {
@@ -390,6 +399,7 @@ export default function PayrollPage() {
                     <button onClick={exportExcel}
                         className="flex items-center gap-2 border border-[var(--border)] bg-white rounded-[12px] text-[13px] font-semibold px-4 py-2.5 hover:bg-[var(--surface2)] transition-colors shadow-[0_2px_10px_rgba(80,80,170,0.05)]">
                         <Download size={14} className="text-[var(--accent)]" /> Download Excel
+                        {exportFiltered && <span className="text-[11px] font-bold text-[var(--accent-text)] bg-[var(--accent-light)] rounded-full px-2 py-0.5">{exportRows.length}</span>}
                     </button>
                 </div>
             </div>
