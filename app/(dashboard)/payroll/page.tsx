@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect, useCallback, useMemo } from "react"
+import { createPortal } from "react-dom"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -728,10 +729,24 @@ function SalarySlip({ row, periodLabel, onClose }: { row: EmpPayRow; periodLabel
     const c = row.calc
     const lineTone = (kind: string, cut: boolean) =>
         kind === "SUNDAY_WORK" ? "bg-purple-50" : kind === "FREE_SUNDAY" ? "bg-teal-50" : cut ? "bg-red-50" : ""
-    return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 md:p-4" onClick={onClose}>
-            {/* Print isolation: only the slip prints, not the whole page */}
-            <style>{`@media print { body * { visibility: hidden !important; } #salary-slip, #salary-slip * { visibility: visible !important; } #salary-slip { position: absolute !important; inset: 0 auto auto 0 !important; width: 100% !important; max-width: none !important; max-height: none !important; overflow: visible !important; box-shadow: none !important; } .no-print { display: none !important; } }`}</style>
+    return createPortal(
+        <div className="salary-slip-overlay fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 md:p-4" onClick={onClose}>
+            {/* Print isolation: the overlay is portalled to <body>, so every other
+                body child can be dropped from the print. Printing a position:fixed
+                box makes Chrome repeat it on every page, overlapping the table —
+                so in print the overlay and slip become plain static blocks. */}
+            <style>{`@media print {
+                @page { size: A4; margin: 10mm; }
+                body > *:not(.salary-slip-overlay) { display: none !important; }
+                html, body { background: #fff !important; }
+                .salary-slip-overlay { position: static !important; display: block !important; inset: auto !important; padding: 0 !important; background: none !important; }
+                #salary-slip { position: static !important; width: 100% !important; max-width: none !important; max-height: none !important; overflow: visible !important; box-shadow: none !important; border-radius: 0 !important; }
+                #salary-slip, #salary-slip * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                #salary-slip .overflow-x-auto, #salary-slip .overflow-hidden { overflow: visible !important; }
+                #salary-slip tr, #salary-slip .slip-block { break-inside: avoid; }
+                #salary-slip thead { display: table-header-group; }
+                .no-print { display: none !important; }
+            }`}</style>
             <div id="salary-slip" onClick={e => e.stopPropagation()}
                 className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto">
                 <div className="sticky top-0 bg-white z-10 flex items-center justify-between px-5 py-3 border-b no-print">
@@ -802,7 +817,7 @@ function SalarySlip({ row, periodLabel, onClose }: { row: EmpPayRow; periodLabel
                     </div>
 
                     {/* Summary */}
-                    <div className="border border-[var(--border)] rounded-lg overflow-hidden">
+                    <div className="slip-block border border-[var(--border)] rounded-lg overflow-hidden">
                         <div className="bg-[var(--surface)] px-3 py-1.5 text-[10px] font-bold text-[var(--text3)] uppercase tracking-wide">Summary</div>
                         <div className="px-3 py-2 space-y-1.5 text-[11.5px]">
                             <Row k={`Working days (Mon–Sat): ${c.daysWorked} · ${c.workHours} h paid${c.lateEarlyHrs > 0 ? ` (−${c.lateEarlyHrs} h late/early)` : ""}`} v={fmt2(c.workPay)} />
@@ -818,7 +833,7 @@ function SalarySlip({ row, periodLabel, onClose }: { row: EmpPayRow; periodLabel
                             )}
                         </div>
                     </div>
-                    <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex justify-between items-center">
+                    <div className="slip-block bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex justify-between items-center">
                         <span className="font-bold text-[13px] text-green-800">NET PAYABLE</span>
                         <span className="font-bold text-[20px] text-green-700">{fmt(c.net)}</span>
                     </div>
@@ -829,7 +844,8 @@ function SalarySlip({ row, periodLabel, onClose }: { row: EmpPayRow; periodLabel
                     )}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     )
 }
 
