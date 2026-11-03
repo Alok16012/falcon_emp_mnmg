@@ -324,7 +324,10 @@ export default function PayrollPage() {
     const slip = slipId ? displayRows.find(r => r.id === slipId) ?? null : null
 
     // Paid amount: blank = full net. Less than net → balance carries to next month.
-    const PaidAmount = ({ row, compact }: { row: EmpPayRow; compact?: boolean }) => {
+    // Called as a plain function (not <PaidAmount />): a component declared inside
+    // the page is a new type every render, which remounted the input and dropped
+    // focus after each keystroke.
+    const renderPaidAmount = (row: EmpPayRow, compact?: boolean) => {
         const c = row.calc
         if (c.hourlyRate <= 0) return null
         if (row.payrollStatus === "PAID") {
@@ -344,7 +347,7 @@ export default function PayrollPage() {
                 <input type="number" min="0" inputMode="numeric"
                     value={v ?? ""} placeholder={String(c.net)}
                     onChange={e => setPaidOverride(prev => ({ ...prev, [row.id]: e.target.value === "" ? undefined : Math.max(0, parseFloat(e.target.value) || 0) }))}
-                    className={cn("border border-[var(--border)] rounded px-1.5 py-1 text-right text-[11px] outline-none focus:border-green-500", compact ? "w-[76px]" : "w-28")} />
+                    className={cn("border border-[var(--border)] rounded px-1.5 py-1 text-right text-[11px] outline-none focus:border-green-500", compact ? "w-[92px]" : "w-28")} />
                 {v != null && v < c.net && <span className="text-[10px] text-orange-600 whitespace-nowrap">{fmt(c.net - v)} next month</span>}
             </label>
         )
@@ -532,7 +535,7 @@ export default function PayrollPage() {
                                 {c.carryForward !== 0 && (
                                     <p className="mt-1.5 text-[11px] text-[var(--text2)]">Prev. month balance {c.carryForward > 0 ? "+" : "−"}{fmt(Math.abs(c.carryForward))} included</p>
                                 )}
-                                <PaidAmount row={row} />
+                                {renderPaidAmount(row)}
                                 </>
                             )}
                         </div>
@@ -654,7 +657,7 @@ export default function PayrollPage() {
                                                     : <span className="text-[var(--text3)]">—</span>}
                                             </td>
                                             <td className="px-2 py-2 text-right font-bold text-green-700">{fmt(c.net)}</td>
-                                            <td className="px-2 py-2 text-right"><PaidAmount row={row} compact /></td>
+                                            <td className="px-2 py-2 text-right">{renderPaidAmount(row, true)}</td>
                                         </>)}
                                         <td className="px-2 py-2">
                                             <div className="flex items-center justify-center gap-1.5">
