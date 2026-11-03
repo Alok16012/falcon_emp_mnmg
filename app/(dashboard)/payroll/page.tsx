@@ -12,7 +12,7 @@ import * as XLSX from "xlsx"
 import { cn } from "@/lib/utils"
 import {
     calcHourlyPayroll, monthPeriod, FREE_SUNDAY_SLABS, SALARY_BASE_DAYS,
-    type HourlyPayResult, type PayAttendance,
+    type HourlyPayResult, type PayAttendance, type PayAdvance,
 } from "@/lib/hourly-payroll"
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
@@ -26,8 +26,11 @@ function hrs(n: number) { return `${Number(n.toFixed(2))} h` }
 type EmpBase = {
     id: string; employeeId: string; name: string; designation: string
     basicSalary: number; shiftHours: number; shiftStart: string | null; shiftEnd: string | null
-    att: PayAttendance[]; autoAdvance: number
+    dateOfJoining: string | null; dateOfLeaving: string | null
+    att: PayAttendance[]; autoAdvance: number; advances: PayAdvance[]
+    carryForward: number          // last month's unpaid balance (net − paid)
     payrollStatus: string | null
+    paidAmount: number | null     // saved paid amount for this month
 }
 type EmpPayRow = EmpBase & { calc: HourlyPayResult }
 
@@ -56,6 +59,8 @@ export default function PayrollPage() {
     const [slipId, setSlipId] = useState<string | null>(null)
     const [advOverride, setAdvOverride] = useState<Record<string, number>>({})
     const [otOverride, setOtOverride]   = useState<Record<string, number>>({})
+    // Amount actually paid (blank = full net); a short payment carries to next month
+    const [paidOverride, setPaidOverride] = useState<Record<string, number | undefined>>({})
     const [saving, setSaving] = useState<Set<string>>(new Set())
     const [rulesOpen, setRulesOpen] = useState(true)
     // Pagination
@@ -87,21 +92,32 @@ export default function PayrollPage() {
             const attQuery = mode === "range"
                 ? `from=${fromDate}&to=${toDate}`
                 : `month=${year}-${String(month).padStart(2, "0")}`
-            const [empRes, attRes, advRes, payRes] = await Promise.all([
+            const prevMonth = payMonth === 1 ? 12 : payMonth - 1
+            const prevYear  = payMonth === 1 ? payYear - 1 : payYear
+            const [empRes, attRes, advRes, payRes, prevRes] = await Promise.all([
                 fetch("/api/employees?limit=1000"),
                 fetch(`/api/attendance?${attQuery}&limit=5000`),
-                fetch(`/api/advances?month=${payMonth}&year=${payYear}`),
+                fetch(`/api/advances?month=${payMonth}&year=${payYear}&status=APPROVED`),
                 fetch(`/api/payroll?month=${payMonth}&year=${payYear}&limit=1000`),
+                fetch(`/api/payroll?month=${prevMonth}&year=${prevYear}&limit=1000`),
             ])
             const emps     = empRes.ok ? await empRes.json() : []
             const attData  = attRes.ok ? await attRes.json() : []
             const advances = advRes.ok ? await advRes.json() : []
             const pays     = payRes.ok ? await payRes.json() : []
+            const prevPays = prevRes.ok ? await prevRes.json() : []
 
             const empList: any[] = emps.data ?? emps
             const attList: any[] = Array.isArray(attData) ? attData : (attData.data ?? [])
             const advList: any[] = Array.isArray(advances) ? advances : []
             const payList: any[] = Array.isArray(pays) ? pays : (pays.data ?? [])
+            const prevList: any[] = Array.isArray(prevPays) ? prevPays : (prevPays.data ?? [])
+            // Same rule as the save API: only a PAID month with a different paid amount carries over
+            const carryOf = (empId: string) => {
+                const p = prevList.find(x => x.employeeId === empId)
+                if (!p || p.status !== "PAID" || p.paidAmount == null) return 0
+                return Math.round((p.netSalary - p.paidAmount) * 100) / 100
+            }
 
             const attByEmp = new Map<string, PayAttendance[]>()
             for (const a of attList) {
@@ -116,13 +132,21 @@ export default function PayrollPage() {
                 basicSalary: parseFloat(e.basicSalary) || 0,
                 shiftHours: parseFloat(e.shiftHours) || 8,
                 shiftStart: e.shiftStart ?? null, shiftEnd: e.shiftEnd ?? null,
+                dateOfJoining: e.dateOfJoining ?? null, dateOfLeaving: e.dateOfLeaving ?? null,
                 att: attByEmp.get(e.id) ?? [],
+                advances: advList
+                    .filter(a => a.employeeId === e.id)
+                    .map(a => ({ date: String(a.advanceDate ?? a.createdAt ?? "").slice(0, 10) || null, amount: a.amount ?? 0, reason: a.reason ?? null }))
+                    .sort((x, y) => String(x.date).localeCompare(String(y.date))),
                 autoAdvance: advList.filter(a => a.employeeId === e.id).reduce((s, a) => s + (a.amount ?? 0), 0),
+                carryForward: carryOf(e.id),
                 payrollStatus: payList.find(p => p.employeeId === e.id)?.status ?? null,
+                paidAmount: payList.find(p => p.employeeId === e.id)?.paidAmount ?? null,
             }))
             setBase(rows)
             setAdvOverride(Object.fromEntries(rows.map(r => [r.id, r.autoAdvance])))
             setOtOverride({})
+            setPaidOverride({})
             setPage(1)
             setSelected(new Set())
         } catch (e) {
@@ -139,8 +163,10 @@ export default function PayrollPage() {
     const displayRows: EmpPayRow[] = useMemo(() => base.map(r => ({
         ...r,
         calc: calcHourlyPayroll(r, r.att, period, {
+            advances: r.advances,
             advance: advOverride[r.id] ?? r.autoAdvance,
             otHrs: otOverride[r.id] ?? 0,
+            carryForward: r.carryForward,
         }),
     })), [base, period, advOverride, otOverride])
 
@@ -148,7 +174,7 @@ export default function PayrollPage() {
         if (!ids.length) return
         setSaving(prev => new Set([...prev, ...ids]))
         try {
-            const overrides = Object.fromEntries(ids.map(id => [id, { advance: advOverride[id], otHrs: otOverride[id] ?? 0 }]))
+            const overrides = Object.fromEntries(ids.map(id => [id, { advance: advOverride[id], otHrs: otOverride[id] ?? 0, paidAmount: paidOverride[id] }]))
             const res = await fetch("/api/payroll/hourly", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -157,7 +183,11 @@ export default function PayrollPage() {
                 }),
             })
             if (!res.ok) throw new Error(await res.text())
-            setBase(prev => prev.map(r => ids.includes(r.id) ? { ...r, payrollStatus: newStatus } : r))
+            setBase(prev => prev.map(r => {
+                if (!ids.includes(r.id)) return r
+                const net = displayRows.find(d => d.id === r.id)?.calc.net ?? 0
+                return { ...r, payrollStatus: newStatus, paidAmount: newStatus === "PAID" ? Math.round(paidOverride[r.id] ?? net) : null }
+            }))
             toast.success(ids.length === 1
                 ? (newStatus === "PAID" ? "Marked as PAID ✓" : "Marked as Unpaid")
                 : `${ids.length} employees marked as ${newStatus === "PAID" ? "PAID" : "Unpaid"}`)
@@ -195,35 +225,44 @@ export default function PayrollPage() {
             "Monthly Salary (₹)": r.calc.monthlySalary,
             "Daily Rate ÷30 (₹)": r.calc.dailyRate,
             "Hourly Rate (₹)": r.calc.hourlyRate,
-            "Days Worked (Mon–Sat)": r.calc.daysWorked,
-            "Paid Hours": r.calc.workHours,
+            "Days Present (Mon–Sat)": r.calc.daysWorked,
+            "Days Absent (Mon–Sat)": r.calc.absentDays,
+            "Absent Dates": r.calc.absentDates.map(d => fmtDMY(d).slice(0, 6)).join(", "),
+            "Absent Cut (₹)": r.calc.absentCut,
             "Late/Early Cut (h)": r.calc.lateEarlyHrs,
-            "Working Day Pay (₹)": r.calc.workPay,
-            "Sundays Worked": r.calc.sundaysWorked,
-            "Sunday Hours": r.calc.sundayHours,
-            "Sunday Pay ×2 (₹)": r.calc.sundayPay,
+            "Late/Early Cut (₹)": r.calc.lateEarlyCut,
             "Free Sundays": r.calc.freeSundays,
-            "Free Sunday Pay (₹)": r.calc.freeSundayPay,
+            "Unpaid Sundays": r.calc.unpaidSundays,
+            "Unpaid Sunday Cut (₹)": r.calc.unpaidSundayCut,
+            "Other Days Cut (₹)": r.calc.otherCut,
+            "Sundays Worked": r.calc.sundaysWorked,
+            "Sunday Pay ×2 (₹)": r.calc.sundayPay,
             "OT Hours": r.calc.otHrs,
             "OT Pay (₹)": r.calc.otPay,
             "Gross (₹)": r.calc.gross,
             "Advance (₹)": r.calc.advance,
+            "Advance Details": r.calc.advances.map(a => `${a.date ? fmtDMY(a.date).slice(0, 6) : "-"} ₹${a.amount}${a.reason ? ` (${a.reason})` : ""}`).join("; "),
+            "Previous Balance (₹)": r.calc.carryForward,
             "Net Payable (₹)": r.calc.net,
+            "Paid (₹)": r.payrollStatus === "PAID" ? (r.paidAmount ?? r.calc.net) : "",
+            "Balance to Next Month (₹)": r.payrollStatus === "PAID" ? r.calc.net - (r.paidAmount ?? r.calc.net) : "",
             "Status": r.payrollStatus === "PAID" ? "PAID" : "PENDING",
         }))
         const sum = (f: (r: typeof displayRows[number]) => number) =>
             Math.round(displayRows.reduce((s, r) => s + (f(r) || 0), 0) * 100) / 100
         summary.push({
             "#": "", "Employee ID": "", "Name": "TOTAL",
-            "Days Worked (Mon–Sat)": sum(r => r.calc.daysWorked),
-            "Paid Hours": sum(r => r.calc.workHours),
-            "Working Day Pay (₹)": sum(r => r.calc.workPay),
+            "Days Present (Mon–Sat)": sum(r => r.calc.daysWorked),
+            "Days Absent (Mon–Sat)": sum(r => r.calc.absentDays),
+            "Absent Cut (₹)": sum(r => r.calc.absentCut),
+            "Late/Early Cut (₹)": sum(r => r.calc.lateEarlyCut),
+            "Unpaid Sunday Cut (₹)": sum(r => r.calc.unpaidSundayCut),
             "Sunday Pay ×2 (₹)": sum(r => r.calc.sundayPay),
-            "Free Sunday Pay (₹)": sum(r => r.calc.freeSundayPay),
             "OT Hours": sum(r => r.calc.otHrs),
             "OT Pay (₹)": sum(r => r.calc.otPay),
             "Gross (₹)": sum(r => r.calc.gross),
             "Advance (₹)": sum(r => r.calc.advance),
+            "Previous Balance (₹)": sum(r => r.calc.carryForward),
             "Net Payable (₹)": sum(r => r.calc.net),
         })
         const daywise = displayRows.flatMap(r => r.calc.lines.map(l => ({
@@ -233,9 +272,10 @@ export default function PayrollPage() {
             "Day": l.weekday,
             "In": l.inTime ?? "-",
             "Out": l.outTime ?? "-",
-            "Hours Paid": l.kind === "FREE_SUNDAY" ? "-" : l.hours,
-            "Rate (₹/h)": l.kind === "FREE_SUNDAY" ? "-" : l.rate,
+            "Hours Paid": l.kind === "WORK" || l.kind === "SUNDAY_WORK" ? l.hours : "-",
+            "Rate (₹/h)": l.kind === "WORK" || l.kind === "SUNDAY_WORK" ? l.rate : "-",
             "Amount (₹)": l.amount,
+            "Cut (₹)": l.cut,
             "Remarks": l.remark,
         })))
         const wb = XLSX.utils.book_new()
@@ -260,8 +300,9 @@ export default function PayrollPage() {
     const totalAdv    = displayRows.reduce((s, r) => s + r.calc.advance, 0)
     const totalNet    = displayRows.reduce((s, r) => s + r.calc.net, 0)
     const totalSunday = displayRows.reduce((s, r) => s + r.calc.sundayPay, 0)
-    const totalFree   = displayRows.reduce((s, r) => s + r.calc.freeSundayPay, 0)
-    const totalWork   = displayRows.reduce((s, r) => s + r.calc.workPay, 0)
+    const totalAbsCut = displayRows.reduce((s, r) => s + r.calc.absentCut + r.calc.unpaidSundayCut + r.calc.otherCut, 0)
+    const totalLate   = displayRows.reduce((s, r) => s + r.calc.lateEarlyCut, 0)
+    const totalCarry  = displayRows.reduce((s, r) => s + r.calc.carryForward, 0)
     const paidCount   = displayRows.filter(r => r.payrollStatus === "PAID").length
 
     // Search + pagination
@@ -281,6 +322,33 @@ export default function PayrollPage() {
     }
 
     const slip = slipId ? displayRows.find(r => r.id === slipId) ?? null : null
+
+    // Paid amount: blank = full net. Less than net → balance carries to next month.
+    const PaidAmount = ({ row, compact }: { row: EmpPayRow; compact?: boolean }) => {
+        const c = row.calc
+        if (c.hourlyRate <= 0) return null
+        if (row.payrollStatus === "PAID") {
+            const paid = row.paidAmount ?? c.net
+            const bal = c.net - paid
+            return (
+                <div className={cn("text-[11px] text-right", !compact && "mt-1.5 text-left")}>
+                    <span className="font-semibold text-green-700">Paid {fmt(paid)}</span>
+                    {bal !== 0 && <Sub className={bal > 0 ? "text-orange-600" : "text-blue-600"}>{bal > 0 ? `${fmt(bal)} to next month` : `${fmt(-bal)} extra, cut next month`}</Sub>}
+                </div>
+            )
+        }
+        const v = paidOverride[row.id]
+        return (
+            <label className={cn("flex items-center gap-1.5", !compact && "mt-2")}>
+                {!compact && <span className="text-[11px] text-[var(--text3)]">Paying ₹</span>}
+                <input type="number" min="0" inputMode="numeric"
+                    value={v ?? ""} placeholder={String(c.net)}
+                    onChange={e => setPaidOverride(prev => ({ ...prev, [row.id]: e.target.value === "" ? undefined : Math.max(0, parseFloat(e.target.value) || 0) }))}
+                    className={cn("border border-[var(--border)] rounded px-1.5 py-1 text-right text-[11px] outline-none focus:border-green-500", compact ? "w-[76px]" : "w-28")} />
+                {v != null && v < c.net && <span className="text-[10px] text-orange-600 whitespace-nowrap">{fmt(c.net - v)} next month</span>}
+            </label>
+        )
+    }
 
     const PaidButton = ({ row, compact }: { row: EmpPayRow; compact?: boolean }) => {
         const busy = saving.has(row.id)
@@ -308,7 +376,7 @@ export default function PayrollPage() {
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                 <div>
                     <h1 className="text-[26px] font-bold text-[var(--text)]">Payroll</h1>
-                    <p className="text-[13px] text-[var(--text3)]">30-day base · Shift-wise hourly salary · Sunday rules</p>
+                    <p className="text-[13px] text-[var(--text3)]">30-day base · Full salary minus absent & late cuts · Sunday rules</p>
                 </div>
                 <div className="flex gap-2 self-start">
                     <button onClick={toggleRules}
@@ -399,9 +467,9 @@ export default function PayrollPage() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
                     { label: "Paid Hours", value: totalHrs.toFixed(1) + " hrs", sub: `${paidCount}/${displayRows.length} paid`, color: "#2563eb", bg: "#eff5ff", icon: <Clock size={18} /> },
-                    { label: "Gross Salary", value: fmt(totalGross), sub: `Days ${fmt(totalWork)} · Sun ${fmt(totalSunday + totalFree)}`, color: "#0b5cff", bg: "#f0f0fd", icon: <IndianRupee size={18} /> },
+                    { label: "Gross Salary", value: fmt(totalGross), sub: `Absent −${fmt(totalAbsCut)} · Late −${fmt(totalLate)}`, color: "#0b5cff", bg: "#f0f0fd", icon: <IndianRupee size={18} /> },
                     { label: "Advance", value: fmt(totalAdv), sub: "deducted from net", color: "#ea580c", bg: "#fff5eb", icon: <IndianRupee size={18} /> },
-                    { label: "Net Payable", value: fmt(totalNet), sub: "gross − advance", color: "#16a34a", bg: "#eefaf2", icon: <IndianRupee size={18} /> },
+                    { label: "Net Payable", value: fmt(totalNet), sub: totalCarry ? `incl. prev. balance ${fmt(totalCarry)}` : "gross − advance", color: "#16a34a", bg: "#eefaf2", icon: <IndianRupee size={18} /> },
                 ].map(card => (
                     <div key={card.label} className="rounded-[16px] p-3 md:p-4 flex items-center gap-2.5 min-w-0" style={{ background: card.bg }}>
                         <div className="w-9 h-9 md:w-11 md:h-11 rounded-[11px] md:rounded-[13px] bg-white flex items-center justify-center shrink-0 shadow-sm" style={{ color: card.color }}>
@@ -454,12 +522,18 @@ export default function PayrollPage() {
                             {c.hourlyRate <= 0 ? (
                                 <p className="mt-2.5 pt-2.5 border-t border-[var(--border)] text-[11.5px] text-orange-600">Monthly salary not set — add it in Employees.</p>
                             ) : (
+                                <>
                                 <div className="grid grid-cols-4 gap-2 mt-2.5 pt-2.5 border-t border-[var(--border)]">
-                                    <Stat label="Days" value={String(c.daysWorked)} className="text-blue-600" />
-                                    <Stat label="Hours" value={String(c.workHours)} className="text-blue-600" />
-                                    <Stat label="Sundays" value={fmt(c.sundayPay + c.freeSundayPay)} className="text-purple-600" />
+                                    <Stat label="Present" value={String(c.daysWorked)} className="text-blue-600" />
+                                    <Stat label="Absent" value={String(c.absentDays)} className="text-red-600" />
+                                    <Stat label="Advance" value={fmt(c.advance)} className="text-orange-600" />
                                     <Stat label="Net" value={fmt(c.net)} className="text-green-600" />
                                 </div>
+                                {c.carryForward !== 0 && (
+                                    <p className="mt-1.5 text-[11px] text-[var(--text2)]">Prev. month balance {c.carryForward > 0 ? "+" : "−"}{fmt(Math.abs(c.carryForward))} included</p>
+                                )}
+                                <PaidAmount row={row} />
+                                </>
                             )}
                         </div>
                     )
@@ -493,15 +567,17 @@ export default function PayrollPage() {
                                 <th className="px-2 py-3 text-left font-semibold text-[var(--text3)] w-6">#</th>
                                 <th className="px-2 py-3 text-left font-semibold text-[var(--text3)]">Employee · Shift</th>
                                 <th className="px-2 py-3 text-right font-semibold text-[var(--text3)]">Rate/Hr<Sub>salary ÷ 30 ÷ shift</Sub></th>
-                                <th className="px-2 py-3 text-center font-semibold text-blue-600">Days<Sub>Mon–Sat</Sub></th>
-                                <th className="px-2 py-3 text-right font-semibold text-blue-600">Paid Hrs<Sub>after late/early</Sub></th>
-                                <th className="px-2 py-3 text-right font-semibold text-blue-600">Day Pay</th>
+                                <th className="px-2 py-3 text-right font-semibold text-[var(--text3)]">Monthly<Sub>30-day base</Sub></th>
+                                <th className="px-2 py-3 text-center font-semibold text-blue-600">Present<Sub>Mon–Sat</Sub></th>
+                                <th className="px-2 py-3 text-right font-semibold text-red-600">Absent Cut<Sub>days + unpaid Sun</Sub></th>
+                                <th className="px-2 py-3 text-right font-semibold text-red-600">Late/Early Cut</th>
                                 <th className="px-2 py-3 text-right font-semibold text-purple-600">Sunday Work<Sub>shift hrs × rate × 2</Sub></th>
-                                <th className="px-2 py-3 text-right font-semibold text-teal-600">Free Sundays<Sub>by days worked</Sub></th>
                                 <th className="px-2 py-3 text-center font-semibold text-[var(--text3)]">OT Hrs<Sub>×1.5, manual</Sub></th>
                                 <th className="px-2 py-3 text-right font-semibold text-[var(--accent)]">Gross</th>
                                 <th className="px-2 py-3 text-center font-semibold text-orange-600">Advance</th>
+                                <th className="px-2 py-3 text-right font-semibold text-[var(--text3)]">Prev. Bal<Sub>last month</Sub></th>
                                 <th className="px-2 py-3 text-right font-semibold text-green-700">Net</th>
+                                <th className="px-2 py-3 text-right font-semibold text-green-700">Paid ₹<Sub>blank = full</Sub></th>
                                 <th className="px-2 py-3 text-center font-semibold text-[var(--text3)]">Status</th>
                             </tr>
                         </thead>
@@ -528,30 +604,34 @@ export default function PayrollPage() {
                                             </button>
                                         </td>
                                         {noSalary ? (
-                                            <td colSpan={9} className="px-2 py-2 text-[11px] text-orange-600">Monthly salary not set — add it in Employees to calculate pay.</td>
+                                            <td colSpan={12} className="px-2 py-2 text-[11px] text-orange-600">Monthly salary not set — add it in Employees to calculate pay.</td>
                                         ) : (<>
                                             <td className="px-2 py-2 text-right font-medium whitespace-nowrap">
                                                 ₹{c.hourlyRate}
                                                 <Sub>{c.shiftHours} h · ₹{Math.round(c.dailyRate)}/day</Sub>
                                             </td>
-                                            <td className="px-2 py-2 text-center font-semibold text-blue-600">{c.daysWorked}</td>
-                                            <td className="px-2 py-2 text-right font-semibold text-blue-600 whitespace-nowrap">
-                                                {hrs(c.workHours)}
-                                                {c.lateEarlyHrs > 0 && <Sub className="text-red-500">−{c.lateEarlyHrs} h cut</Sub>}
+                                            <td className="px-2 py-2 text-right whitespace-nowrap">{fmt(c.monthlySalary)}</td>
+                                            <td className="px-2 py-2 text-center font-semibold text-blue-600">
+                                                {c.daysWorked}
                                                 {c.missingPunchDays > 0 && <Sub className="text-orange-600">{c.missingPunchDays} out-punch missing</Sub>}
                                             </td>
-                                            <td className="px-2 py-2 text-right font-semibold text-blue-700">{fmt(c.workPay)}</td>
+                                            <td className="px-2 py-2 text-right whitespace-nowrap">
+                                                {c.absentCut + c.unpaidSundayCut + c.otherCut > 0 ? (<>
+                                                    <span className="font-semibold text-red-600">−{fmt(c.absentCut + c.unpaidSundayCut + c.otherCut)}</span>
+                                                    <Sub>{c.absentDays} absent{c.unpaidSundays ? ` · ${c.unpaidSundays} Sun` : ""}{c.notEmployedDays + c.upcomingDays ? ` · ${c.notEmployedDays + c.upcomingDays} other` : ""}</Sub>
+                                                </>) : <span className="text-[var(--text3)]">—</span>}
+                                            </td>
+                                            <td className="px-2 py-2 text-right whitespace-nowrap">
+                                                {c.lateEarlyCut > 0 ? (<>
+                                                    <span className="font-semibold text-red-600">−{fmt(c.lateEarlyCut)}</span>
+                                                    <Sub>{c.lateEarlyHrs} h</Sub>
+                                                </>) : <span className="text-[var(--text3)]">—</span>}
+                                            </td>
                                             <td className="px-2 py-2 text-right whitespace-nowrap">
                                                 {c.sundaysWorked > 0 ? (<>
                                                     <span className="font-semibold text-purple-600">{fmt(c.sundayPay)}</span>
                                                     <Sub>{c.sundaysWorked} day · {c.sundayHours} h</Sub>
                                                 </>) : <span className="text-[var(--text3)]">—</span>}
-                                            </td>
-                                            <td className="px-2 py-2 text-right whitespace-nowrap">
-                                                {c.freeSundays > 0
-                                                    ? <span className="font-semibold text-teal-600">{fmt(c.freeSundayPay)}</span>
-                                                    : <span className="text-[var(--text3)]">₹0</span>}
-                                                <Sub>{c.freeSundays} Sunday{c.freeSundays !== 1 ? "s" : ""}</Sub>
                                             </td>
                                             <td className="px-2 py-2 text-center">
                                                 <input type="number" min="0" step="0.5"
@@ -566,8 +646,15 @@ export default function PayrollPage() {
                                                     value={advOverride[row.id] ?? row.autoAdvance}
                                                     onChange={e => setAdvOverride(prev => ({ ...prev, [row.id]: parseFloat(e.target.value) || 0 }))}
                                                     className="w-[72px] border border-[var(--border)] rounded px-1.5 py-1 text-right text-[11px] outline-none focus:border-orange-400" />
+                                                {c.advances.length > 0 && <Sub>{c.advances.length} advance{c.advances.length > 1 ? "s" : ""}</Sub>}
+                                            </td>
+                                            <td className="px-2 py-2 text-right whitespace-nowrap">
+                                                {c.carryForward !== 0
+                                                    ? <span className={cn("font-semibold", c.carryForward > 0 ? "text-orange-600" : "text-blue-600")}>{c.carryForward > 0 ? "+" : "−"}{fmt(Math.abs(c.carryForward))}</span>
+                                                    : <span className="text-[var(--text3)]">—</span>}
                                             </td>
                                             <td className="px-2 py-2 text-right font-bold text-green-700">{fmt(c.net)}</td>
+                                            <td className="px-2 py-2 text-right"><PaidAmount row={row} compact /></td>
                                         </>)}
                                         <td className="px-2 py-2">
                                             <div className="flex items-center justify-center gap-1.5">
@@ -587,14 +674,16 @@ export default function PayrollPage() {
                         <tfoot>
                             <tr className="bg-[var(--surface)] border-t-2 border-[var(--border)] font-bold text-[12px]">
                                 <td colSpan={5} className="px-2 py-3 text-[var(--text3)]">TOTAL — {displayRows.length} employees</td>
-                                <td className="px-2 py-3 text-right text-blue-600">{hrs(displayRows.reduce((s, r) => s + r.calc.workHours, 0))}</td>
-                                <td className="px-2 py-3 text-right text-blue-700">{fmt(totalWork)}</td>
+                                <td className="px-2 py-3 text-center text-blue-600">{displayRows.reduce((s, r) => s + r.calc.daysWorked, 0)}</td>
+                                <td className="px-2 py-3 text-right text-red-600">−{fmt(totalAbsCut)}</td>
+                                <td className="px-2 py-3 text-right text-red-600">−{fmt(totalLate)}</td>
                                 <td className="px-2 py-3 text-right text-purple-600">{fmt(totalSunday)}</td>
-                                <td className="px-2 py-3 text-right text-teal-600">{fmt(totalFree)}</td>
                                 <td className="px-2 py-3 text-center text-[var(--text3)]">{fmt(displayRows.reduce((s, r) => s + r.calc.otPay, 0))}</td>
                                 <td className="px-2 py-3 text-right text-[var(--accent)]">{fmt(totalGross)}</td>
                                 <td className="px-2 py-3 text-right text-orange-600">{fmt(totalAdv)}</td>
+                                <td className="px-2 py-3 text-right text-[var(--text2)]">{fmt(totalCarry)}</td>
                                 <td className="px-2 py-3 text-right text-green-700">{fmt(totalNet)}</td>
+                                <td />
                                 <td />
                             </tr>
                         </tfoot>
@@ -664,28 +753,32 @@ function Stat({ label, value, className }: { label: string; value: string; class
 function RulesPanel() {
     const rules = [
         {
-            n: 1, color: "#2563eb", bg: "#eff5ff", title: "Always 30 days",
-            body: <>Salary is calculated on <b>30 days</b> every month — even if the month has 28 or 31 days.<br />
-                <span className="font-mono text-[11px]">Hourly = Monthly ÷ (30 × shift hours)</span></>,
+            n: 1, color: "#2563eb", bg: "#eff5ff", title: "Full salary, 30 days",
+            body: <>Every month starts from the <b>full monthly salary</b> (30-day base) — 28, 30 or 31 days. Each <b>absent</b> day is cut 1 day (31st included); working the 31st adds nothing.<br />
+                <span className="font-mono text-[11px]">Day = Monthly ÷ 30 · Hourly = Day ÷ shift hrs</span></>,
         },
         {
-            n: 2, color: "#dc2626", bg: "#fff1f1", title: "Hourly, shift-wise",
-            body: <>Each employee is paid for their own shift timing. Coming <b>late</b> or leaving <b>early</b> is cut by the exact minutes. <b>7 min grace</b>: coming in up to 7 min after shift start is not cut.<br />
-                <span className="font-mono text-[11px]">Day pay = (shift hrs − late − early) × hourly</span></>,
+            n: 2, color: "#dc2626", bg: "#fff1f1", title: "Late / early cut",
+            body: <><b>7 min briefing grace</b>: an 8:30 shift may punch in till <b>8:37</b>. From 8:38 the full lateness from 8:30 is cut; leaving early is cut by the minute. Lunch is <b>37 min</b>, company-paid.<br />
+                <span className="font-mono text-[11px]">Cut = (late + early hrs) × hourly</span></>,
         },
         {
-            n: 3, color: "#0d9488", bg: "#ebfaf6", title: "Free Sundays (max 4)",
-            body: <>Sundays are paid free, based on days worked (Mon–Sat). 1 free Sunday = 1 day salary (Monthly ÷ 30).</>,
+            n: 3, color: "#0d9488", bg: "#ebfaf6", title: "Sundays (max 4 free)",
+            body: <>Sundays are paid by days worked (table below). A Sunday that is not earned is cut 1 day. Full attendance → every Sunday paid.</>,
         },
         {
-            n: 4, color: "#7c3aed", bg: "#f5f0ff", title: "Working on Sunday = 2×",
-            body: <>Sunday shift ends at <b>5:00 PM</b>. Working till 5:00 PM = <b>full shift hours</b>, paid <b>double</b>. Late / leaving before 5:00 is cut. No extra free-day salary for that Sunday.<br />
+            n: 4, color: "#7c3aed", bg: "#f5f0ff", title: "Sunday duty 9 – 5 = 2×",
+            body: <>Sunday duty is <b>9:00 AM – 5:00 PM</b> = <b>full shift hours</b>, paid <b>double</b>. After 9:07 / before 5:00 is cut.<br />
                 <span className="font-mono text-[11px]">Sunday pay = (shift hrs − late − early) × hourly × 2</span></>,
+        },
+        {
+            n: 5, color: "#ea580c", bg: "#fff5eb", title: "Advance & balance",
+            body: <>Each advance (date, reason, amount) is cut from net. If <b>less than net is paid</b>, the balance is added to next month&apos;s salary.</>,
         },
     ]
     return (
         <div className="bg-white border border-[var(--border)] rounded-[16px] p-3.5 md:p-4 shadow-[0_2px_10px_rgba(80,80,170,0.05)] space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-2.5">
                 {rules.map(r => (
                     <div key={r.n} className="rounded-[12px] p-3" style={{ background: r.bg }}>
                         <div className="flex items-center gap-2 mb-1.5">
@@ -713,11 +806,11 @@ function RulesPanel() {
                     </div>
                 </div>
                 <div className="lg:w-[42%] border border-[var(--border)] rounded-[12px] px-3 py-2 text-[11.5px] text-[var(--text2)] space-y-0.5">
-                    <div className="font-bold text-[var(--text)] text-[11px] mb-1">Example — ₹30,000 salary, 9-hour shift</div>
-                    <div>Hourly = 30,000 ÷ (30 × 9) = <b>₹111.11</b> · Daily = <b>₹1,000</b></div>
-                    <div>Left 30 min early → 8.5 h × 111.11 = <b>₹944.44</b></div>
-                    <div>Sunday 8:30 AM – 5:00 PM → full 9 h × 111.11 × 2 = <b>₹2,000</b></div>
-                    <div>Worked 18 days → 3 free Sundays = <b>₹3,000</b></div>
+                    <div className="font-bold text-[var(--text)] text-[11px] mb-1">Example — ₹30,000 salary, 12-hour shift</div>
+                    <div>Daily = 30,000 ÷ 30 = <b>₹1,000</b> · Hourly = 1,000 ÷ 12 = <b>₹83.33</b></div>
+                    <div>2 days absent → 30,000 − 2,000 = <b>₹28,000</b></div>
+                    <div>In at 8:45 (shift 8:30) → 15 min = 0.25 h × 83.33 = <b>−₹20.83</b></div>
+                    <div>Sunday 9:00 – 5:00 → 12 h × 83.33 × 2 = <b>₹2,000</b></div>
                 </div>
             </div>
         </div>
@@ -728,7 +821,10 @@ function RulesPanel() {
 function SalarySlip({ row, periodLabel, onClose }: { row: EmpPayRow; periodLabel: string; onClose: () => void }) {
     const c = row.calc
     const lineTone = (kind: string, cut: boolean) =>
-        kind === "SUNDAY_WORK" ? "bg-purple-50" : kind === "FREE_SUNDAY" ? "bg-teal-50" : cut ? "bg-red-50" : ""
+        kind === "ABSENT" || kind === "UNPAID_SUNDAY" || kind === "NOT_EMPLOYED" ? "bg-red-50 text-red-700"
+            : kind === "SUNDAY_WORK" ? "bg-purple-50" : kind === "FREE_SUNDAY" || kind === "HOLIDAY" ? "bg-teal-50" : cut ? "bg-orange-50" : ""
+    const paid = row.payrollStatus === "PAID" ? (row.paidAmount ?? c.net) : null
+    const daysCut = c.absentDays + c.unpaidSundays + c.notEmployedDays + c.upcomingDays
     return createPortal(
         <div className="salary-slip-overlay fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 md:p-4" onClick={onClose}>
             {/* Print isolation: the overlay is portalled to <body>, so every other
@@ -746,6 +842,15 @@ function SalarySlip({ row, periodLabel, onClose }: { row: EmpPayRow; periodLabel
                 #salary-slip tr, #salary-slip .slip-block { break-inside: avoid; }
                 #salary-slip thead { display: table-header-group; }
                 .no-print { display: none !important; }
+                /* Compact print so a full month (31 rows) fits one A4 page */
+                #salary-slip .slip-body { padding: 0 !important; }
+                #salary-slip .slip-body > * + * { margin-top: 6px !important; }
+                #salary-slip .slip-body .space-y-1 > * + *, #salary-slip .slip-body .space-y-1\\.5 > * + * { margin-top: 1px !important; }
+                #salary-slip .slip-body .p-3, #salary-slip .slip-body .py-2 { padding-top: 4px !important; padding-bottom: 4px !important; }
+                #salary-slip .slip-body, #salary-slip .slip-body .text-\\[11\\.5px\\] { font-size: 10px !important; line-height: 1.3 !important; }
+                #salary-slip th, #salary-slip td { padding-top: 1.5px !important; padding-bottom: 1.5px !important; font-size: 9.5px !important; line-height: 1.25 !important; }
+                #salary-slip .slip-net { padding-top: 6px !important; padding-bottom: 6px !important; }
+                #salary-slip .slip-net span:last-child { font-size: 16px !important; }
             }`}</style>
             <div id="salary-slip" onClick={e => e.stopPropagation()}
                 className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto">
@@ -761,10 +866,10 @@ function SalarySlip({ row, periodLabel, onClose }: { row: EmpPayRow; periodLabel
                         </button>
                     </div>
                 </div>
-                <div className="px-4 md:px-5 py-4 text-[12px] space-y-3">
+                <div className="slip-body px-4 md:px-5 py-4 text-[12px] space-y-3">
                     <div className="text-center pb-2 border-b border-[var(--border)]">
                         <div className="text-[17px] font-bold text-[var(--accent)]">Falcon Plus</div>
-                        <div className="text-[11px] text-[var(--text3)]">Salary Slip — {periodLabel} · Hourly, 30-day base</div>
+                        <div className="text-[11px] text-[var(--text3)]">Salary Slip — {periodLabel} · 30-day base, full salary minus cuts</div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -794,21 +899,23 @@ function SalarySlip({ row, periodLabel, onClose }: { row: EmpPayRow; periodLabel
                                     <th className="px-2 py-1.5 text-right">Hours</th>
                                     <th className="px-2 py-1.5 text-right">Rate</th>
                                     <th className="px-2 py-1.5 text-right">Amount</th>
+                                    <th className="px-2 py-1.5 text-right">Cut</th>
                                     <th className="px-2 py-1.5 text-left">Remarks</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--border)]">
                                 {c.lines.length === 0 ? (
-                                    <tr><td colSpan={8} className="px-2 py-4 text-center text-[var(--text3)]">No attendance in this period</td></tr>
+                                    <tr><td colSpan={9} className="px-2 py-4 text-center text-[var(--text3)]">No days in this period</td></tr>
                                 ) : c.lines.map(l => (
                                     <tr key={l.date + l.kind} className={lineTone(l.kind, l.lateHrs + l.earlyHrs > 0)}>
                                         <td className="px-2 py-1 whitespace-nowrap">{fmtDMY(l.date).slice(0, 6)}</td>
                                         <td className={cn("px-2 py-1", l.isSunday && "font-semibold text-red-600")}>{l.weekday}</td>
                                         <td className="px-2 py-1 whitespace-nowrap">{l.inTime ?? "–"}</td>
                                         <td className="px-2 py-1 whitespace-nowrap">{l.outTime ?? "–"}</td>
-                                        <td className="px-2 py-1 text-right">{l.kind === "FREE_SUNDAY" ? "–" : l.hours}</td>
-                                        <td className="px-2 py-1 text-right whitespace-nowrap">{l.kind === "FREE_SUNDAY" ? "–" : l.kind === "SUNDAY_WORK" ? `${c.hourlyRate} × 2` : c.hourlyRate}</td>
-                                        <td className="px-2 py-1 text-right font-medium">{fmt2(l.amount)}</td>
+                                        <td className="px-2 py-1 text-right">{l.kind === "WORK" || l.kind === "SUNDAY_WORK" ? l.hours : "–"}</td>
+                                        <td className="px-2 py-1 text-right whitespace-nowrap">{l.kind === "SUNDAY_WORK" ? `${c.hourlyRate} × 2` : l.kind === "WORK" ? c.hourlyRate : "–"}</td>
+                                        <td className="px-2 py-1 text-right font-medium">{l.amount ? fmt2(l.amount) : "–"}</td>
+                                        <td className={cn("px-2 py-1 text-right whitespace-nowrap", l.cut > 0 && "font-semibold text-red-600")}>{l.cut > 0 ? `−${fmt2(l.cut)}` : "–"}</td>
                                         <td className="px-2 py-1 text-[var(--text2)]">{l.remark}</td>
                                     </tr>
                                 ))}
@@ -820,23 +927,66 @@ function SalarySlip({ row, periodLabel, onClose }: { row: EmpPayRow; periodLabel
                     <div className="slip-block border border-[var(--border)] rounded-lg overflow-hidden">
                         <div className="bg-[var(--surface)] px-3 py-1.5 text-[10px] font-bold text-[var(--text3)] uppercase tracking-wide">Summary</div>
                         <div className="px-3 py-2 space-y-1.5 text-[11.5px]">
-                            <Row k={`Working days (Mon–Sat): ${c.daysWorked} · ${c.workHours} h paid${c.lateEarlyHrs > 0 ? ` (−${c.lateEarlyHrs} h late/early)` : ""}`} v={fmt2(c.workPay)} />
-                            <Row k={`Sunday worked: ${c.sundaysWorked} (${c.sundayHours} h × ${fmt2(c.hourlyRate)} × 2)`} v={fmt2(c.sundayPay)} />
-                            <Row k={`Free Sundays: ${c.freeSundays} × ${fmt2(c.dailyRate)}${c.freeSundaysEarned > c.freeSundays ? ` (earned ${c.freeSundaysEarned}, ${c.sundaysWorked} Sunday worked)` : ` (for ${c.daysWorked} days worked)`}`} v={fmt2(c.freeSundayPay)} />
-                            {c.otHrs > 0 && <Row k={`OT: ${c.otHrs} h × ${fmt2(c.hourlyRate)} × 1.5`} v={fmt2(c.otPay)} />}
+                            <Row k="Monthly salary (30-day base)" v={fmt2(c.monthlySalary)} />
+                            {c.absentDays > 0 && (
+                                <Row k={<>Absent {c.absentDays} day{c.absentDays > 1 ? "s" : ""} × {fmt2(c.dailyRate)}
+                                    <span className="block text-[10px] text-red-600">{c.absentDates.map(d => fmtDMY(d).slice(0, 6)).join(", ")}</span></>}
+                                    v={<span className="text-red-600">−{fmt2(c.absentCut)}</span>} />
+                            )}
+                            {c.lateEarlyCut > 0 && <Row k={`Late / early: ${c.lateEarlyHrs} h × ${fmt2(c.hourlyRate)}`} v={<span className="text-red-600">−{fmt2(c.lateEarlyCut)}</span>} />}
+                            {c.halfDays > 0 && <Row k={`Half days: ${c.halfDays} × ½ day`} v={<span className="text-red-600">−{fmt2(c.halfDays * c.dailyRate / 2)}</span>} />}
+                            {c.unpaidSundays > 0 && (
+                                <Row k={`Sundays not paid: ${c.unpaidSundays} (only ${c.freeSundaysEarned} free for ${c.daysWorked} days worked)`}
+                                    v={<span className="text-red-600">−{fmt2(c.unpaidSundayCut)}</span>} />
+                            )}
+                            {c.notEmployedDays > 0 && <Row k={`Before joining / after leaving: ${c.notEmployedDays} day(s)`} v={<span className="text-red-600">−{fmt2(c.notEmployedDays * c.dailyRate)}</span>} />}
+                            {c.upcomingDays > 0 && <Row k={`Days not reached yet: ${c.upcomingDays}`} v={<span className="text-red-600">−{fmt2(c.upcomingDays * c.dailyRate)}</span>} />}
+                            {c.sundaysWorked > 0 && (
+                                <Row k={`Sunday worked: ${c.sundaysWorked} (${c.sundayHours} h × ${fmt2(c.hourlyRate)} × 2 = ${fmt2(c.sundayPay)}, replaces ${c.sundaysWorked} day)`}
+                                    v={<span className="text-purple-700">{c.sundayExtra >= 0 ? "+" : "−"}{fmt2(Math.abs(c.sundayExtra))}</span>} />
+                            )}
+                            {c.otHrs > 0 && <Row k={`OT: ${c.otHrs} h × ${fmt2(c.hourlyRate)} × 1.5`} v={<span className="text-purple-700">+{fmt2(c.otPay)}</span>} />}
                             <div className="flex justify-between border-t border-[var(--border)] pt-1.5 font-bold text-[var(--accent)]">
-                                <span>Gross Salary</span><span>{fmt2(c.gross)}</span>
+                                <span>Gross Salary{daysCut > 0 ? ` (${daysCut} day${daysCut > 1 ? "s" : ""} cut)` : ""}</span><span>{fmt2(c.gross)}</span>
                             </div>
-                            {c.advance > 0 && <Row k="Less: Advance" v={<span className="text-orange-700">−{fmt2(c.advance)}</span>} />}
                             {c.missingPunchDays > 0 && (
-                                <p className="text-[10.5px] text-orange-600">⚠ {c.missingPunchDays} day(s) have only an IN punch — paid 0 hours until attendance is corrected.</p>
+                                <p className="text-[10.5px] text-orange-600">⚠ {c.missingPunchDays} day(s) have only an IN punch — cut as absent until attendance is corrected.</p>
                             )}
                         </div>
                     </div>
-                    <div className="slip-block bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex justify-between items-center">
+
+                    {/* Advances + carry forward */}
+                    {(c.advance > 0 || c.carryForward !== 0) && (
+                        <div className="slip-block border border-[var(--border)] rounded-lg overflow-hidden">
+                            <div className="bg-[var(--surface)] px-3 py-1.5 text-[10px] font-bold text-[var(--text3)] uppercase tracking-wide">Advance & balance</div>
+                            <div className="px-3 py-2 space-y-1.5 text-[11.5px]">
+                                {c.advances.map((a, i) => (
+                                    <Row key={i}
+                                        k={<>Advance{a.date ? ` · ${fmtDMY(a.date)}` : ""}{a.reason ? <span className="text-[var(--text2)]"> · {a.reason}</span> : ""}</>}
+                                        v={<span className="text-orange-700">−{fmt2(a.amount)}</span>} />
+                                ))}
+                                {c.advance !== c.advances.reduce((t, a) => t + a.amount, 0) && (
+                                    <Row k="Advance (adjusted on payroll)" v={<span className="text-orange-700">−{fmt2(c.advance)}</span>} />
+                                )}
+                                {c.carryForward !== 0 && (
+                                    <Row k={c.carryForward > 0 ? "Balance from last month (paid less)" : "Paid extra last month"}
+                                        v={<span className={c.carryForward > 0 ? "text-green-700" : "text-orange-700"}>{c.carryForward > 0 ? "+" : "−"}{fmt2(Math.abs(c.carryForward))}</span>} />
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    <div className="slip-block slip-net bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex justify-between items-center">
                         <span className="font-bold text-[13px] text-green-800">NET PAYABLE</span>
                         <span className="font-bold text-[20px] text-green-700">{fmt(c.net)}</span>
                     </div>
+                    {paid != null && paid !== c.net && (
+                        <div className="slip-block flex justify-between text-[12px] px-4">
+                            <span className="text-[var(--text2)]">Paid {fmt(paid)}</span>
+                            <span className={cn("font-semibold", c.net - paid > 0 ? "text-orange-600" : "text-blue-600")}>
+                                {c.net - paid > 0 ? `${fmt(c.net - paid)} carried to next month` : `${fmt(paid - c.net)} extra, cut next month`}
+                            </span>
+                        </div>
+                    )}
                     {row.payrollStatus === "PAID" && (
                         <div className="text-center text-[11px] font-bold text-green-700 bg-green-100 rounded py-1.5 border border-green-200">
                             ✓ PAID & CONFIRMED

@@ -100,7 +100,7 @@ export async function processHardwareRecord(rec: AccessControlRecord): Promise<b
     const firstPunch = new Date(dayPunches[0].punchTime)
     const lastPunch = new Date(dayPunches[dayPunches.length - 1].punchTime)
     const hasOut = dayPunches.length >= 2
-    // Total hours = last punch − first punch (full span). The 35-min lunch is
+    // Total hours = last punch − first punch (full span). The 37-min lunch is
     // company-paid so it stays counted, not deducted.
     const newWorkingHrs = hasOut
         ? parseFloat(((lastPunch.getTime() - firstPunch.getTime()) / (1000 * 60 * 60)).toFixed(2))

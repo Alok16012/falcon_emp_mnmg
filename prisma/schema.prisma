@@ -703,6 +703,7 @@ model Payroll {
   otherDeductions     Float         @default(0)
   totalDeductions     Float         @default(0)
   netSalary           Float         @default(0)
+  paidAmount          Float?        // what was actually paid; netSalary − paidAmount carries to next month
   ctc                 Float         @default(0)
   workingDays         Int           @default(26)
   presentDays         Int           @default(26)

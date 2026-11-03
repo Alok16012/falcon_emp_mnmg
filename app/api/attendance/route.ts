@@ -125,7 +125,7 @@ export async function POST(req: Request) {
                     checkOutDT = new Date(`${r.date}T${r.checkOut}:00`)
                 }
                 if (checkInDT && checkOutDT && checkOutDT > checkInDT) {
-                    // Full span — the 35-min lunch is paid by the company, not deducted.
+                    // Full span — the 37-min lunch is paid by the company, not deducted.
                     workingHrs = parseFloat(
                         ((checkOutDT.getTime() - checkInDT.getTime()) / (1000 * 60 * 60)).toFixed(2)
                     )

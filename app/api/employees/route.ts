@@ -84,6 +84,7 @@ export async function GET(req: Request) {
                 gender: true,
                 dateOfBirth: true,
                 dateOfJoining: true,
+                dateOfLeaving: true,
                 employmentType: true,
                 employeeCategory: true,
                 basicSalary: true,

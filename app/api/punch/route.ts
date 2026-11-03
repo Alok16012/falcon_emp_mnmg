@@ -52,7 +52,7 @@ export async function POST(req: Request) {
         const isLate = punchType === "IN" && newPunchCount === 1 &&
             (now.getHours() > SHIFT_H || (now.getHours() === SHIFT_H && now.getMinutes() > SHIFT_M))
 
-        // Working hours = full span (last OUT − first IN). 35-min lunch is paid, not deducted.
+        // Working hours = full span (last OUT − first IN). 37-min lunch is paid, not deducted.
         const newCheckIn  = newPunchCount === 1 ? now : attendance.checkIn  // first IN only
         const newCheckOut = punchType === "OUT" ? now : attendance.checkOut // update on every OUT
         let newWorkingHrs = attendance.workingHrs ?? 0
