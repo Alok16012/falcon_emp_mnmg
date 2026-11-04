@@ -125,7 +125,10 @@ export default function PayrollPage() {
                 attByEmp.get(a.employeeId)!.push(a)
             }
 
-            const rows: EmpBase[] = empList.map((e: any) => ({
+            // Terminated / resigned workers are hidden like in Employees — unless they
+            // punched in this period, so their last salary can still be paid.
+            const isLeft = (e: any) => e.status === "TERMINATED" || e.status === "RESIGNED"
+            const rows: EmpBase[] = empList.filter((e: any) => !isLeft(e) || attByEmp.has(e.id)).map((e: any) => ({
                 id: e.id, employeeId: e.employeeId,
                 name: `${e.firstName} ${e.lastName ?? ""}`.trim(),
                 designation: e.designation ?? "—",
